@@ -1,6 +1,6 @@
-# Purchasing Dashboard
+# Reporting Dashboard
 
-Dashboard purchasing (frontend-only) berbasis **Vite + React + TypeScript + Tailwind CSS v4 + shadcn/ui** dengan 14 halaman analisis pembelian. Seluruh angka berasal dari dataset nyata (`purchase-data.json`, ±3.010 baris invoice) — tanpa data tiruan.
+Dashboard reporting (frontend-only) berbasis **Vite + React + TypeScript + Tailwind CSS v4 + shadcn/ui** dengan 14 halaman analisis pembelian. Seluruh angka berasal dari dataset nyata (`purchase-data.json`, ±3.010 baris invoice) — tanpa data tiruan.
 
 ## Fitur
 
