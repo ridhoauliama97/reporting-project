@@ -8,7 +8,7 @@ interface EmptyStateProps {
 
 export default function EmptyState({ icon: Icon, title, description }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed bg-card p-10 text-center">
+    <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed bg-card p-6 text-center sm:p-10">
       <div className="flex size-12 items-center justify-center rounded-full bg-muted">
         <Icon className="size-6 text-muted-foreground" />
       </div>

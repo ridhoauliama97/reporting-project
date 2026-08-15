@@ -1,11 +1,11 @@
-import { useMemo } from 'react';
-import type { ParsedPurchaseItem } from '../types/purchase';
-import { ITEM_CATEGORIES, CATEGORY_LABELS } from '../types/purchase';
-import { formatRupiah, formatNumber, formatDate } from '../utils/formatters';
-import PageLayout from '../components/PageLayout';
-import StatCard from '../components/StatCard';
-import DataTable from '../components/DataTable';
-import { SectionCards } from '../components/dashboard/section-cards';
+import { useMemo } from "react";
+import type { ParsedPurchaseItem } from "../types/purchase";
+import { ITEM_CATEGORIES, CATEGORY_LABELS } from "../types/purchase";
+import { formatRupiah, formatNumber, formatDate } from "../utils/formatters";
+import PageLayout from "../components/PageLayout";
+import StatCard from "../components/StatCard";
+import DataTable from "../components/DataTable";
+import { SectionCards } from "../components/dashboard/section-cards";
 
 interface DateRange {
   start: Date | null;
@@ -21,43 +21,58 @@ interface PurchaseSummaryProps {
 
 const COLUMN_GROUPS = [
   {
-    name: 'Transaksi',
-    columns: ['purchaseNumber', 'purchaseType', 'purchaseDate', 'dueDate', 'poNumber', 'poDate', 'referenceNumber', 'transitStatus'],
+    name: "Transaksi",
+    columns: [
+      "purchaseNumber",
+      "purchaseType",
+      "purchaseDate",
+      "dueDate",
+      "poNumber",
+      "poDate",
+      "referenceNumber",
+      "transitStatus",
+    ],
   },
   {
-    name: 'Supplier',
-    columns: ['supplierCode', 'supplierName'],
+    name: "Supplier",
+    columns: ["supplierCode", "supplierName"],
   },
   {
-    name: 'Item',
-    columns: ['itemCode', 'itemName', 'itemCategory', 'itemType', 'uom'],
+    name: "Item",
+    columns: ["itemCode", "itemName", "itemCategory", "itemType", "uom"],
   },
   {
-    name: 'Gudang',
-    columns: ['warehouse'],
+    name: "Gudang",
+    columns: ["warehouse"],
   },
   {
-    name: 'Kuantitas & Nilai',
-    columns: ['quantity', 'unitCost', 'netTotal'],
+    name: "Kuantitas & Nilai",
+    columns: ["quantity", "unitCost", "netTotal"],
   },
   {
-    name: 'PIC',
-    columns: ['requestedBy', 'usedBy', 'poCreator', 'poApprovedBy'],
+    name: "PIC",
+    columns: ["requestedBy", "usedBy", "poCreator", "poApprovedBy"],
   },
 ];
 
 const DEFAULT_VISIBLE = [
-  'purchaseNumber',
-  'purchaseDate',
-  'supplierName',
-  'itemName',
-  'warehouse',
-  'quantity',
-  'uom',
-  'netTotal',
+  "purchaseNumber",
+  "purchaseDate",
+  "supplierName",
+  "itemName",
+  "itemCategory",
+  "quantity",
+  "unitCost",
+  "uom",
+  "netTotal",
 ];
 
-export default function PurchaseSummary({ items, allItems, dateRange, onDateRangeChange }: PurchaseSummaryProps) {
+export default function PurchaseSummary({
+  items,
+  allItems,
+  dateRange,
+  onDateRangeChange,
+}: PurchaseSummaryProps) {
   const categoryStats = useMemo(() => {
     const stats: Record<string, { total: number; count: number }> = {};
     ITEM_CATEGORIES.forEach((cat) => {
@@ -75,7 +90,10 @@ export default function PurchaseSummary({ items, allItems, dateRange, onDateRang
     return stats;
   }, [items]);
 
-  const grandTotal = useMemo(() => items.reduce((sum, item) => sum + item.netTotal, 0), [items]);
+  const grandTotal = useMemo(
+    () => items.reduce((sum, item) => sum + item.netTotal, 0),
+    [items],
+  );
 
   const prevItems = useMemo(() => {
     if (!dateRange.start || !dateRange.end) return undefined;
@@ -89,34 +107,64 @@ export default function PurchaseSummary({ items, allItems, dateRange, onDateRang
   }, [allItems, dateRange]);
 
   const columns = [
-    { key: 'purchaseNumber', label: 'Nomor Purchase', sortable: true },
-    { key: 'purchaseType', label: 'Tipe Purchase' },
-    { key: 'purchaseDate', label: 'Tanggal Purchase', sortable: true, render: (item: ParsedPurchaseItem) => formatDate(item.purchaseDate) },
-    { key: 'dueDate', label: 'Tanggal Jatuh Tempo', render: (item: ParsedPurchaseItem) => formatDate(item.dueDate) },
-    { key: 'poNumber', label: 'Nomor PO', sortable: true },
-    { key: 'poDate', label: 'Tanggal PO', render: (item: ParsedPurchaseItem) => formatDate(item.poDate) },
-    { key: 'referenceNumber', label: 'Nomor Referensi' },
-    { key: 'transitStatus', label: 'Status Transit' },
-    { key: 'supplierCode', label: 'Kode Supplier' },
-    { key: 'supplierName', label: 'Nama Supplier', sortable: true },
-    { key: 'itemCode', label: 'Kode Item' },
-    { key: 'itemName', label: 'Nama Item', sortable: true },
-    { key: 'itemCategory', label: 'Kategori Item', sortable: true },
-    { key: 'itemType', label: 'Tipe Item' },
-    { key: 'uom', label: 'Satuan' },
-    { key: 'warehouse', label: 'Gudang' },
-    { key: 'quantity', label: 'Kuantitas', align: 'right' as const, render: (item: ParsedPurchaseItem) => formatNumber(item.quantity) },
-    { key: 'unitCost', label: 'Harga Satuan', align: 'right' as const, sortable: true, render: (item: ParsedPurchaseItem) => formatRupiah(item.unitCost) },
-    { key: 'netTotal', label: 'Total Netto', align: 'right' as const, sortable: true, render: (item: ParsedPurchaseItem) => formatRupiah(item.netTotal) },
-    { key: 'requestedBy', label: 'Diminta Oleh' },
-    { key: 'usedBy', label: 'Digunakan Oleh' },
-    { key: 'poCreator', label: 'Pembuat PO' },
-    { key: 'poApprovedBy', label: 'PO Disetujui Oleh' },
+    { key: "purchaseNumber", label: "Nomor Purchase", sortable: true },
+    { key: "purchaseType", label: "Tipe Purchase" },
+    {
+      key: "purchaseDate",
+      label: "Tanggal Purchase",
+      sortable: true,
+      render: (item: ParsedPurchaseItem) => formatDate(item.purchaseDate),
+    },
+    {
+      key: "dueDate",
+      label: "Tanggal Jatuh Tempo",
+      render: (item: ParsedPurchaseItem) => formatDate(item.dueDate),
+    },
+    { key: "poNumber", label: "Nomor PO", sortable: true },
+    {
+      key: "poDate",
+      label: "Tanggal PO",
+      render: (item: ParsedPurchaseItem) => formatDate(item.poDate),
+    },
+    { key: "referenceNumber", label: "Nomor Referensi" },
+    { key: "transitStatus", label: "Status Transit" },
+    { key: "supplierCode", label: "Kode Supplier" },
+    { key: "supplierName", label: "Nama Supplier", sortable: true },
+    { key: "itemCode", label: "Kode Item" },
+    { key: "itemName", label: "Nama Item", sortable: true },
+    { key: "itemCategory", label: "Kategori Item", sortable: true },
+    { key: "itemType", label: "Tipe Item" },
+    { key: "uom", label: "Satuan" },
+    { key: "warehouse", label: "Gudang" },
+    {
+      key: "quantity",
+      label: "Kuantitas",
+      align: "right" as const,
+      render: (item: ParsedPurchaseItem) => formatNumber(item.quantity),
+    },
+    {
+      key: "unitCost",
+      label: "Harga Satuan",
+      align: "right" as const,
+      sortable: true,
+      render: (item: ParsedPurchaseItem) => formatRupiah(item.unitCost),
+    },
+    {
+      key: "netTotal",
+      label: "Total Pembelian",
+      align: "right" as const,
+      sortable: true,
+      render: (item: ParsedPurchaseItem) => formatRupiah(item.netTotal),
+    },
+    { key: "requestedBy", label: "Diminta Oleh" },
+    { key: "usedBy", label: "Digunakan Oleh" },
+    { key: "poCreator", label: "Pembuat PO" },
+    { key: "poApprovedBy", label: "PO Disetujui Oleh" },
   ];
 
   return (
     <PageLayout
-      title="Ringkasan Pembelian"
+      title="Purchase Summary"
       subtitle="Ringkasan nilai pembelian per kategori item dan detail transaksi."
       dateRange={dateRange}
       onDateRangeChange={onDateRangeChange}
@@ -138,7 +186,7 @@ export default function PurchaseSummary({ items, allItems, dateRange, onDateRang
           accent
         />
       </div>
-      <DataTable
+<DataTable
         columns={columns}
         data={items}
         pageSize={20}
@@ -149,6 +197,7 @@ export default function PurchaseSummary({ items, allItems, dateRange, onDateRang
         defaultVisible={DEFAULT_VISIBLE}
         columnGroups={COLUMN_GROUPS}
         title="ringkasan-pembelian"
+        totalColumns={['quantity', 'unitCost', 'netTotal']}
       />
     </PageLayout>
   );

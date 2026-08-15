@@ -2,88 +2,86 @@
 
 ## Project Overview
 
-This is a **purchasing dashboard** frontend-only project built with Vite + React + TypeScript + Tailwind CSS + shadcn/ui. The dashboard has 14 purchasing-related pages with sidebar navigation.
+**Purchasing dashboard** — frontend-only Vite + React + TypeScript + Tailwind CSS v4 + shadcn/ui app with 14 purchasing pages in a sidebar. Real dataset (`purchase-data.json`, ~3,010 invoice line items); never use mock data.
 
 ## Key Files
 
-- `prompt.md` — Complete specification for the dashboard (14 pages, UI conventions, data handling rules)
-- `purchase-data.json` — Real dataset: ~3,010 purchase invoice line items
-- `dashboard/` — Main application directory
-
-## Tech Stack
-
-- **Framework**: Vite + React + TypeScript
-- **Styling**: Tailwind CSS v4 + shadcn/ui (CLI-installed, radix-nova style, `radix-ui` consolidated package)
-- **Routing**: React Router DOM
-- **Charts**: Recharts
-- **Date Utils**: date-fns with Indonesian locale
-- **Export**: xlsx (Excel), jspdf + jspdf-autotable (PDF)
-- **UI Components**: shadcn/ui — installed via `npx shadcn@latest add <component> -o` (CLI needs network to ui.shadcn.com; init preset: `-b radix -p nova`)
-
-## Data Handling Rules (Critical)
-
-- **String-to-number conversion**: Numeric fields (`quantity`, `unitCost`, `poUnitCost`, `netTotal`, `qtyOrdered`, `poPiDays`, `prPiDays`, `poPiOverdueDays`) are stored as strings — parse to `Number` before any math
-- **Empty strings**: `""` means no value — show as `-` in UI, exclude from averages/counts
-- **Data limitation**: Only contains invoiced transactions (PI/PN/PURBB types). No goods-receiving, QC, or reject data
-- **Categories**: Exactly 5 values: `BAHAN BAKU`, `BAHAN PENDUKUNG`, `SPAREPART`, `WORK IN PROGRESS`, `BARANG DAGANG`
-
-## Placeholder Pages (No Fabricated Data)
-
-Pages #4 (Supplier Quality), #11 (Outstanding PO), #12 (Open PO), #13 (Closed PO) must remain empty-state with placeholder messages. Do not invent data for these.
-
-## UI Conventions
-
-- All labels in Indonesian
-- Currency formatted as Rupiah (`Rp 1.234.567`)
-- Percentages to 1 decimal
-- Date range filter drives all widgets/tables/charts
-- Consistent page shell: stat widgets → chart/table
-- **Date Filter**: Shows formatted date range (e.g., "01 Agu 2026 – 15 Agu 2026") with date pickers
-- **Data Table**: Includes Export (CSV/Excel/PDF) and Kolom (column toggle) buttons with grouped categories
-- **Pagination**: Shows "Halaman X dari Y" with Previous/Next buttons
-- **Dark Mode**: Toggle in header, persists via localStorage, respects system preference
+- `prompt.md` — Complete page-by-page spec (14 pages, widget/table definitions, data rules)
+- `polish.md` — Responsive polish spec (fluid type scale, mobile table strategies, breakpoints 375/640/1024). Respect these patterns in new UI work.
+- `purchase-data.json` — Dataset (repo root, imported into `dashboard/src/data/`)
+- `dashboard/` — The app; all work happens here
 
 ## Development Commands
 
 ```bash
 cd dashboard
 npm install
-npm run dev      # Start development server
-npm run build    # Build for production
-npm run preview  # Preview production build
+npm run dev       # Vite dev server (host: true, port 5173)
+npm run lint      # oxlint (config: .oxlintrc.json)
+npm run build     # tsc -b (typecheck, noEmit) && vite build — this IS the typecheck step
+npm run preview   # Preview production build
 ```
+
+- There is **no separate typecheck script** — `npm run build` runs `tsc -b` first.
+- Verify with `npm run lint` then `npm run build` before finishing.
+
+## Data Handling (Critical)
+
+- **Numeric fields are strings** in the JSON: `quantity`, `unitCost`, `poUnitCost`, `netTotal`, `qtyOrdered`, `poPiDays`, `prPiDays`, `poPiOverdueDays`. Parse with `parseAllItems()` (`utils/formatters.ts`) before math.
+- **Gotcha**: `parsePurchaseItem()` converts empty string `""` to `0`, not `NaN`/`null`. Pages therefore guard with `> 0` filters (e.g. `poPiDays > 0`, `qtyOrdered > 0`) rather than null checks — follow this pattern. Empty values render as `-` in the UI.
+- Only invoiced transactions (types PI/PN/PURBB). No goods-receiving, QC, or reject data.
+- `itemCategory` has exactly 5 values: `BAHAN BAKU`, `BAHAN PENDUKUNG`, `SPAREPART`, `WORK IN PROGRESS`, `BARANG DAGANG`.
+
+## Placeholder Pages (Never Fabricate Data)
+
+Pages #4 (Supplier Quality), #11 (Outstanding PO), #12 (Open PO), #13 (Closed PO) must stay empty-state via the `EmptyState` component with the existing messages. No invented numbers, ever.
+
+## TypeScript Gotchas
+
+- `verbatimModuleSyntax: true` — type-only imports must use `import type`.
+- `noUnusedLocals`/`noUnusedParameters` are errors — build fails on unused vars.
+- Path alias `@/` → `./src/` (in `vite.config.ts` + `tsconfig.app.json`); shadcn CLI reads it, so `npx shadcn@latest add <component> -o` works non-interactively (needs network to ui.shadcn.com).
+
+## UI Conventions
+
+- All labels in Indonesian; currency as `Rp 1.234.567` (`formatRupiah`), percentages 1 decimal (`formatPercent`)
+- Date range filter (via `DateFilter`) drives every page's widgets/table/chart; filtering uses `filterByDateRange()` (defaults to `purchaseDate`, some pages pass `poDate`/`prDate`)
+- Page shell: stat widget cards (`StatCard`) → chart/table; `PageLayout` wraps pages, `ChartCard` wraps Recharts charts (CSS vars `--color-chart-1..5`, cartesian grid uses `stroke-border`)
+- Tables use `DataTable` (search, sortable headers, pagination "Halaman X dari Y", Export CSV/Excel/PDF, "Kolom" column toggle with grouped categories)
+- Proxy-metric pages carry an `InfoBanner` note explaining the data limitation (e.g. Supplier Delivery, Supplier Scorecard)
+- Dark mode: `ThemeToggle` toggles `.dark` on `<html>`, persists via `localStorage` key `theme` (no next-themes in app code)
+- Responsive rules from `polish.md`: no page-level horizontal scroll; tables use horizontal-scroll container with sticky first column; fluid type scale, min 12px text
 
 ## Project Structure
 
 ```
-dashboard/
-├── src/
-│   ├── components/
-│   │   ├── ui/           # shadcn/ui components (Card, Button, Input, Table, Badge, Sidebar, DropdownMenu, Chart, ...)
-│   │   ├── dashboard/    # dashboard-01 block components (AppSidebar, SiteHeader, SectionCards)
-│   │   ├── Layout.tsx    # Main layout wrapper (SidebarProvider + AppSidebar + SiteHeader)
-│   │   ├── StatCard.tsx  # KPI stat card component
-│   │   ├── DataTable.tsx # Data table with sorting, pagination, export
-│   │   ├── DateFilter.tsx # Date range filter
-│   │   └── ThemeToggle.tsx # Dark mode toggle (toggles `.dark` on <html>)
-│   ├── pages/            # 14 page components
-│   ├── types/            # TypeScript type definitions
-│   ├── utils/            # Utility functions (formatters)
-│   ├── lib/              # Utility functions (cn for className merging)
-│   ├── hooks/            # use-mobile hook (from shadcn sidebar)
-│   └── data/             # purchase-data.json
-├── public/
-├── components.json       # shadcn CLI config (aliases, style: radix-nova)
-└── package.json
+dashboard/src/
+├── components/
+│   ├── ui/           # shadcn/ui (button, card, chart, sidebar, table, ...)
+│   ├── dashboard/    # sidebar blocks (AppSidebar, SiteHeader, SectionCards)
+│   ├── Layout.tsx    # SidebarProvider + AppSidebar + SiteHeader shell
+│   ├── PageLayout.tsx # Shared page shell (title + date filter + content)
+│   ├── StatCard.tsx  # KPI stat card
+│   ├── DataTable.tsx # Sortable/exportable table with column toggle
+│   ├── DateFilter.tsx
+│   ├── ChartCard.tsx # Chart wrapper (Card + header)
+│   ├── EmptyState.tsx # Placeholder pages
+│   ├── InfoBanner.tsx # Data-limitation notes
+│   └── ThemeToggle.tsx
+├── pages/            # 14 pages (PurchaseSummary, PurchaseBySupplier, ... ClosedPO)
+├── utils/formatters.ts # parseAllItems, formatRupiah, formatPercent, filterByDateRange
+├── types/purchase.ts  # PurchaseItem / ParsedPurchaseItem
+├── data/purchase-data.json
+└── lib/              # cn() helper
 ```
 
-## Key Implementation Details
+## Per-Page Notes (from prompt.md)
 
-- **Path Alias**: `@/` maps to `./src/` (defined in both `vite.config.ts` using `import.meta.dirname` and `tsconfig.app.json`) — the shadcn CLI reads this, so `npx shadcn@latest add` works non-interactively
-- **Data parsing**: All numeric fields parsed in `utils/formatters.ts` using `parseAllItems()`
-- **Date filtering**: `filterByDateRange()` handles date-based filtering across all pages
-- **Rupiah formatting**: `formatRupiah()` for currency display
-- **Table component**: `DataTable` supports sorting, pagination, search, export (CSV/Excel/PDF), and column visibility toggle with grouped categories
-- **Charts**: Recharts wrapped in `ChartCard` (Card + header) using CSS vars `--color-chart-1..5` for stroke/fill; cartesian grid uses `stroke-border`
-- **Font**: Geist Variable (`@fontsource-variable/geist`) via `--font-sans` in the Tailwind theme
-- **shadcn/ui**: Use `cn()` utility for className merging with Tailwind CSS
+- #1 Purchase Summary: full line-item table with grouped "Kolom" column picker (default columns: purchaseNumber, purchaseDate, supplierName, itemName, warehouse, quantity, uom, netTotal)
+- #5 Supplier Delivery: proxy metric from `poPiDays`/`poPiOverdueDays` (PO→Invoice, not goods receipt)
+- #6 Purchase Price History: item dropdown (`itemName`) required alongside date filter; prompt state if none selected
+- #7 Purchase Variance: `variance = quantity - qtyOrdered` only where `qtyOrdered > 0`; rows with variance ≠ 0
+- #8 Material Cost Trend: scope only `BAHAN BAKU` + `BAHAN PENDUKUNG`, category toggle, monthly `netTotal` by month
+- #9 Price Increase Alert: per-item sequential `unitCost` increase ≥ threshold (default 10%), severity-highlighted rows
+- #10 Purchase Lead Time: histogram buckets 0-3/4-7/8-14/15+ hari; only `prPiDays`/`poPiDays` exist — don't invent PR→PO figures
+- #14 Supplier Scorecard: score = avg(price score, timeliness score), both 0-100; rating badge Excellent ≥80 / Good 60-79 / Perlu Perhatian <60

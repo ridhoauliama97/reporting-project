@@ -41,28 +41,28 @@ export default function DateFilter({ dateRange, onChange }: DateFilterProps) {
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <CalendarIcon className="size-4" />
-        <span className="font-medium text-foreground">
+        <CalendarIcon className="size-4 shrink-0" />
+        <span className="truncate font-medium text-foreground">
           {dateRange.start && dateRange.end
             ? `${formatDateDisplay(dateRange.start)} – ${formatDateDisplay(dateRange.end)}`
             : 'Semua Data'}
         </span>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:flex">
         <Input
           type="date"
           value={formatDateForInput(dateRange.start)}
           onChange={handleStartChange}
-          className="h-9 w-fit"
+          className="h-11 min-w-0 w-full sm:h-9 sm:w-fit"
         />
         <span className="text-muted-foreground">–</span>
         <Input
           type="date"
           value={formatDateForInput(dateRange.end)}
           onChange={handleEndChange}
-          className="h-9 w-fit"
+          className="h-11 min-w-0 w-full sm:h-9 sm:w-fit"
         />
       </div>
     </div>

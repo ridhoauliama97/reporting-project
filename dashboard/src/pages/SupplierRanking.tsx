@@ -1,11 +1,21 @@
-import { useMemo } from 'react';
-import type { ParsedPurchaseItem } from '../types/purchase';
-import { formatRupiah, formatNumber, formatPercent } from '../utils/formatters';
-import PageLayout from '../components/PageLayout';
-import StatCard from '../components/StatCard';
-import DataTable from '../components/DataTable';
-import ChartCard from '../components/ChartCard';
-import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useMemo } from "react";
+import type { ParsedPurchaseItem } from "../types/purchase";
+import { formatRupiah, formatNumber, formatPercent } from "../utils/formatters";
+import PageLayout from "../components/PageLayout";
+import StatCard from "../components/StatCard";
+import DataTable from "../components/DataTable";
+import ChartCard from "../components/ChartCard";
+import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  BarChart,
+  Bar,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 interface DateRange {
   start: Date | null;
@@ -13,19 +23,12 @@ interface DateRange {
 }
 
 const CHART_COLORS = [
-  'var(--color-chart-1)',
-  'var(--color-chart-2)',
-  'var(--color-chart-3)',
-  'var(--color-chart-4)',
-  'var(--color-chart-5)',
+  "var(--color-chart-1)",
+  "var(--color-chart-2)",
+  "var(--color-chart-3)",
+  "var(--color-chart-4)",
+  "var(--color-chart-5)",
 ];
-
-const formatCompactRupiah = (v: number): string => {
-  if (v >= 1e9) return `Rp ${(v / 1e9).toLocaleString('id-ID', { maximumFractionDigits: 1 })} M`;
-  if (v >= 1e6) return `Rp ${(v / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 0 })} jt`;
-  if (v >= 1e3) return `Rp ${(v / 1e3).toLocaleString('id-ID', { maximumFractionDigits: 0 })} rb`;
-  return `Rp ${v.toLocaleString('id-ID')}`;
-};
 
 interface SupplierRankingProps {
   items: ParsedPurchaseItem[];
@@ -41,14 +44,22 @@ interface SupplierRank {
   percentContribution: number;
 }
 
-export default function SupplierRanking({ items, dateRange, onDateRangeChange }: SupplierRankingProps) {
-  const grandTotal = useMemo(() => items.reduce((sum, item) => sum + item.netTotal, 0), [items]);
+export default function SupplierRanking({
+  items,
+  dateRange,
+  onDateRangeChange,
+}: SupplierRankingProps) {
+  const isMobile = useIsMobile();
+  const grandTotal = useMemo(
+    () => items.reduce((sum, item) => sum + item.netTotal, 0),
+    [items],
+  );
 
   const supplierRanks = useMemo(() => {
     const grouped: Record<string, { total: number; count: number }> = {};
 
     items.forEach((item) => {
-      const name = item.supplierName || '-';
+      const name = item.supplierName || "-";
       if (!grouped[name]) {
         grouped[name] = { total: 0, count: 0 };
       }
@@ -61,7 +72,8 @@ export default function SupplierRanking({ items, dateRange, onDateRangeChange }:
         supplierName: name,
         totalPurchase: data.total,
         transactionCount: data.count,
-        percentContribution: grandTotal > 0 ? (data.total / grandTotal) * 100 : 0,
+        percentContribution:
+          grandTotal > 0 ? (data.total / grandTotal) * 100 : 0,
       }))
       .sort((a, b) => b.totalPurchase - a.totalPurchase);
 
@@ -72,34 +84,73 @@ export default function SupplierRanking({ items, dateRange, onDateRangeChange }:
   }, [items, grandTotal]);
 
   const top1 = supplierRanks[0];
-  const top5Total = supplierRanks.slice(0, 5).reduce((sum, s) => sum + s.totalPurchase, 0);
+  const top5Total = supplierRanks
+    .slice(0, 5)
+    .reduce((sum, s) => sum + s.totalPurchase, 0);
   const top5Percent = grandTotal > 0 ? (top5Total / grandTotal) * 100 : 0;
-  const avgPerSupplier = supplierRanks.length > 0 ? grandTotal / supplierRanks.length : 0;
+  const avgPerSupplier =
+    supplierRanks.length > 0 ? grandTotal / supplierRanks.length : 0;
 
   const chartData = supplierRanks.slice(0, 10).map((s) => ({
-    name: s.supplierName.length > 20 ? s.supplierName.substring(0, 20) + '...' : s.supplierName,
+    name:
+      s.supplierName.length > (isMobile ? 13 : 20)
+        ? s.supplierName.substring(0, isMobile ? 13 : 20) + "..."
+        : s.supplierName,
     total: s.totalPurchase,
   }));
 
   const columns = [
-    { key: 'rank', label: 'Rank', align: 'center' as const },
-    { key: 'supplierName', label: 'Nama Supplier', sortable: true },
-    { key: 'totalPurchase', label: 'Total Pembelian', align: 'right' as const, sortable: true, render: (item: SupplierRank) => formatRupiah(item.totalPurchase) },
-    { key: 'transactionCount', label: 'Jumlah Transaksi', align: 'right' as const, sortable: true },
-    { key: 'percentContribution', label: '% Kontribusi', align: 'right' as const, sortable: true, render: (item: SupplierRank) => formatPercent(item.percentContribution) },
+    { key: "rank", label: "Rank", align: "center" as const },
+    { key: "supplierName", label: "Nama Supplier", sortable: true },
+    {
+      key: "totalPurchase",
+      label: "Total Pembelian",
+      align: "right" as const,
+      sortable: true,
+      render: (item: SupplierRank) => formatRupiah(item.totalPurchase),
+    },
+    {
+      key: "transactionCount",
+      label: "Jumlah Transaksi",
+      align: "right" as const,
+      sortable: true,
+    },
+    {
+      key: "percentContribution",
+      label: "% Kontribusi",
+      align: "right" as const,
+      sortable: true,
+      render: (item: SupplierRank) => formatPercent(item.percentContribution),
+    },
   ];
 
   return (
-    <PageLayout title="Peringkat Supplier" dateRange={dateRange} onDateRangeChange={onDateRangeChange}>
+    <PageLayout
+      title="Supplier Ranking"
+      subtitle="Peringkat supplier berdasarkan total pembelian dan kontribusi terhadap total pembelian."
+      dateRange={dateRange}
+      onDateRangeChange={onDateRangeChange}
+    >
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Top 1 Supplier"
-          value={top1 ? formatRupiah(top1.totalPurchase) : '-'}
+          value={top1 ? formatRupiah(top1.totalPurchase) : "-"}
           subtitle={top1?.supplierName}
         />
-        <StatCard title="Top 5 Suppliers (Gabungan)" value={formatRupiah(top5Total)} subtitle={formatPercent(top5Percent)} />
-        <StatCard title="Jumlah Supplier" value={formatNumber(supplierRanks.length)} />
-        <StatCard title="Rata-rata per Supplier" value={formatRupiah(avgPerSupplier)} accent />
+        <StatCard
+          title="Top 5 Suppliers (Gabungan)"
+          value={formatRupiah(top5Total)}
+          subtitle={formatPercent(top5Percent)}
+        />
+        <StatCard
+          title="Jumlah Supplier"
+          value={formatNumber(supplierRanks.length)}
+        />
+        <StatCard
+          title="Rata-rata per Supplier"
+          value={formatRupiah(avgPerSupplier)}
+          accent
+        />
       </div>
 
       <ChartCard
@@ -108,13 +159,40 @@ export default function SupplierRanking({ items, dateRange, onDateRangeChange }:
       >
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData} layout="vertical" margin={{ left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border" horizontal={false} />
-            <XAxis type="number" tickFormatter={formatCompactRupiah} className="text-xs text-muted-foreground" tickLine={false} axisLine={false} />
-            <YAxis type="category" dataKey="name" width={180} className="text-xs text-muted-foreground" tickLine={false} axisLine={false} />
-            <Tooltip formatter={(value) => [formatCompactRupiah(Number(value)), 'Total Pembelian']} cursor={{ fill: 'var(--color-muted)' }} contentStyle={{ borderRadius: 8 }} />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              className="stroke-border"
+              horizontal={false}
+            />
+            <XAxis
+              type="number"
+              tickFormatter={(v) => formatRupiah(Number(v))}
+              className="text-xs text-muted-foreground"
+              tickLine={false}
+              axisLine={false}
+            />
+            <YAxis
+              type="category"
+              dataKey="name"
+              width={isMobile ? 120 : 180}
+              className="text-xs text-muted-foreground"
+              tickLine={false}
+              axisLine={false}
+            />
+            <Tooltip
+              formatter={(value) => [
+                formatRupiah(Number(value)),
+                "Total Pembelian",
+              ]}
+              cursor={{ fill: "var(--color-muted)" }}
+              contentStyle={{ borderRadius: 8 }}
+            />
             <Bar dataKey="total" radius={[0, 4, 4, 0]}>
               {chartData.map((_, idx) => (
-                <Cell key={idx} fill={CHART_COLORS[idx % CHART_COLORS.length]} />
+                <Cell
+                  key={idx}
+                  fill={CHART_COLORS[idx % CHART_COLORS.length]}
+                />
               ))}
             </Bar>
           </BarChart>

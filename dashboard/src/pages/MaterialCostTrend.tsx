@@ -1,13 +1,27 @@
-import { useMemo, useState } from 'react';
-import type { ParsedPurchaseItem } from '../types/purchase';
-import { formatRupiah, formatPercent, getMonthYear, getMonthLabel } from '../utils/formatters';
-import PageLayout from '../components/PageLayout';
-import StatCard from '../components/StatCard';
-import DataTable from '../components/DataTable';
-import ChartCard from '../components/ChartCard';
-import { Card, CardContent } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { useMemo, useState } from "react";
+import type { ParsedPurchaseItem } from "../types/purchase";
+import {
+  formatRupiah,
+  formatPercent,
+  getMonthYear,
+  getMonthLabel,
+} from "../utils/formatters";
+import PageLayout from "../components/PageLayout";
+import StatCard from "../components/StatCard";
+import DataTable from "../components/DataTable";
+import ChartCard from "../components/ChartCard";
+import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 
 interface DateRange {
   start: Date | null;
@@ -20,18 +34,27 @@ interface MaterialCostTrendProps {
   onDateRangeChange: (range: DateRange) => void;
 }
 
-export default function MaterialCostTrend({ items, dateRange, onDateRangeChange }: MaterialCostTrendProps) {
+export default function MaterialCostTrend({
+  items,
+  dateRange,
+  onDateRangeChange,
+}: MaterialCostTrendProps) {
   const [showBahanBaku, setShowBahanBaku] = useState(true);
   const [showBahanPendukung, setShowBahanPendukung] = useState(true);
 
   const materialItems = useMemo(() => {
     return items.filter(
-      (item) => item.itemCategory === 'BAHAN BAKU' || item.itemCategory === 'BAHAN PENDUKUNG'
+      (item) =>
+        item.itemCategory === "BAHAN BAKU" ||
+        item.itemCategory === "BAHAN PENDUKUNG",
     );
   }, [items]);
 
   const monthlyData = useMemo(() => {
-    const grouped: Record<string, { bahanBaku: number; bahanPendukung: number; total: number }> = {};
+    const grouped: Record<
+      string,
+      { bahanBaku: number; bahanPendukung: number; total: number }
+    > = {};
 
     materialItems.forEach((item) => {
       const monthKey = getMonthYear(item.purchaseDate);
@@ -39,7 +62,7 @@ export default function MaterialCostTrend({ items, dateRange, onDateRangeChange 
       if (!grouped[monthKey]) {
         grouped[monthKey] = { bahanBaku: 0, bahanPendukung: 0, total: 0 };
       }
-      if (item.itemCategory === 'BAHAN BAKU') {
+      if (item.itemCategory === "BAHAN BAKU") {
         grouped[monthKey].bahanBaku += item.netTotal;
       } else {
         grouped[monthKey].bahanPendukung += item.netTotal;
@@ -56,20 +79,30 @@ export default function MaterialCostTrend({ items, dateRange, onDateRangeChange 
       .sort((a, b) => a.month.localeCompare(b.month));
   }, [materialItems]);
 
-  const totalCost = useMemo(() => materialItems.reduce((sum, i) => sum + i.netTotal, 0), [materialItems]);
-  const avgPerMonth = monthlyData.length > 0 ? totalCost / monthlyData.length : 0;
-  const highestMonth = monthlyData.reduce((max, m) => (m.total > max.total ? m : max), monthlyData[0]);
+  const totalCost = useMemo(
+    () => materialItems.reduce((sum, i) => sum + i.netTotal, 0),
+    [materialItems],
+  );
+  const avgPerMonth =
+    monthlyData.length > 0 ? totalCost / monthlyData.length : 0;
+  const highestMonth = monthlyData.reduce(
+    (max, m) => (m.total > max.total ? m : max),
+    monthlyData[0],
+  );
 
-  const prevMonth = monthlyData.length >= 2 ? monthlyData[monthlyData.length - 2] : null;
-  const currentMonth = monthlyData.length >= 1 ? monthlyData[monthlyData.length - 1] : null;
-  const trendPercent = prevMonth && currentMonth && prevMonth.total > 0
-    ? ((currentMonth.total - prevMonth.total) / prevMonth.total) * 100
-    : 0;
+  const prevMonth =
+    monthlyData.length >= 2 ? monthlyData[monthlyData.length - 2] : null;
+  const currentMonth =
+    monthlyData.length >= 1 ? monthlyData[monthlyData.length - 1] : null;
+  const trendPercent =
+    prevMonth && currentMonth && prevMonth.total > 0
+      ? ((currentMonth.total - prevMonth.total) / prevMonth.total) * 100
+      : 0;
 
   const chartData = monthlyData.map((m) => ({
     name: m.label,
-    'Bahan Baku': m.bahanBaku,
-    'Bahan Pendukung': m.bahanPendukung,
+    "Bahan Baku": m.bahanBaku,
+    "Bahan Pendukung": m.bahanPendukung,
   }));
 
   const tableData = monthlyData.map((m) => ({
@@ -80,18 +113,40 @@ export default function MaterialCostTrend({ items, dateRange, onDateRangeChange 
   }));
 
   const columns = [
-    { key: 'month', label: 'Bulan', sortable: true },
-    { key: 'bahanBaku', label: 'Bahan Baku', align: 'right' as const, render: (item: any) => formatRupiah(item.bahanBaku) },
-    { key: 'bahanPendukung', label: 'Bahan Pendukung', align: 'right' as const, render: (item: any) => formatRupiah(item.bahanPendukung) },
-    { key: 'total', label: 'Total', align: 'right' as const, render: (item: any) => formatRupiah(item.total) },
+    { key: "month", label: "Bulan", sortable: true },
+    {
+      key: "bahanBaku",
+      label: "Bahan Baku",
+      align: "right" as const,
+      render: (item: any) => formatRupiah(item.bahanBaku),
+    },
+    {
+      key: "bahanPendukung",
+      label: "Bahan Pendukung",
+      align: "right" as const,
+      render: (item: any) => formatRupiah(item.bahanPendukung),
+    },
+    {
+      key: "total",
+      label: "Total",
+      align: "right" as const,
+      render: (item: any) => formatRupiah(item.total),
+    },
   ];
 
   return (
-    <PageLayout title="Tren Biaya Material" dateRange={dateRange} onDateRangeChange={onDateRangeChange}>
+    <PageLayout
+      title="Material Cost Trend"
+      subtitle="Tren biaya material per bulan, termasuk Bahan Baku dan Bahan Pendukung."
+      dateRange={dateRange}
+      onDateRangeChange={onDateRangeChange}
+    >
       <Card>
         <CardContent className="p-4">
-          <label className="mb-3 block text-sm font-medium text-muted-foreground">Filter Kategori</label>
-          <div className="flex items-center gap-6">
+          <label className="mb-3 block text-sm font-medium text-muted-foreground">
+            Filter Kategori
+          </label>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <label className="flex cursor-pointer items-center gap-2 text-sm">
               <Checkbox
                 checked={showBahanBaku}
@@ -111,15 +166,24 @@ export default function MaterialCostTrend({ items, dateRange, onDateRangeChange 
       </Card>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Biaya Material" value={formatRupiah(totalCost)} />
-        <StatCard title="Rata-rata Biaya per Bulan" value={formatRupiah(avgPerMonth)} />
+        <StatCard
+          title="Total Biaya Material"
+          value={formatRupiah(totalCost)}
+        />
+        <StatCard
+          title="Rata-rata Biaya per Bulan"
+          value={formatRupiah(avgPerMonth)}
+        />
         <StatCard
           title="Bulan dengan Biaya Tertinggi"
-          value={highestMonth?.label || '-'}
-          subtitle={highestMonth ? formatRupiah(highestMonth.total) : ''}
+          value={highestMonth?.label || "-"}
+          subtitle={highestMonth ? formatRupiah(highestMonth.total) : ""}
           accent
         />
-        <StatCard title="Trend vs Bulan Lalu" value={formatPercent(trendPercent)} />
+        <StatCard
+          title="Trend vs Bulan Lalu"
+          value={formatPercent(trendPercent)}
+        />
       </div>
 
       <ChartCard
@@ -129,12 +193,44 @@ export default function MaterialCostTrend({ items, dateRange, onDateRangeChange 
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-            <XAxis dataKey="name" className="text-xs text-muted-foreground" tickLine={false} axisLine={false} dy={8} />
-            <YAxis tickFormatter={(v) => `Rp ${(v / 1000000).toFixed(0)}jt`} className="text-xs text-muted-foreground" tickLine={false} axisLine={false} width={56} />
-            <Tooltip formatter={(value) => formatRupiah(Number(value))} contentStyle={{ borderRadius: 8 }} />
+            <XAxis
+              dataKey="name"
+              className="text-xs text-muted-foreground"
+              tickLine={false}
+              axisLine={false}
+              dy={8}
+              minTickGap={28}
+            />
+            <YAxis
+              tickFormatter={(v) => formatRupiah(Number(v))}
+              className="text-xs text-muted-foreground"
+              tickLine={false}
+              axisLine={false}
+              width={110}
+            />
+            <Tooltip
+              formatter={(value) => formatRupiah(Number(value))}
+              contentStyle={{ borderRadius: 8 }}
+            />
             <Legend />
-            {showBahanBaku && <Line type="monotone" dataKey="Bahan Baku" stroke="var(--color-chart-1)" strokeWidth={2} dot={false} />}
-            {showBahanPendukung && <Line type="monotone" dataKey="Bahan Pendukung" stroke="var(--color-chart-2)" strokeWidth={2} dot={false} />}
+            {showBahanBaku && (
+              <Line
+                type="monotone"
+                dataKey="Bahan Baku"
+                stroke="var(--color-chart-1)"
+                strokeWidth={2}
+                dot={false}
+              />
+            )}
+            {showBahanPendukung && (
+              <Line
+                type="monotone"
+                dataKey="Bahan Pendukung"
+                stroke="var(--color-chart-2)"
+                strokeWidth={2}
+                dot={false}
+              />
+            )}
           </LineChart>
         </ResponsiveContainer>
       </ChartCard>

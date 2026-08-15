@@ -29,18 +29,20 @@ export default function StatCard({ title, value, subtitle, accent = false }: Sta
         </div>
         <div
           className={cn(
-            "mt-1 text-2xl font-semibold tabular-nums",
+            "mt-1 truncate text-xl font-semibold tabular-nums md:text-3xl",
             accent ? "text-primary-foreground" : "text-foreground"
           )}
+          title={String(value)}
         >
           {value}
         </div>
         {subtitle && (
           <div
             className={cn(
-              "mt-1 text-xs",
+              "mt-1 truncate text-xs",
               accent ? "text-primary-foreground/80" : "text-muted-foreground"
             )}
+            title={subtitle}
           >
             {subtitle}
           </div>

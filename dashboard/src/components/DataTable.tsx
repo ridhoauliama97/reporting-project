@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { ChevronUpIcon, ChevronDownIcon, ChevronsUpDownIcon, Columns3Icon, DownloadIcon, SearchIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -42,6 +42,7 @@ interface DataTableProps<T> {
   defaultVisible?: string[];
   columnGroups?: ColumnGroup[];
   title?: string;
+  totalColumns?: string[];
 }
 
 export default function DataTable<T extends Record<string, any>>({
@@ -55,6 +56,7 @@ export default function DataTable<T extends Record<string, any>>({
   defaultVisible = [],
   columnGroups = [],
   title = 'data-pembelian',
+  totalColumns = [],
 }: DataTableProps<T>) {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
@@ -62,6 +64,20 @@ export default function DataTable<T extends Record<string, any>>({
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
     new Set(defaultVisible.length > 0 ? defaultVisible : columns.map((c) => c.key))
   );
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateScrollIndicators = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 4);
+  };
+
+  useEffect(() => {
+    updateScrollIndicators();
+    window.addEventListener('resize', updateScrollIndicators);
+    return () => window.removeEventListener('resize', updateScrollIndicators);
+  }, [data, visibleColumns]);
 
   const filteredData = searchable && searchTerm
     ? data.filter((item) =>
@@ -166,6 +182,15 @@ export default function DataTable<T extends Record<string, any>>({
   const hasGrouping = columnGroups.length > 0;
   const allColumnKeys = new Set(columns.map((c) => c.key));
 
+  const totals = useMemo(() => {
+    if (totalColumns.length === 0) return null;
+    const acc: Record<string, number> = {};
+    totalColumns.forEach((key) => {
+      acc[key] = paginatedData.reduce((sum, item) => sum + (Number(item[key]) || 0), 0);
+    });
+    return acc;
+  }, [totalColumns, paginatedData]);
+
   return (
     <div className="rounded-xl border bg-card text-card-foreground shadow-xs">
       <div className="flex flex-col gap-3 border-b p-4 lg:flex-row lg:items-center lg:justify-between">
@@ -181,7 +206,7 @@ export default function DataTable<T extends Record<string, any>>({
                   setSearchTerm(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="pl-8"
+                className="h-11 pl-8 md:h-9"
               />
             </div>
           )}
@@ -193,7 +218,7 @@ export default function DataTable<T extends Record<string, any>>({
           {showColumnToggle && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="h-10 md:h-8">
                   <Columns3Icon />
                   Kolom
                 </Button>
@@ -250,7 +275,7 @@ export default function DataTable<T extends Record<string, any>>({
           {showExport && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="h-10 md:h-8">
                   <DownloadIcon />
                   Export
                 </Button>
@@ -264,17 +289,26 @@ export default function DataTable<T extends Record<string, any>>({
           )}
         </div>
       </div>
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50 hover:bg-muted/50">
-              {visibleColumnsList.map((col) => (
-                <TableHead
-                  key={col.key}
-                  className={cn(col.sortable && "cursor-pointer select-none")}
-                  onClick={() => col.sortable && handleSort(col.key)}
-                  style={{ textAlign: col.align === 'right' ? 'right' : 'left' }}
-                >
+      <div className="relative">
+        <div
+          ref={scrollRef}
+          onScroll={updateScrollIndicators}
+          className="overflow-x-auto"
+        >
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50 hover:bg-muted/50">
+                {visibleColumnsList.map((col) => (
+                  <TableHead
+                    key={col.key}
+                    className={cn(
+                      col.sortable && "cursor-pointer select-none",
+                      col.key === visibleColumnsList[0]?.key &&
+                        "sticky left-0 z-10 border-r border-border bg-muted/50"
+                    )}
+                    onClick={() => col.sortable && handleSort(col.key)}
+                    style={{ textAlign: col.align === 'right' ? 'right' : 'left' }}
+                  >
                   <span className="inline-flex items-center gap-1">
                     {col.label}
                     {col.sortable && (
@@ -302,11 +336,15 @@ export default function DataTable<T extends Record<string, any>>({
               </TableRow>
             ) : (
               paginatedData.map((item, idx) => (
-                <TableRow key={idx}>
+                <TableRow key={idx} className="group">
                   {visibleColumnsList.map((col) => (
                     <TableCell
                       key={col.key}
-                      className="whitespace-nowrap tabular-nums"
+                      className={cn(
+                        "whitespace-nowrap tabular-nums",
+                        col.key === visibleColumnsList[0]?.key &&
+                          "sticky left-0 z-10 border-r border-border bg-card group-hover:bg-muted/50"
+                      )}
                       style={{ textAlign: col.align === 'right' ? 'right' : 'left' }}
                     >
                       {col.render ? col.render(item) : (item[col.key] ?? '-')}
@@ -316,7 +354,52 @@ export default function DataTable<T extends Record<string, any>>({
               ))
             )}
           </TableBody>
+          {totals && (
+            <TableFooter>
+              <TableRow className="bg-muted/50 hover:bg-muted/50">
+                {visibleColumnsList.map((col) => {
+                  const isFirst = col.key === visibleColumnsList[0]?.key;
+                  const stickyClass = isFirst
+                    ? "sticky left-0 z-10 border-r border-border bg-muted/50"
+                    : "";
+                  if (isFirst) {
+                    return (
+                      <TableCell
+                        key={col.key}
+                        className={cn("font-semibold", stickyClass)}
+                        style={{ textAlign: col.align === 'right' ? 'right' : 'left' }}
+                      >
+                        Total
+                      </TableCell>
+                    );
+                  }
+                  if (Object.prototype.hasOwnProperty.call(totals, col.key)) {
+                    return (
+                      <TableCell
+                        key={col.key}
+                        className={cn("font-semibold tabular-nums", stickyClass)}
+                        style={{ textAlign: col.align === 'right' ? 'right' : 'left' }}
+                      >
+                        {col.render
+                          ? col.render({ [col.key]: totals[col.key] } as T)
+                          : totals[col.key]}
+                      </TableCell>
+                    );
+                  }
+                  return <TableCell key={col.key} className={stickyClass} />;
+                })}
+              </TableRow>
+            </TableFooter>
+          )}
         </Table>
+        </div>
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-black/10 to-transparent transition-opacity duration-200 dark:from-white/10",
+            canScrollRight ? "opacity-100" : "opacity-0"
+          )}
+          aria-hidden
+        />
       </div>
       {totalPages > 1 && (
         <div className="flex flex-col gap-3 border-t p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -328,6 +411,7 @@ export default function DataTable<T extends Record<string, any>>({
             <Button
               variant="outline"
               size="sm"
+              className="h-10 md:h-8"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
             >
@@ -337,6 +421,7 @@ export default function DataTable<T extends Record<string, any>>({
             <Button
               variant="outline"
               size="sm"
+              className="h-10 md:h-8"
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
             >

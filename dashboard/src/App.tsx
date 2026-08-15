@@ -17,6 +17,17 @@ import OutstandingPO from './pages/OutstandingPO';
 import OpenPO from './pages/OpenPO';
 import ClosedPO from './pages/ClosedPO';
 import SupplierScorecard from './pages/SupplierScorecard';
+import WarehousePlaceholder from './pages/WarehousePlaceholder';
+
+const WAREHOUSES: Record<string, string> = {
+  'gudang-bahan-baku': '01: GUDANG BAHAN BAKU',
+  'gudang-barang-jadi': '04: GUDANG BARANG JADI',
+  'gudang-sparepart': '07: GUDANG SPAREPART',
+  'cbd-sparepart': '09: CBD SPAREPART',
+  'gudang-wip': '51: GUDANG WIP',
+  'gudang-pekanbaru': '54: GUDANG PEKANBARU',
+  'kantor-sales': '24: KANTOR SALES',
+};
 
 function getDefaultDateRange() {
   const now = new Date();
@@ -137,6 +148,13 @@ function App() {
           <Route path="/outstanding-po" element={<OutstandingPO />} />
           <Route path="/open-po" element={<OpenPO />} />
           <Route path="/closed-po" element={<ClosedPO />} />
+          {Object.entries(WAREHOUSES).map(([slug, name]) => (
+            <Route
+              key={slug}
+              path={`/warehouse/${slug}`}
+              element={<WarehousePlaceholder name={name} />}
+            />
+          ))}
           <Route
             path="/scorecard"
             element={

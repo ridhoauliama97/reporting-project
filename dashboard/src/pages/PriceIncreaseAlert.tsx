@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react';
-import type { ParsedPurchaseItem } from '../types/purchase';
-import { formatRupiah, formatPercent, formatDate } from '../utils/formatters';
-import PageLayout from '../components/PageLayout';
-import StatCard from '../components/StatCard';
-import DataTable from '../components/DataTable';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { useMemo, useState } from "react";
+import type { ParsedPurchaseItem } from "../types/purchase";
+import { formatRupiah, formatPercent, formatDate } from "../utils/formatters";
+import PageLayout from "../components/PageLayout";
+import StatCard from "../components/StatCard";
+import DataTable from "../components/DataTable";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 
 interface DateRange {
   start: Date | null;
@@ -28,7 +28,11 @@ interface PriceIncreaseItem {
   increasePercent: number;
 }
 
-export default function PriceIncreaseAlert({ items, dateRange, onDateRangeChange }: PriceIncreaseAlertProps) {
+export default function PriceIncreaseAlert({
+  items,
+  dateRange,
+  onDateRangeChange,
+}: PriceIncreaseAlertProps) {
   const [threshold, setThreshold] = useState(10);
 
   const flaggedItems = useMemo(() => {
@@ -45,12 +49,17 @@ export default function PriceIncreaseAlert({ items, dateRange, onDateRangeChange
     Object.entries(grouped).forEach(([itemName, itemGroup]) => {
       const sorted = itemGroup
         .filter((i) => i.unitCost > 0)
-        .sort((a, b) => new Date(a.purchaseDate).getTime() - new Date(b.purchaseDate).getTime());
+        .sort(
+          (a, b) =>
+            new Date(a.purchaseDate).getTime() -
+            new Date(b.purchaseDate).getTime(),
+        );
 
       for (let i = 1; i < sorted.length; i++) {
         const prev = sorted[i - 1];
         const curr = sorted[i];
-        const increase = ((curr.unitCost - prev.unitCost) / prev.unitCost) * 100;
+        const increase =
+          ((curr.unitCost - prev.unitCost) / prev.unitCost) * 100;
 
         if (increase >= threshold) {
           result.push({
@@ -69,39 +78,61 @@ export default function PriceIncreaseAlert({ items, dateRange, onDateRangeChange
     return result.sort((a, b) => b.increasePercent - a.increasePercent);
   }, [items, threshold]);
 
-  const avgIncrease = flaggedItems.length > 0
-    ? flaggedItems.reduce((sum, i) => sum + i.increasePercent, 0) / flaggedItems.length
-    : 0;
+  const avgIncrease =
+    flaggedItems.length > 0
+      ? flaggedItems.reduce((sum, i) => sum + i.increasePercent, 0) /
+        flaggedItems.length
+      : 0;
 
   const maxIncrease = flaggedItems[0];
 
   const monitoredItems = useMemo(() => {
     const itemSet = new Set(
-      items
-        .filter((i) => i.unitCost > 0)
-        .map((i) => i.itemName)
+      items.filter((i) => i.unitCost > 0).map((i) => i.itemName),
     );
     return itemSet.size;
   }, [items]);
 
   const columns = [
-    { key: 'itemName', label: 'Nama Item', sortable: true },
-    { key: 'supplierName', label: 'Nama Supplier', sortable: true },
-    { key: 'previousDate', label: 'Tanggal Sebelumnya', render: (item: PriceIncreaseItem) => formatDate(item.previousDate) },
-    { key: 'previousPrice', label: 'Harga Sebelumnya', align: 'right' as const, render: (item: PriceIncreaseItem) => formatRupiah(item.previousPrice) },
-    { key: 'latestDate', label: 'Tanggal Terbaru', render: (item: PriceIncreaseItem) => formatDate(item.latestDate) },
-    { key: 'latestPrice', label: 'Harga Terbaru', align: 'right' as const, render: (item: PriceIncreaseItem) => formatRupiah(item.latestPrice) },
+    { key: "itemName", label: "Nama Item", sortable: true },
+    { key: "supplierName", label: "Nama Supplier", sortable: true },
     {
-      key: 'increasePercent',
-      label: 'Kenaikan (%)',
-      align: 'right' as const,
+      key: "previousDate",
+      label: "Tanggal Sebelumnya",
+      render: (item: PriceIncreaseItem) => formatDate(item.previousDate),
+    },
+    {
+      key: "previousPrice",
+      label: "Harga Sebelumnya",
+      align: "right" as const,
+      render: (item: PriceIncreaseItem) => formatRupiah(item.previousPrice),
+    },
+    {
+      key: "latestDate",
+      label: "Tanggal Terbaru",
+      render: (item: PriceIncreaseItem) => formatDate(item.latestDate),
+    },
+    {
+      key: "latestPrice",
+      label: "Harga Terbaru",
+      align: "right" as const,
+      render: (item: PriceIncreaseItem) => formatRupiah(item.latestPrice),
+    },
+    {
+      key: "increasePercent",
+      label: "Kenaikan (%)",
+      align: "right" as const,
       sortable: true,
       render: (item: PriceIncreaseItem) => (
-        <span className={`px-2 py-1 rounded text-sm font-medium ${
-          item.increasePercent >= 20 ? 'bg-red-100 text-red-700' :
-          item.increasePercent >= 15 ? 'bg-orange-100 text-orange-700' :
-          'bg-yellow-100 text-yellow-700'
-        }`}>
+        <span
+          className={`px-2 py-1 rounded text-sm font-medium ${
+            item.increasePercent >= 20
+              ? "bg-red-100 text-red-700"
+              : item.increasePercent >= 15
+                ? "bg-orange-100 text-orange-700"
+                : "bg-yellow-100 text-yellow-700"
+          }`}
+        >
           {formatPercent(item.increasePercent)}
         </span>
       ),
@@ -109,13 +140,24 @@ export default function PriceIncreaseAlert({ items, dateRange, onDateRangeChange
   ];
 
   return (
-    <PageLayout title="Alert Kenaikan Harga" dateRange={dateRange} onDateRangeChange={onDateRangeChange}>
+    <PageLayout
+      title="Price Increase Alert"
+      subtitle="Daftar item yang mengalami kenaikan harga signifikan dalam periode tertentu."
+      dateRange={dateRange}
+      onDateRangeChange={onDateRangeChange}
+    >
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Jumlah Item Naik Harga" value={String(flaggedItems.length)} />
-        <StatCard title="Rata-rata Kenaikan" value={formatPercent(avgIncrease)} />
+        <StatCard
+          title="Jumlah Item Naik Harga"
+          value={String(flaggedItems.length)}
+        />
+        <StatCard
+          title="Rata-rata Kenaikan"
+          value={formatPercent(avgIncrease)}
+        />
         <StatCard
           title="Kenaikan Tertinggi"
-          value={maxIncrease ? formatPercent(maxIncrease.increasePercent) : '-'}
+          value={maxIncrease ? formatPercent(maxIncrease.increasePercent) : "-"}
           subtitle={maxIncrease?.itemName}
           accent
         />
@@ -133,7 +175,7 @@ export default function PriceIncreaseAlert({ items, dateRange, onDateRangeChange
             onChange={(e) => setThreshold(Number(e.target.value))}
             min={1}
             max={100}
-            className="w-32"
+            className="h-11 w-full sm:h-9 sm:w-32"
           />
         </CardContent>
       </Card>
