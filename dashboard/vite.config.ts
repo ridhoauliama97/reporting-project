@@ -11,6 +11,26 @@ export default defineConfig({
       "@": path.resolve(import.meta.dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: (id: string) => {
+          if (!id.includes("node_modules")) return undefined;
+          if (id.includes("radix-ui")) return "radix-vendor";
+          if (id.includes("lucide-react")) return "icons";
+          if (id.includes("react-router")) return "react-router-vendor";
+          if (
+            id.includes("react-dom") ||
+            id.includes("/react/") ||
+            id.includes("scheduler")
+          ) {
+            return "react-vendor";
+          }
+          return undefined;
+        },
+      },
+    },
+  },
   server: {
     host: true,
     port: 5173,

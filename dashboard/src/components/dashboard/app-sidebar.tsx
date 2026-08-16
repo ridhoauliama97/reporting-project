@@ -3,6 +3,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { Collapsible as CollapsiblePrimitive } from "radix-ui";
 import purchaseData from "@/data/purchase-data.json";
 import { formatNumber } from "@/utils/formatters";
+import { NAV_GROUPS, type NavGroup } from "./nav-config";
 
 import {
   Sidebar,
@@ -18,140 +19,31 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
-import {
-  LayoutDashboardIcon,
-  ChevronRightIcon,
-  Building2Icon,
-  TrophyIcon,
-  ShieldCheckIcon,
-  TruckIcon,
-  HistoryIcon,
-  TrendingUpIcon,
-  FactoryIcon,
-  AlertTriangleIcon,
-  TimerIcon,
-  ClipboardListIcon,
-  FileTextIcon,
-  FolderCheckIcon,
-  StarIcon,
-  ChartSplineIcon,
-  DatabaseIcon,
-  WarehouseIcon,
-  PackageIcon,
-  BoxesIcon,
-  ArchiveIcon,
-  StoreIcon,
-  CogIcon,
-  MapPinIcon,
-  BuildingIcon,
-} from "lucide-react";
-
-interface NavItem {
-  title: string;
-  url: string;
-  icon: React.ReactNode;
-}
-
-const PURCHASING_MENU_ITEMS: NavItem[] = [
-  { title: "Purchase Summary", url: "/summary", icon: <LayoutDashboardIcon /> },
-  {
-    title: "Purchasing by Supplier",
-    url: "/by-supplier",
-    icon: <Building2Icon />,
-  },
-  { title: "Supplier Ranking", url: "/ranking", icon: <TrophyIcon /> },
-  {
-    title: "Supplier Quality",
-    url: "/quality",
-    icon: <ShieldCheckIcon />,
-  },
-  {
-    title: "Supplier Delivery Performance",
-    url: "/delivery",
-    icon: <TruckIcon />,
-  },
-  { title: "Supplier Scorecard", url: "/scorecard", icon: <StarIcon /> },
-  { title: "Price History", url: "/price-history", icon: <HistoryIcon /> },
-  {
-    title: "Purchase Variance",
-    url: "/variance",
-    icon: <TrendingUpIcon />,
-  },
-  {
-    title: "Material Cost Trends",
-    url: "/material-cost",
-    icon: <FactoryIcon />,
-  },
-  {
-    title: "Price Increase Alert",
-    url: "/price-alert",
-    icon: <AlertTriangleIcon />,
-  },
-  { title: "Supplier Lead Time", url: "/lead-time", icon: <TimerIcon /> },
-  {
-    title: "Outstanding PO",
-    url: "/outstanding-po",
-    icon: <ClipboardListIcon />,
-  },
-  { title: "Open PO", url: "/open-po", icon: <FileTextIcon /> },
-  {
-    title: "Closed PO",
-    url: "/closed-po",
-    icon: <FolderCheckIcon />,
-  },
-];
-
-const WAREHOUSE_MENU_ITEMS: NavItem[] = [
-  {
-    title: "01: GUDANG BAHAN BAKU",
-    url: "/warehouse/gudang-bahan-baku",
-    icon: <PackageIcon />,
-  },
-  {
-    title: "04: GUDANG BARANG JADI",
-    url: "/warehouse/gudang-barang-jadi",
-    icon: <BoxesIcon />,
-  },
-  {
-    title: "07: GUDANG SPAREPART",
-    url: "/warehouse/gudang-sparepart",
-    icon: <ArchiveIcon />,
-  },
-  {
-    title: "09: CBD SPAREPART",
-    url: "/warehouse/cbd-sparepart",
-    icon: <StoreIcon />,
-  },
-  { title: "51: GUDANG WIP", url: "/warehouse/gudang-wip", icon: <CogIcon /> },
-  {
-    title: "54: GUDANG PEKANBARU",
-    url: "/warehouse/gudang-pekanbaru",
-    icon: <MapPinIcon />,
-  },
-  {
-    title: "24: KANTOR SALES",
-    url: "/warehouse/kantor-sales",
-    icon: <BuildingIcon />,
-  },
-];
-
-interface NavGroup {
-  title: string;
-  icon: React.ReactNode;
-  items: NavItem[];
-}
-
-const NAV_GROUPS: NavGroup[] = [
-  {
-    title: "Purchasing",
-    icon: <LayoutDashboardIcon />,
-    items: PURCHASING_MENU_ITEMS,
-  },
-  { title: "Warehouse", icon: <WarehouseIcon />, items: WAREHOUSE_MENU_ITEMS },
-];
+import { ChartSplineIcon, ChevronRightIcon, DatabaseIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 function CollapsibleMenuGroup({ group }: { group: NavGroup }) {
   const { pathname } = useLocation();
+  if (group.disabled) {
+    return (
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          disabled
+          className="cursor-not-allowed opacity-60"
+          aria-disabled="true"
+        >
+          {group.icon}
+          <span>{group.title}</span>
+          <Badge
+            variant="outline"
+            className="ml-auto px-1.5 py-0 text-[10px] font-semibold uppercase tracking-wide"
+          >
+            SOON
+          </Badge>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  }
   return (
     <CollapsiblePrimitive.Root
       asChild
@@ -203,9 +95,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <div className="flex size-6 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
                   <ChartSplineIcon className="size-4!" />
                 </div>
-                <span className="text-base font-semibold">
-                  Dashboard Report
-                </span>
+                <span className="text-base font-semibold">Database Report</span>
               </NavLink>
             </SidebarMenuButton>
           </SidebarMenuItem>

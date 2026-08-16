@@ -172,7 +172,10 @@ export default function PriceIncreaseAlert({
           <Input
             type="number"
             value={threshold}
-            onChange={(e) => setThreshold(Number(e.target.value))}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              setThreshold(Number.isFinite(v) && v >= 1 ? v : 10);
+            }}
             min={1}
             max={100}
             className="h-11 w-full sm:h-9 sm:w-32"

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { ParsedPurchaseItem } from "../types/purchase";
-import { formatRupiah, formatNumber, formatPercent } from "../utils/formatters";
+import { formatRupiah, formatRupiahCompact, formatNumber, formatPercent } from "../utils/formatters";
 import PageLayout from "../components/PageLayout";
 import StatCard from "../components/StatCard";
 import DataTable from "../components/DataTable";
@@ -166,7 +166,7 @@ export default function SupplierRanking({
             />
             <XAxis
               type="number"
-              tickFormatter={(v) => formatRupiah(Number(v))}
+              tickFormatter={(v) => formatRupiahCompact(Number(v))}
               className="text-xs text-muted-foreground"
               tickLine={false}
               axisLine={false}

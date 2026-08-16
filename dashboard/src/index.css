@@ -125,3 +125,10 @@
     @apply bg-background text-foreground font-sans antialiased;
   }
 }
+
+input[type="date"] {
+  color-scheme: light;
+}
+.dark input[type="date"] {
+  color-scheme: dark;
+}

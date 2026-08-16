@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type { ParsedPurchaseItem } from "../types/purchase";
 import {
   formatRupiah,
+  formatRupiahCompact,
   formatPercent,
   getMonthYear,
   getMonthLabel,
@@ -198,11 +199,15 @@ export default function MaterialCostTrend({
               className="text-xs text-muted-foreground"
               tickLine={false}
               axisLine={false}
-              dy={8}
               minTickGap={28}
+              interval="preserveStartEnd"
+              angle={-35}
+              textAnchor="end"
+              height={50}
+              tickMargin={6}
             />
             <YAxis
-              tickFormatter={(v) => formatRupiah(Number(v))}
+              tickFormatter={(v) => formatRupiahCompact(Number(v))}
               className="text-xs text-muted-foreground"
               tickLine={false}
               axisLine={false}

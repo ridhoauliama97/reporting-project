@@ -1,23 +1,24 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Suspense, lazy } from 'react';
 import { parseAllItems, filterByDateRange } from './utils/formatters';
 import purchaseData from './data/purchase-data.json';
 import Layout from './components/Layout';
-import PurchaseSummary from './pages/PurchaseSummary';
-import PurchaseBySupplier from './pages/PurchaseBySupplier';
-import SupplierRanking from './pages/SupplierRanking';
-import SupplierQuality from './pages/SupplierQuality';
-import SupplierDelivery from './pages/SupplierDelivery';
-import PurchasePriceHistory from './pages/PurchasePriceHistory';
-import PurchaseVariance from './pages/PurchaseVariance';
-import MaterialCostTrend from './pages/MaterialCostTrend';
-import PriceIncreaseAlert from './pages/PriceIncreaseAlert';
-import PurchaseLeadTime from './pages/PurchaseLeadTime';
-import OutstandingPO from './pages/OutstandingPO';
-import OpenPO from './pages/OpenPO';
-import ClosedPO from './pages/ClosedPO';
-import SupplierScorecard from './pages/SupplierScorecard';
-import WarehousePlaceholder from './pages/WarehousePlaceholder';
+
+const PurchaseSummary = lazy(() => import('./pages/PurchaseSummary'));
+const PurchaseBySupplier = lazy(() => import('./pages/PurchaseBySupplier'));
+const SupplierRanking = lazy(() => import('./pages/SupplierRanking'));
+const SupplierQuality = lazy(() => import('./pages/SupplierQuality'));
+const SupplierDelivery = lazy(() => import('./pages/SupplierDelivery'));
+const PurchasePriceHistory = lazy(() => import('./pages/PurchasePriceHistory'));
+const PurchaseVariance = lazy(() => import('./pages/PurchaseVariance'));
+const MaterialCostTrend = lazy(() => import('./pages/MaterialCostTrend'));
+const PriceIncreaseAlert = lazy(() => import('./pages/PriceIncreaseAlert'));
+const PurchaseLeadTime = lazy(() => import('./pages/PurchaseLeadTime'));
+const OutstandingPO = lazy(() => import('./pages/OutstandingPO'));
+const OpenPO = lazy(() => import('./pages/OpenPO'));
+const ClosedPO = lazy(() => import('./pages/ClosedPO'));
+const SupplierScorecard = lazy(() => import('./pages/SupplierScorecard'));
+const WarehousePlaceholder = lazy(() => import('./pages/WarehousePlaceholder'));
 
 const WAREHOUSES: Record<string, string> = {
   'gudang-bahan-baku': '01: GUDANG BAHAN BAKU',
@@ -51,7 +52,14 @@ function App() {
   return (
     <Router>
       <Layout>
-        <Routes>
+        <Suspense
+          fallback={
+            <div className="flex min-h-[50vh] items-center justify-center">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-foreground" />
+            </div>
+          }
+        >
+          <Routes>
           <Route path="/" element={<Navigate to="/summary" replace />} />
           <Route
             path="/summary"
@@ -166,6 +174,7 @@ function App() {
             }
           />
         </Routes>
+        </Suspense>
       </Layout>
     </Router>
   );

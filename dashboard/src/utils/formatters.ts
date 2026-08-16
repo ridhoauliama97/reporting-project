@@ -26,18 +26,35 @@ export function parseAllItems(items: PurchaseItem[]): ParsedPurchaseItem[] {
   return items.map(parsePurchaseItem);
 }
 
+const rupiahFormatter = new Intl.NumberFormat('id-ID', {
+  style: 'currency',
+  currency: 'IDR',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+const numberFormatter = new Intl.NumberFormat('id-ID');
+
+const compactNumberFormatter = new Intl.NumberFormat('id-ID', {
+  maximumFractionDigits: 2,
+});
+
 export function formatRupiah(value: number): string {
   if (value === 0) return '-';
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
+  return rupiahFormatter.format(value);
 }
 
 export function formatNumber(value: number): string {
-  return new Intl.NumberFormat('id-ID').format(value);
+  return numberFormatter.format(value);
+}
+
+export function formatRupiahCompact(value: number): string {
+  const abs = Math.abs(value);
+  if (abs >= 1e12) return `Rp ${compactNumberFormatter.format(value / 1e12)} Triliun`;
+  if (abs >= 1e9) return `Rp ${compactNumberFormatter.format(value / 1e9)} Miliar`;
+  if (abs >= 1e6) return `Rp ${compactNumberFormatter.format(value / 1e6)} Juta`;
+  if (abs >= 1e3) return `Rp ${compactNumberFormatter.format(value / 1e3)} Ribu`;
+  return formatRupiah(value);
 }
 
 export function formatPercent(value: number): string {

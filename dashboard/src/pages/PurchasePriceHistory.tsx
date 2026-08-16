@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { ParsedPurchaseItem } from "../types/purchase";
-import { formatRupiah, formatNumber, formatDate } from "../utils/formatters";
+import { formatRupiah, formatRupiahCompact, formatNumber, formatDate } from "../utils/formatters";
 import PageLayout from "../components/PageLayout";
 import StatCard from "../components/StatCard";
 import DataTable from "../components/DataTable";
@@ -181,11 +181,15 @@ export default function PurchasePriceHistory({
                   className="text-xs text-muted-foreground"
                   tickLine={false}
                   axisLine={false}
-                  dy={8}
+                  angle={-35}
+                  textAnchor="end"
+                  height={50}
+                  tickMargin={6}
+                  interval="preserveStartEnd"
                   minTickGap={28}
                 />
                 <YAxis
-                  tickFormatter={(v) => formatRupiah(Number(v))}
+                  tickFormatter={(v) => formatRupiahCompact(Number(v))}
                   className="text-xs text-muted-foreground"
                   tickLine={false}
                   axisLine={false}

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/app-sidebar";
+import { NAV_GROUPS } from "@/components/dashboard/nav-config";
 import { SiteHeader } from "@/components/dashboard/site-header";
 
 const PAGE_TITLES: Record<string, string> = {
@@ -28,6 +29,19 @@ const PAGE_TITLES: Record<string, string> = {
   "/warehouse/kantor-sales": "24: KANTOR SALES",
 };
 
+interface BreadcrumbEntry {
+  group: string;
+  item: string;
+}
+
+function getBreadcrumb(pathname: string): BreadcrumbEntry | null {
+  for (const group of NAV_GROUPS) {
+    const item = group.items.find((i) => i.url === pathname);
+    if (item) return { group: group.title, item: item.title };
+  }
+  return null;
+}
+
 interface LayoutProps {
   children: ReactNode;
 }
@@ -35,12 +49,13 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   const { pathname } = useLocation();
   const title = PAGE_TITLES[pathname] ?? "Dashboard Purchase";
+  const breadcrumb = getBreadcrumb(pathname);
 
   return (
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <SiteHeader title={title} />
+        <SiteHeader title={title} breadcrumb={breadcrumb} />
         <main className="flex flex-1 flex-col">
           <div
             key={pathname}

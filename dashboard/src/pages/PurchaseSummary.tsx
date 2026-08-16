@@ -186,10 +186,10 @@ export default function PurchaseSummary({
           accent
         />
       </div>
-<DataTable
+      <DataTable
         columns={columns}
         data={items}
-        pageSize={20}
+        pageSize={25}
         searchable
         searchFields={['itemName', 'supplierName', 'purchaseNumber']}
         showExport

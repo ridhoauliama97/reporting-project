@@ -1,5 +1,5 @@
-import { format } from 'date-fns';
-import { id } from 'date-fns/locale';
+import { format } from "date-fns";
+import { id } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
@@ -26,18 +26,18 @@ export default function DateFilter({ dateRange, onChange }: DateFilterProps) {
     const value = e.target.value;
     onChange({
       ...dateRange,
-      end: value ? new Date(value + 'T23:59:59') : null,
+      end: value ? new Date(value + "T23:59:59") : null,
     });
   };
 
   const formatDateForInput = (date: Date | null): string => {
-    if (!date) return '';
-    return format(date, 'yyyy-MM-dd');
+    if (!date) return "";
+    return format(date, "yyyy-MM-dd");
   };
 
   const formatDateDisplay = (date: Date | null): string => {
-    if (!date) return '';
-    return format(date, 'dd MMM yyyy', { locale: id });
+    if (!date) return "";
+    return format(date, "dd MMM yyyy", { locale: id });
   };
 
   return (
@@ -47,7 +47,7 @@ export default function DateFilter({ dateRange, onChange }: DateFilterProps) {
         <span className="truncate font-medium text-foreground">
           {dateRange.start && dateRange.end
             ? `${formatDateDisplay(dateRange.start)} – ${formatDateDisplay(dateRange.end)}`
-            : 'Semua Data'}
+            : "Semua Data"}
         </span>
       </div>
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:flex">
