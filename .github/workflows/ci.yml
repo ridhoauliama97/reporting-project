@@ -41,9 +41,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Compute app version
+        id: version
+        run: echo "version=$(node dashboard/scripts/version.mjs)" >> "$GITHUB_OUTPUT"
+
       - name: Deploy production
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: npx vercel@latest deploy --prod --yes
+        run: npx vercel@latest deploy --prod --yes --build-env APP_VERSION=${{ steps.version.outputs.version }}

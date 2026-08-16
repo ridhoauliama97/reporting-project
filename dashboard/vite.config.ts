@@ -6,23 +6,7 @@ import { execSync } from 'node:child_process'
 
 function getAppVersion(): string {
   try {
-    const messages = execSync('git log --reverse --format=%s')
-      .toString()
-      .trim()
-      .split('\n')
-      .filter(Boolean)
-    const isComplex = (msg: string) => /^(feat|perf)(\(.+\))?:/.test(msg)
-    let minor = 0
-    let patch = 0
-    messages.slice(1).forEach((msg) => {
-      if (isComplex(msg)) {
-        minor += 1
-        patch = 0
-      } else {
-        patch += 1
-      }
-    })
-    return `1.${minor}.${patch}`
+    return execSync('node scripts/version.mjs', { encoding: 'utf8' }).trim()
   } catch {
     return '1.0.0'
   }
