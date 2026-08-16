@@ -119,7 +119,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <NavLink to="/summary" className="text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5">
                   <DatabaseIcon className="size-3.5" />
-                  v1.0.0 · {formatNumber(purchaseData.length)} item
+                  v{__APP_VERSION__} · {formatNumber(purchaseData.length)} item
                 </span>
               </NavLink>
             </SidebarMenuButton>

@@ -20,3 +20,8 @@ Thumbs.db
 # Env
 .env
 .env.local
+.vercel
+.env*
+
+# Vercel CLI link
+.vercel/

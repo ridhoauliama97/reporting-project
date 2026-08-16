@@ -23,6 +23,8 @@ import {
   MapPinIcon,
   BuildingIcon,
   ShoppingCartIcon,
+  FileOutputIcon,
+  BrainCircuitIcon,
 } from "lucide-react";
 
 export interface NavItem {
@@ -77,6 +79,16 @@ export const PURCHASING_MENU_ITEMS: NavItem[] = [
     title: "Closed PO",
     url: "/closed-po",
     icon: <FolderCheckIcon />,
+  },
+  {
+    title: "Reports & Exports",
+    url: "/reports-exports",
+    icon: <FileOutputIcon />,
+  },
+  {
+    title: "AI Insights & Analytics",
+    url: "/analytics-insights",
+    icon: <BrainCircuitIcon />,
   },
 ];
 

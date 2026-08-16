@@ -31,6 +31,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { exportData, type ExportFormat } from "@/utils/exporter";
 import {
   Select,
   SelectContent,
@@ -205,63 +206,16 @@ export default function DataTable<T extends Record<string, any>>({
     return { headers, rows };
   };
 
-  const escapeCsvCell = (value: unknown): string => {
-    let s = String(value ?? "-");
-    if (/^[=+\-@]/.test(s)) s = `'${s}`;
-    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-  };
-
-  const handleExportCSV = () => {
+  const handleExport = (format: ExportFormat) => {
     const { headers, rows } = getExportData();
-    const csvContent = [
-      headers.map(escapeCsvCell).join(","),
-      ...rows.map((row) => row.map(escapeCsvCell).join(",")),
-    ].join("\n");
-    const blob = new Blob([`\uFEFF${csvContent}`], {
-      type: "text/csv;charset=utf-8;",
+    void exportData(format, {
+      filename: title,
+      title: "Laporan Data Pembelian",
+      meta: `Diekspor: ${new Date().toLocaleDateString("id-ID")} | Total: ${rows.length} baris`,
+      sheetName: "Data Pembelian",
+      headers,
+      rows,
     });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${title}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleExportExcel = async () => {
-    const { headers, rows } = getExportData();
-    const XLSX = await import("xlsx");
-    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Data Pembelian");
-    XLSX.writeFile(workbook, `${title}.xlsx`);
-  };
-
-  const handleExportPDF = async () => {
-    const { headers, rows } = getExportData();
-    const { jsPDF } = await import("jspdf");
-    const { default: autoTable } = await import("jspdf-autotable");
-    const doc = new jsPDF({
-      orientation: "landscape",
-      unit: "mm",
-      format: "a4",
-    });
-    doc.setFontSize(14);
-    doc.text("Laporan Data Pembelian", 14, 15);
-    doc.setFontSize(10);
-    doc.text(
-      `Diekspor: ${new Date().toLocaleDateString("id-ID")} | Total: ${rows.length} baris`,
-      14,
-      22,
-    );
-    autoTable(doc, {
-      head: [headers],
-      body: rows.map((row) => row.map(String)),
-      startY: 28,
-      styles: { fontSize: 7, cellPadding: 2 },
-      headStyles: { fillColor: [30, 41, 59] },
-    });
-    doc.save(`${title}.pdf`);
   };
 
   const hasGrouping = columnGroups.length > 0;
@@ -367,13 +321,13 @@ export default function DataTable<T extends Record<string, any>>({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={handleExportCSV}>
+                <DropdownMenuItem onSelect={() => handleExport("csv")}>
                   CSV
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={handleExportExcel}>
+                <DropdownMenuItem onSelect={() => handleExport("excel")}>
                   Excel
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={handleExportPDF}>
+                <DropdownMenuItem onSelect={() => handleExport("pdf")}>
                   PDF
                 </DropdownMenuItem>
               </DropdownMenuContent>

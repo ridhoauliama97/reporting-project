@@ -18,6 +18,8 @@ const OutstandingPO = lazy(() => import('./pages/OutstandingPO'));
 const OpenPO = lazy(() => import('./pages/OpenPO'));
 const ClosedPO = lazy(() => import('./pages/ClosedPO'));
 const SupplierScorecard = lazy(() => import('./pages/SupplierScorecard'));
+const ReportsExports = lazy(() => import('./pages/ReportsExports'));
+const AnalyticsInsights = lazy(() => import('./pages/AnalyticsInsights'));
 const WarehousePlaceholder = lazy(() => import('./pages/WarehousePlaceholder'));
 
 const WAREHOUSES: Record<string, string> = {
@@ -173,6 +175,17 @@ function App() {
               />
             }
           />
+          <Route
+            path="/reports-exports"
+            element={
+              <ReportsExports
+                items={filteredItems}
+                dateRange={dateRange}
+                onDateRangeChange={setDateRange}
+              />
+            }
+          />
+          <Route path="/analytics-insights" element={<AnalyticsInsights />} />
         </Routes>
         </Suspense>
       </Layout>
