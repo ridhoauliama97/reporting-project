@@ -51,6 +51,7 @@ export default function PurchasePriceHistory({
   const [selectedItem, setSelectedItem] = useState<string>("");
   const [comboboxOpen, setComboboxOpen] = useState(false);
   const [comboboxSearch, setComboboxSearch] = useState("");
+  const [activeItem, setActiveItem] = useState("");
 
   const uniqueItems = useMemo(() => {
     const itemMap = new Map<string, string>();
@@ -148,7 +149,7 @@ export default function PurchasePriceHistory({
               </button>
             </PopoverTrigger>
             <PopoverContent className="w-full min-w-72 p-0 md:w-96">
-              <Command>
+              <Command value={activeItem} onValueChange={setActiveItem}>
                 <CommandInput
                   placeholder="Cari item..."
                   value={comboboxSearch}
@@ -157,30 +158,38 @@ export default function PurchasePriceHistory({
                 <CommandList>
                   <CommandEmpty>Tidak ada item ditemukan.</CommandEmpty>
                   <CommandGroup>
-                    {uniqueItems.map((item) => (
-                      <CommandItem
-                        key={item.name}
-                        value={item.name}
-                        onSelect={(currentValue) => {
-                          setSelectedItem(currentValue);
-                          setComboboxOpen(false);
-                          setComboboxSearch("");
-                        }}
-                      >
-                        <CheckIcon
-                          className={cn(
-                            "mr-2 size-4",
-                            selectedItem === item.name
-                              ? "opacity-100"
-                              : "opacity-0",
+                    {uniqueItems.map((item) => {
+                      const isActive =
+                        item.name === selectedItem || item.name === activeItem;
+                      return (
+                        <CommandItem
+                          key={item.name}
+                          value={item.name}
+                          onSelect={(currentValue) => {
+                            setSelectedItem(currentValue);
+                            setComboboxOpen(false);
+                            setComboboxSearch("");
+                          }}
+                        >
+                          <CheckIcon
+                            className={cn(
+                              "mr-2 size-4",
+                              selectedItem === item.name
+                                ? "opacity-100"
+                                : "opacity-0",
+                            )}
+                          />
+                          {isActive ? (
+                            <HighlightMatch
+                              text={item.name}
+                              query={comboboxSearch}
+                            />
+                          ) : (
+                            <span>{item.name}</span>
                           )}
-                        />
-                        <HighlightMatch
-                          text={item.name}
-                          query={comboboxSearch}
-                        />
-                      </CommandItem>
-                    ))}
+                        </CommandItem>
+                      );
+                    })}
                   </CommandGroup>
                 </CommandList>
               </Command>
