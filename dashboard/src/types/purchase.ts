@@ -41,6 +41,9 @@ export interface ParsedPurchaseItem extends Omit<PurchaseItem, 'qtyOrdered' | 'q
   poPiDays: number;
   prPiDays: number;
   poPiOverdueDays: number;
+  purchaseDateObj: Date | null;
+  poDateObj: Date | null;
+  prDateObj: Date | null;
 }
 
 export type ItemCategory = 'BAHAN BAKU' | 'BAHAN PENDUKUNG' | 'SPAREPART' | 'WORK IN PROGRESS' | 'BARANG DAGANG';

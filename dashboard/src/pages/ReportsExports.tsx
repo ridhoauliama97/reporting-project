@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { AlertTriangleIcon, DownloadIcon } from "lucide-react";
 import type { ParsedPurchaseItem } from "../types/purchase";
 import PageLayout from "../components/PageLayout";
@@ -35,17 +35,29 @@ export default function ReportsExports({
     [items],
   );
 
-  const handleExport = (format: ExportFormat, reportId: string) => {
+  const [exportingId, setExportingId] = useState<string | null>(null);
+  const [exportErrorId, setExportErrorId] = useState<string | null>(null);
+
+  const handleExport = async (format: ExportFormat, reportId: string) => {
     const entry = reportData.find((r) => r.report.id === reportId);
-    if (!entry || entry.data.rows.length === 0) return;
-    void exportData(format, {
-      filename: `laporan-${reportId}`,
-      title: entry.report.name,
-      meta: `Diekspor: ${new Date().toLocaleDateString("id-ID")} | Total: ${entry.data.rows.length} baris`,
-      sheetName: entry.report.name,
-      headers: entry.data.headers,
-      rows: entry.data.rows,
-    });
+    if (!entry || entry.data.rows.length === 0 || exportingId) return;
+    setExportingId(reportId);
+    setExportErrorId(null);
+    try {
+      await exportData(format, {
+        filename: `laporan-${reportId}`,
+        title: entry.report.name,
+        meta: `Diekspor: ${new Date().toLocaleDateString("id-ID")} | Total: ${entry.data.rows.length} baris`,
+        sheetName: entry.report.name,
+        headers: entry.data.headers,
+        rows: entry.data.rows,
+      });
+    } catch (err) {
+      console.error("Export failed:", err);
+      setExportErrorId(reportId);
+    } finally {
+      setExportingId(null);
+    }
   };
 
   return (
@@ -84,16 +96,17 @@ export default function ReportsExports({
                 </div>
               </CardContent>
               <CardFooter className="flex items-center justify-between gap-2 border-t p-4">
+                <div className="flex items-center gap-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="outline"
                       size="sm"
                       className="h-9"
-                      disabled={!hasData}
+                      disabled={!hasData || exportingId !== null}
                     >
                       <DownloadIcon />
-                      Ekspor
+                      {exportingId === report.id ? "Mengekspor…" : "Ekspor"}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -114,6 +127,12 @@ export default function ReportsExports({
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                {exportErrorId === report.id && (
+                  <span className="text-xs text-red-600 dark:text-red-400">
+                    Gagal mengekspor
+                  </span>
+                )}
+                </div>
                 {!hasData && (
                   <Badge
                     variant="outline"

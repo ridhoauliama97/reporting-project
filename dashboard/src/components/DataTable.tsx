@@ -115,6 +115,8 @@ export default function DataTable<T extends Record<string, any>>({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [exporting, setExporting] = useState<ExportFormat | null>(null);
+  const [exportError, setExportError] = useState(false);
 
   const updateScrollIndicators = useCallback(() => {
     const el = scrollRef.current;
@@ -228,16 +230,26 @@ export default function DataTable<T extends Record<string, any>>({
     return { headers, rows };
   };
 
-  const handleExport = (format: ExportFormat) => {
+  const handleExport = async (format: ExportFormat) => {
+    if (exporting) return;
     const { headers, rows } = getExportData();
-    void exportData(format, {
-      filename: title,
-      title: "Laporan Data Pembelian",
-      meta: `Diekspor: ${new Date().toLocaleDateString("id-ID")} | Total: ${rows.length} baris`,
-      sheetName: "Data Pembelian",
-      headers,
-      rows,
-    });
+    setExporting(format);
+    setExportError(false);
+    try {
+      await exportData(format, {
+        filename: title,
+        title: "Laporan Data Pembelian",
+        meta: `Diekspor: ${new Date().toLocaleDateString("id-ID")} | Total: ${rows.length} baris`,
+        sheetName: "Data Pembelian",
+        headers,
+        rows,
+      });
+    } catch (err) {
+      console.error("Export failed:", err);
+      setExportError(true);
+    } finally {
+      setExporting(null);
+    }
   };
 
   const hasGrouping = columnGroups.length > 0;
@@ -337,9 +349,14 @@ export default function DataTable<T extends Record<string, any>>({
           {showExport && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-10 md:h-8">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-10 md:h-8"
+                  disabled={exporting !== null}
+                >
                   <DownloadIcon />
-                  Ekspor
+                  {exporting ? "Mengekspor…" : "Ekspor"}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -354,6 +371,11 @@ export default function DataTable<T extends Record<string, any>>({
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+          )}
+          {exportError && (
+            <span className="text-sm text-red-600 dark:text-red-400">
+              Gagal mengekspor. Coba lagi.
+            </span>
           )}
         </div>
       </div>

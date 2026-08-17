@@ -19,11 +19,37 @@ export function parsePurchaseItem(item: PurchaseItem): ParsedPurchaseItem {
     poPiDays: parseNum(item.poPiDays),
     prPiDays: parseNum(item.prPiDays),
     poPiOverdueDays: parseNum(item.poPiOverdueDays),
+    purchaseDateObj: null,
+    poDateObj: null,
+    prDateObj: null,
   };
 }
 
+function parseDateCached(
+  cache: Map<string, Date | null>,
+  dateStr: string,
+): Date | null {
+  if (!dateStr) return null;
+  const cached = cache.get(dateStr);
+  if (cached !== undefined) return cached;
+  try {
+    const date = parseISO(dateStr);
+    cache.set(dateStr, isValid(date) ? date : null);
+  } catch {
+    cache.set(dateStr, null);
+  }
+  return cache.get(dateStr) ?? null;
+}
+
 export function parseAllItems(items: PurchaseItem[]): ParsedPurchaseItem[] {
-  return items.map(parsePurchaseItem);
+  const dateCache = new Map<string, Date | null>();
+  return items.map((item) => {
+    const parsed = parsePurchaseItem(item);
+    parsed.purchaseDateObj = parseDateCached(dateCache, item.purchaseDate);
+    parsed.poDateObj = parseDateCached(dateCache, item.poDate);
+    parsed.prDateObj = parseDateCached(dateCache, item.prDate);
+    return parsed;
+  });
 }
 
 const rupiahFormatter = new Intl.NumberFormat("id-ID", {
@@ -95,18 +121,19 @@ export function filterByDateRange(
 ): ParsedPurchaseItem[] {
   if (!startDate && !endDate) return items;
 
+  const dateObjField =
+    dateField === "poDate"
+      ? "poDateObj"
+      : dateField === "prDate"
+        ? "prDateObj"
+        : "purchaseDateObj";
+
   return items.filter((item) => {
-    const dateStr = item[dateField];
-    if (!dateStr) return false;
-    try {
-      const date = parseISO(dateStr);
-      if (!isValid(date)) return false;
-      if (startDate && date < startDate) return false;
-      if (endDate && date > endDate) return false;
-      return true;
-    } catch {
-      return false;
-    }
+    const date = item[dateObjField];
+    if (!date) return false;
+    if (startDate && date < startDate) return false;
+    if (endDate && date > endDate) return false;
+    return true;
   });
 }
 
