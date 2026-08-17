@@ -7,11 +7,11 @@ import { SiteHeader } from "@/components/dashboard/site-header";
 
 const PAGE_TITLES: Record<string, string> = {
   "/summary": "Purchase Summary",
-  "/by-supplier": "Purchasing by Supplier",
+  "/by-supplier": "Purchase by Supplier",
   "/ranking": "Supplier Ranking",
   "/quality": "Supplier Quality",
   "/delivery": "Supplier Delivery Performance",
-  "/price-history": "Price History",
+  "/price-history": "Purchase Price History",
   "/variance": "Purchase Variance",
   "/material-cost": "Material Cost Trends",
   "/price-alert": "Price Increase Alert",

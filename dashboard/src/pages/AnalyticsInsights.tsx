@@ -243,10 +243,12 @@ export default function AnalyticsInsights({
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center gap-2 p-8 text-center">
             <AlertTriangleIcon className="size-8 text-muted-foreground" />
-            <p className="text-sm font-medium">Tidak ada data pada rentang tanggal ini</p>
+            <p className="text-sm font-medium">
+              Tidak ada data pada rentang tanggal ini
+            </p>
             <p className="text-xs text-muted-foreground">
-              Ubah rentang tanggal untuk melihat insight, atau buka Chat dengan Data untuk
-              menanyakan seluruh data.
+              Ubah rentang tanggal untuk melihat insight, atau buka Chat dengan
+              Data untuk menanyakan seluruh data.
             </p>
           </CardContent>
         </Card>
@@ -271,7 +273,9 @@ export default function AnalyticsInsights({
                       <CardTitle className="text-sm font-semibold leading-snug">
                         {rec.title}
                       </CardTitle>
-                      <Badge className={`shrink-0 gap-1 font-medium ${style.badge}`}>
+                      <Badge
+                        className={`shrink-0 gap-1 font-medium ${style.badge}`}
+                      >
                         <Icon className="size-3" />
                         {rec.level}
                       </Badge>
@@ -321,9 +325,13 @@ export default function AnalyticsInsights({
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-sm font-semibold">{anomaly.title}</h3>
+                        <h3 className="text-sm font-semibold">
+                          {anomaly.title}
+                        </h3>
                         <Badge className={`gap-1 font-medium ${style.badge}`}>
-                          {anomaly.severity === "Urgent" ? "Urgent" : "Perhatian"}
+                          {anomaly.severity === "Urgent"
+                            ? "Urgent"
+                            : "Perhatian"}
                         </Badge>
                       </div>
                       <p className="mt-1 text-sm text-muted-foreground">
@@ -341,7 +349,8 @@ export default function AnalyticsInsights({
             {anomalies.length === 0 && (
               <Card className="border-dashed">
                 <CardContent className="p-6 text-center text-sm text-muted-foreground">
-                  Tidak ada anomali signifikan terdeteksi pada rentang tanggal ini.
+                  Tidak ada anomali signifikan terdeteksi pada rentang tanggal
+                  ini.
                 </CardContent>
               </Card>
             )}
@@ -385,7 +394,8 @@ export default function AnalyticsInsights({
             {spendInsights.length === 0 && (
               <Card className="border-dashed lg:col-span-2">
                 <CardContent className="p-6 text-center text-sm text-muted-foreground">
-                  Tidak ada peluang penghematan signifikan pada rentang tanggal ini.
+                  Tidak ada peluang penghematan signifikan pada rentang tanggal
+                  ini.
                 </CardContent>
               </Card>
             )}
@@ -490,14 +500,17 @@ export default function AnalyticsInsights({
               Chat dengan Data
             </SheetTitle>
             <SheetDescription>
-              Tanya apa saja tentang data purchasing. Jawaban dihitung dari data asli;
-              sebutkan bulan/tahun untuk scope khusus, atau gunakan filter tanggal aktif.
+              Tanya apa saja tentang data purchasing. Jawaban dihitung dari data
+              asli; sebutkan bulan/tahun untuk scope khusus, atau gunakan filter
+              tanggal aktif.
             </SheetDescription>
           </SheetHeader>
           <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
             {messages.length === 0 && (
               <div className="flex flex-col gap-2">
-                <p className="text-xs text-muted-foreground">Contoh pertanyaan:</p>
+                <p className="text-xs text-muted-foreground">
+                  Contoh pertanyaan:
+                </p>
                 {CHAT_SUGGESTIONS.map((suggestion) => (
                   <button
                     key={suggestion}

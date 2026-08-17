@@ -98,7 +98,7 @@ export default function PurchaseBySupplier({
 
   return (
     <PageLayout
-      title="Purchasing by Supplier"
+      title="Purchase by Supplier"
       subtitle="Ringkasan pembelian berdasarkan supplier, termasuk jumlah transaksi, total kuantitas, dan total pembelian."
       dateRange={dateRange}
       onDateRangeChange={onDateRangeChange}

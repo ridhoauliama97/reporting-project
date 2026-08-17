@@ -19,7 +19,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
-import { ChartSplineIcon, ChevronRightIcon, DatabaseIcon } from "lucide-react";
+import { ChartSplineIcon, ChevronRightIcon, DatabaseIcon, BookOpenIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 function CollapsibleMenuGroup({ group }: { group: NavGroup }) {
@@ -38,7 +38,7 @@ function CollapsibleMenuGroup({ group }: { group: NavGroup }) {
             variant="outline"
             className="ml-auto px-1.5 py-0 text-[10px] font-semibold uppercase tracking-wide"
           >
-            SOON
+            Coming Soon
           </Badge>
         </SidebarMenuButton>
       </SidebarMenuItem>
@@ -115,11 +115,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <a href="/docs" target="_blank" rel="noopener noreferrer">
+                <BookOpenIcon className="size-4" />
+                <span>Documentation</span>
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
             <SidebarMenuButton asChild className="cursor-default">
               <NavLink to="/summary" className="text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5">
-                  <DatabaseIcon className="size-3.5" />
-                  v{__APP_VERSION__} · {formatNumber(purchaseData.length)} item
+                  <DatabaseIcon className="size-3.5" />v{__APP_VERSION__} ·{" "}
+                  {formatNumber(purchaseData.length)} item
                 </span>
               </NavLink>
             </SidebarMenuButton>

@@ -35,10 +35,8 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 function groupBySupplier(items: ParsedPurchaseItem[]) {
-  const grouped: Record<
-    string,
-    { count: number; qty: number; total: number }
-  > = {};
+  const grouped: Record<string, { count: number; qty: number; total: number }> =
+    {};
   items.forEach((item) => {
     const name = item.supplierName || "-";
     if (!grouped[name]) {
@@ -94,7 +92,7 @@ export const REPORTS: ReportDefinition[] = [
   },
   {
     id: "by-supplier",
-    name: "Purchasing by Supplier",
+    name: "Purchase by Supplier",
     description: "Total pembelian per supplier dalam periode",
     icon: Building2Icon,
     getData: (items) => {
@@ -186,8 +184,7 @@ export const REPORTS: ReportDefinition[] = [
               : 0;
           const avgOverdueDays =
             d.overdueDays.length > 0
-              ? d.overdueDays.reduce((a, b) => a + b, 0) /
-                d.overdueDays.length
+              ? d.overdueDays.reduce((a, b) => a + b, 0) / d.overdueDays.length
               : 0;
           return [
             name,
@@ -218,12 +215,22 @@ export const REPORTS: ReportDefinition[] = [
     getData: (items) => {
       const grouped: Record<
         string,
-        { items: ParsedPurchaseItem[]; priceIncreases: number[]; overdueCount: number; total: number }
+        {
+          items: ParsedPurchaseItem[];
+          priceIncreases: number[];
+          overdueCount: number;
+          total: number;
+        }
       > = {};
       items.forEach((item) => {
         const name = item.supplierName || "-";
         if (!grouped[name]) {
-          grouped[name] = { items: [], priceIncreases: [], overdueCount: 0, total: 0 };
+          grouped[name] = {
+            items: [],
+            priceIncreases: [],
+            overdueCount: 0,
+            total: 0,
+          };
         }
         grouped[name].items.push(item);
         grouped[name].total += 1;
@@ -288,7 +295,7 @@ export const REPORTS: ReportDefinition[] = [
   },
   {
     id: "price-history",
-    name: "Price History",
+    name: "Purchase Price History",
     description: "Riwayat harga per transaksi seluruh item",
     icon: HistoryIcon,
     getData: (items) => {
@@ -425,7 +432,8 @@ export const REPORTS: ReportDefinition[] = [
         for (let i = 1; i < sorted.length; i++) {
           const prev = sorted[i - 1];
           const curr = sorted[i];
-          const increase = ((curr.unitCost - prev.unitCost) / prev.unitCost) * 100;
+          const increase =
+            ((curr.unitCost - prev.unitCost) / prev.unitCost) * 100;
           if (increase >= 10) {
             result.push([
               curr.itemName,

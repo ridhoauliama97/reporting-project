@@ -36,7 +36,7 @@ export interface NavItem {
 export const PURCHASING_MENU_ITEMS: NavItem[] = [
   { title: "Purchase Summary", url: "/summary", icon: <LayoutDashboardIcon /> },
   {
-    title: "Purchasing by Supplier",
+    title: "Purchase by Supplier",
     url: "/by-supplier",
     icon: <Building2Icon />,
   },
@@ -52,7 +52,11 @@ export const PURCHASING_MENU_ITEMS: NavItem[] = [
     icon: <TruckIcon />,
   },
   { title: "Supplier Scorecard", url: "/scorecard", icon: <StarIcon /> },
-  { title: "Price History", url: "/price-history", icon: <HistoryIcon /> },
+  {
+    title: "Purchase Price History",
+    url: "/price-history",
+    icon: <HistoryIcon />,
+  },
   {
     title: "Purchase Variance",
     url: "/variance",

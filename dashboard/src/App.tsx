@@ -21,6 +21,7 @@ const SupplierScorecard = lazy(() => import('./pages/SupplierScorecard'));
 const ReportsExports = lazy(() => import('./pages/ReportsExports'));
 const AnalyticsInsights = lazy(() => import('./pages/AnalyticsInsights'));
 const WarehousePlaceholder = lazy(() => import('./pages/WarehousePlaceholder'));
+const DocsPage = lazy(() => import('./pages/DocsPage'));
 
 const WAREHOUSES: Record<string, string> = {
   'gudang-bahan-baku': '01: GUDANG BAHAN BAKU',
@@ -53,16 +54,34 @@ function App() {
 
   return (
     <Router>
-      <Layout>
-        <Suspense
-          fallback={
-            <div className="flex min-h-[50vh] items-center justify-center">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-foreground" />
-            </div>
+      <Routes>
+        <Route
+          path="/docs"
+          element={
+            <Suspense
+              fallback={
+                <div className="flex min-h-[50vh] items-center justify-center">
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-foreground" />
+                </div>
+              }
+            >
+              <DocsPage />
+            </Suspense>
           }
-        >
-          <Routes>
-          <Route path="/" element={<Navigate to="/summary" replace />} />
+        />
+        <Route
+          path="*"
+          element={
+            <Layout>
+              <Suspense
+                fallback={
+                  <div className="flex min-h-[50vh] items-center justify-center">
+                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-foreground" />
+                  </div>
+                }
+              >
+                <Routes>
+                  <Route path="/" element={<Navigate to="/summary" replace />} />
           <Route
             path="/summary"
             element={
@@ -197,8 +216,11 @@ function App() {
             }
           />
         </Routes>
-        </Suspense>
-      </Layout>
+              </Suspense>
+            </Layout>
+          }
+        />
+      </Routes>
     </Router>
   );
 }

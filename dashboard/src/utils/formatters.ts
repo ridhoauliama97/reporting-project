@@ -1,10 +1,10 @@
-import type { PurchaseItem, ParsedPurchaseItem } from '../types/purchase';
-import { format, parseISO, isValid } from 'date-fns';
-import { id } from 'date-fns/locale';
+import type { PurchaseItem, ParsedPurchaseItem } from "../types/purchase";
+import { format, parseISO, isValid } from "date-fns";
+import { id } from "date-fns/locale";
 
 export function parsePurchaseItem(item: PurchaseItem): ParsedPurchaseItem {
   const parseNum = (val: string): number => {
-    if (val === '' || val === null || val === undefined) return 0;
+    if (val === "" || val === null || val === undefined) return 0;
     const num = parseFloat(val);
     return isNaN(num) ? 0 : num;
   };
@@ -26,21 +26,21 @@ export function parseAllItems(items: PurchaseItem[]): ParsedPurchaseItem[] {
   return items.map(parsePurchaseItem);
 }
 
-const rupiahFormatter = new Intl.NumberFormat('id-ID', {
-  style: 'currency',
-  currency: 'IDR',
+const rupiahFormatter = new Intl.NumberFormat("id-ID", {
+  style: "currency",
+  currency: "IDR",
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
 
-const numberFormatter = new Intl.NumberFormat('id-ID');
+const numberFormatter = new Intl.NumberFormat("id-ID");
 
-const compactNumberFormatter = new Intl.NumberFormat('id-ID', {
+const compactNumberFormatter = new Intl.NumberFormat("id-ID", {
   maximumFractionDigits: 2,
 });
 
 export function formatRupiah(value: number): string {
-  if (value === 0) return '-';
+  if (value === 0) return "-";
   return rupiahFormatter.format(value);
 }
 
@@ -50,10 +50,14 @@ export function formatNumber(value: number): string {
 
 export function formatRupiahCompact(value: number): string {
   const abs = Math.abs(value);
-  if (abs >= 1e12) return `Rp ${compactNumberFormatter.format(value / 1e12)} Triliun`;
-  if (abs >= 1e9) return `Rp ${compactNumberFormatter.format(value / 1e9)} Miliar`;
-  if (abs >= 1e6) return `Rp ${compactNumberFormatter.format(value / 1e6)} Juta`;
-  if (abs >= 1e3) return `Rp ${compactNumberFormatter.format(value / 1e3)} Ribu`;
+  if (abs >= 1e12)
+    return `Rp ${compactNumberFormatter.format(value / 1e12)} Triliun`;
+  if (abs >= 1e9)
+    return `Rp ${compactNumberFormatter.format(value / 1e9)} Miliar`;
+  if (abs >= 1e6)
+    return `Rp ${compactNumberFormatter.format(value / 1e6)} Juta`;
+  if (abs >= 1e3)
+    return `Rp ${compactNumberFormatter.format(value / 1e3)} Ribu`;
   return formatRupiah(value);
 }
 
@@ -62,24 +66,24 @@ export function formatPercent(value: number): string {
 }
 
 export function formatDate(dateStr: string): string {
-  if (!dateStr || dateStr === '') return '-';
+  if (!dateStr || dateStr === "") return "-";
   try {
     const date = parseISO(dateStr);
-    if (!isValid(date)) return '-';
-    return format(date, 'dd MMM yyyy', { locale: id });
+    if (!isValid(date)) return "-";
+    return format(date, "dd MMM yyyy", { locale: id });
   } catch {
-    return '-';
+    return "-";
   }
 }
 
 export function formatDateShort(dateStr: string): string {
-  if (!dateStr || dateStr === '') return '-';
+  if (!dateStr || dateStr === "") return "-";
   try {
     const date = parseISO(dateStr);
-    if (!isValid(date)) return '-';
-    return format(date, 'dd/MM/yyyy');
+    if (!isValid(date)) return "-";
+    return format(date, "dd/MM/yyyy");
   } catch {
-    return '-';
+    return "-";
   }
 }
 
@@ -87,7 +91,7 @@ export function filterByDateRange(
   items: ParsedPurchaseItem[],
   startDate: Date | null,
   endDate: Date | null,
-  dateField: 'purchaseDate' | 'poDate' | 'prDate' = 'purchaseDate'
+  dateField: "purchaseDate" | "poDate" | "prDate" = "purchaseDate",
 ): ParsedPurchaseItem[] {
   if (!startDate && !endDate) return items;
 
@@ -107,23 +111,23 @@ export function filterByDateRange(
 }
 
 export function getMonthYear(dateStr: string): string {
-  if (!dateStr) return '';
+  if (!dateStr) return "";
   try {
     const date = parseISO(dateStr);
-    if (!isValid(date)) return '';
-    return format(date, 'yyyy-MM');
+    if (!isValid(date)) return "";
+    return format(date, "yyyy-MM");
   } catch {
-    return '';
+    return "";
   }
 }
 
 export function getMonthLabel(dateStr: string): string {
-  if (!dateStr) return '';
+  if (!dateStr) return "";
   try {
     const date = parseISO(dateStr);
-    if (!isValid(date)) return '';
-    return format(date, 'MMM yyyy', { locale: id });
+    if (!isValid(date)) return "";
+    return format(date, "MMM yyyy", { locale: id });
   } catch {
-    return '';
+    return "";
   }
 }

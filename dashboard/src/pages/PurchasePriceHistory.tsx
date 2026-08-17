@@ -1,6 +1,11 @@
 import { useMemo, useState } from "react";
 import type { ParsedPurchaseItem } from "../types/purchase";
-import { formatRupiah, formatRupiahCompact, formatNumber, formatDate } from "../utils/formatters";
+import {
+  formatRupiah,
+  formatRupiahCompact,
+  formatNumber,
+  formatDate,
+} from "../utils/formatters";
 import PageLayout from "../components/PageLayout";
 import StatCard from "../components/StatCard";
 import DataTable from "../components/DataTable";
@@ -119,7 +124,7 @@ export default function PurchasePriceHistory({
 
   return (
     <PageLayout
-      title="Price History"
+      title="Purchase Price History"
       subtitle="Riwayat harga pembelian untuk setiap item"
       dateRange={dateRange}
       onDateRangeChange={onDateRangeChange}
