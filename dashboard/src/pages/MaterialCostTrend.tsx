@@ -1,12 +1,6 @@
 import { useMemo, useState } from "react";
 import type { ParsedPurchaseItem } from "../types/purchase";
-import {
-  formatRupiah,
-  formatRupiahCompact,
-  formatPercent,
-  getMonthYear,
-  getMonthLabel,
-} from "../utils/formatters";
+import { formatRupiah, formatRupiahCompact, formatPercent, getMonthLabel, monthKeyOf } from "../utils/formatters";
 import PageLayout from "../components/PageLayout";
 import StatCard from "../components/StatCard";
 import DataTable from "../components/DataTable";
@@ -98,7 +92,7 @@ export default function MaterialCostTrend({
     const grouped: Record<string, MonthRow> = {};
 
     filteredItems.forEach((item) => {
-      const monthKey = getMonthYear(item.purchaseDate);
+      const monthKey = monthKeyOf(item.purchaseDateObj);
       if (!monthKey) return;
       if (!grouped[monthKey]) {
         grouped[monthKey] = {

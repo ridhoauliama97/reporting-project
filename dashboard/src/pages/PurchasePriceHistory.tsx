@@ -1,11 +1,6 @@
 import { useMemo, useState } from "react";
 import type { ParsedPurchaseItem } from "../types/purchase";
-import {
-  formatRupiah,
-  formatRupiahCompact,
-  formatNumber,
-  formatDate,
-} from "../utils/formatters";
+import { formatRupiah, formatRupiahCompact, formatNumber, formatDate, byPurchaseDateAsc } from "../utils/formatters";
 import PageLayout from "../components/PageLayout";
 import StatCard from "../components/StatCard";
 import DataTable from "../components/DataTable";
@@ -64,11 +59,7 @@ export default function PurchasePriceHistory({
     if (!selectedItem) return [];
     return items
       .filter((item) => item.itemName === selectedItem)
-      .sort(
-        (a, b) =>
-          new Date(a.purchaseDate).getTime() -
-          new Date(b.purchaseDate).getTime(),
-      );
+      .sort(byPurchaseDateAsc);
   }, [items, selectedItem]);
 
   const priceStats = useMemo(() => {

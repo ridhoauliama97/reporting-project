@@ -158,3 +158,15 @@ export function getMonthLabel(dateStr: string): string {
     return "";
   }
 }
+
+export function monthKeyOf(date: Date | null | undefined): string {
+  if (!date || !isValid(date)) return "";
+  return format(date, "yyyy-MM");
+}
+
+export function byPurchaseDateAsc(
+  a: { purchaseDateObj: Date | null },
+  b: { purchaseDateObj: Date | null },
+): number {
+  return (a.purchaseDateObj?.getTime() ?? 0) - (b.purchaseDateObj?.getTime() ?? 0);
+}

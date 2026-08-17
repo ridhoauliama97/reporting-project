@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { ParsedPurchaseItem } from "../types/purchase";
-import { formatNumber } from "../utils/formatters";
+import { formatNumber, byPurchaseDateAsc } from "../utils/formatters";
 import PageLayout from "../components/PageLayout";
 import StatCard from "../components/StatCard";
 import DataTable from "../components/DataTable";
@@ -76,11 +76,7 @@ export default function SupplierScorecard({
     Object.entries(grouped).forEach(([, data]) => {
       const sorted = data.items
         .filter((i) => i.unitCost > 0)
-        .sort(
-          (a, b) =>
-            new Date(a.purchaseDate).getTime() -
-            new Date(b.purchaseDate).getTime(),
-        );
+        .sort(byPurchaseDateAsc);
 
       for (let i = 1; i < sorted.length; i++) {
         const increase =

@@ -138,10 +138,12 @@ export default function Dashboard({
     const len = dateRange.end.getTime() - dateRange.start.getTime();
     const prevStart = new Date(dateRange.start.getTime() - len - 86400000);
     const prevEnd = new Date(dateRange.start.getTime() - 86400000);
-    return allItems.filter((item) => {
-      const d = new Date(item.purchaseDate);
-      return d >= prevStart && d <= prevEnd;
-    });
+    return allItems.filter(
+      (item) =>
+        item.purchaseDateObj !== null &&
+        item.purchaseDateObj >= prevStart &&
+        item.purchaseDateObj <= prevEnd,
+    );
   }, [allItems, dateRange]);
 
   const overallSummary = useMemo(

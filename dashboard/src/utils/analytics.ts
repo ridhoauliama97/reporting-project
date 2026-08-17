@@ -5,8 +5,9 @@ import {
   formatNumber,
   formatPercent,
   formatDate,
-  getMonthYear,
   getMonthLabel,
+  monthKeyOf,
+  byPurchaseDateAsc,
 } from "@/utils/formatters";
 import { REPORTS } from "@/utils/reports";
 
@@ -233,7 +234,7 @@ export function generateReportSummary(
       items.forEach((i) => {
         categoryTotals[i.itemCategory] =
           (categoryTotals[i.itemCategory] || 0) + i.netTotal;
-        const monthKey = getMonthYear(i.purchaseDate);
+        const monthKey = monthKeyOf(i.purchaseDateObj);
         if (monthKey) {
           monthTotals[monthKey] = (monthTotals[monthKey] || 0) + i.netTotal;
         }
@@ -260,11 +261,7 @@ export function generateReportSummary(
       Object.values(grouped).forEach((itemGroup) => {
         const sorted = itemGroup
           .filter((i) => i.unitCost > 0)
-          .sort(
-            (a, b) =>
-              new Date(a.purchaseDate).getTime() -
-              new Date(b.purchaseDate).getTime(),
-          );
+          .sort(byPurchaseDateAsc);
         for (let i = 1; i < sorted.length; i++) {
           const increase = (sorted[i].unitCost - sorted[i - 1].unitCost) / sorted[i - 1].unitCost;
           if (increase >= 0.1) {
@@ -463,7 +460,7 @@ export function generateRecommendations(
 
   if (recommendations.length === 0) {
     const months = new Set(
-      allItems.map((i) => getMonthYear(i.purchaseDate)).filter(Boolean),
+      allItems.map((i) => monthKeyOf(i.purchaseDateObj)).filter(Boolean),
     );
     const monthCount = months.size || 1;
     const monthlyCount = allItems.length / monthCount;
@@ -498,11 +495,7 @@ export function priceIncreaseAlerts(items: ParsedPurchaseItem[]) {
   Object.values(grouped).forEach((itemGroup) => {
     const sorted = itemGroup
       .filter((i) => i.unitCost > 0)
-      .sort(
-        (a, b) =>
-          new Date(a.purchaseDate).getTime() -
-          new Date(b.purchaseDate).getTime(),
-      );
+      .sort(byPurchaseDateAsc);
     for (let i = 1; i < sorted.length; i++) {
       const prev = sorted[i - 1];
       const curr = sorted[i];
@@ -569,10 +562,16 @@ export function detectAnomalies(
   }
   const baselineItems = baselineMonths.size
     ? allItems.filter(
-        (i) => i.purchaseDate && baselineMonths.has(getMonthYear(i.purchaseDate)),
+        (i) => baselineMonths.has(monthKeyOf(i.purchaseDateObj)),
       )
     : allItems.filter((i) => !items.includes(i));
   const inPeriod = new Set(items);
+  const baselineByName: Record<string, ParsedPurchaseItem[]> = {};
+  baselineItems.forEach((i) => {
+    if (i.unitCost <= 0 || inPeriod.has(i)) return;
+    if (!baselineByName[i.itemName]) baselineByName[i.itemName] = [];
+    baselineByName[i.itemName].push(i);
+  });
 
   const priceAnomalies: {
     item: string;
@@ -589,9 +588,7 @@ export function detectAnomalies(
     const currentRows = periodRows.filter((i) => i.unitCost > 0);
     if (currentRows.length === 0) return;
     const current = avg(currentRows.map((i) => i.unitCost));
-    const baselineRows = baselineItems.filter(
-      (i) => i.itemName === name && i.unitCost > 0 && !inPeriod.has(i),
-    );
+    const baselineRows = baselineByName[name] ?? [];
     if (baselineRows.length === 0) return;
     const baseline = avg(baselineRows.map((i) => i.unitCost));
     if (baseline <= 0) return;
@@ -611,7 +608,7 @@ export function detectAnomalies(
     });
   });
 
-  const months = new Set(allItems.map((i) => getMonthYear(i.purchaseDate)).filter(Boolean));
+  const months = new Set(allItems.map((i) => monthKeyOf(i.purchaseDateObj)).filter(Boolean));
   const monthCount = months.size;
   if (monthCount > 0) {
     const avgMonthlyCount = allItems.length / monthCount;
@@ -779,7 +776,7 @@ function resolveChatScope(
     const now = new Date();
     const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
     return {
-      scope: allItems.filter((i) => getMonthYear(i.purchaseDate) === month),
+      scope: allItems.filter((i) => monthKeyOf(i.purchaseDateObj) === month),
       note: "bulan ini",
     };
   }
@@ -789,7 +786,7 @@ function resolveChatScope(
     const year = yearMatch ? yearMatch[1] : new Date().getFullYear();
     const month = `${year}-${String(monthMatch[1]).padStart(2, "0")}`;
     return {
-      scope: allItems.filter((i) => getMonthYear(i.purchaseDate) === month),
+      scope: allItems.filter((i) => monthKeyOf(i.purchaseDateObj) === month),
       note: `${monthMatch[0]} ${year}`,
     };
   }

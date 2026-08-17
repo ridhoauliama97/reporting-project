@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import type { ParsedPurchaseItem, ItemCategory } from "@/types/purchase";
 import { CATEGORY_LABELS } from "@/types/purchase";
-import { getMonthYear, getMonthLabel } from "@/utils/formatters";
+import { getMonthLabel, monthKeyOf, byPurchaseDateAsc } from "@/utils/formatters";
 
 export interface ReportExport {
   headers: (string | number)[];
@@ -240,11 +240,7 @@ export const REPORTS: ReportDefinition[] = [
       Object.values(grouped).forEach((data) => {
         const sorted = data.items
           .filter((i) => i.unitCost > 0)
-          .sort(
-            (a, b) =>
-              new Date(a.purchaseDate).getTime() -
-              new Date(b.purchaseDate).getTime(),
-          );
+          .sort(byPurchaseDateAsc);
         for (let i = 1; i < sorted.length; i++) {
           const increase =
             ((sorted[i].unitCost - sorted[i - 1].unitCost) /
@@ -300,11 +296,7 @@ export const REPORTS: ReportDefinition[] = [
     description: "Riwayat harga per transaksi seluruh item",
     icon: HistoryIcon,
     getData: (items) => {
-      const sorted = [...items].sort(
-        (a, b) =>
-          new Date(a.purchaseDate).getTime() -
-          new Date(b.purchaseDate).getTime(),
-      );
+      const sorted = [...items].sort(byPurchaseDateAsc);
       return {
         headers: [
           "Tanggal",
@@ -377,7 +369,7 @@ export const REPORTS: ReportDefinition[] = [
         { sampleDate: string; [key: string]: number | string }
       > = {};
       items.forEach((item) => {
-        const month = getMonthYear(item.purchaseDate);
+        const month = monthKeyOf(item.purchaseDateObj);
         if (!month) return;
         if (!monthly[month]) {
           monthly[month] = { sampleDate: item.purchaseDate };
@@ -420,11 +412,7 @@ export const REPORTS: ReportDefinition[] = [
       Object.values(grouped).forEach((itemGroup) => {
         const sorted = itemGroup
           .filter((i) => i.unitCost > 0)
-          .sort(
-            (a, b) =>
-              new Date(a.purchaseDate).getTime() -
-              new Date(b.purchaseDate).getTime(),
-          );
+          .sort(byPurchaseDateAsc);
         for (let i = 1; i < sorted.length; i++) {
           const prev = sorted[i - 1];
           const curr = sorted[i];

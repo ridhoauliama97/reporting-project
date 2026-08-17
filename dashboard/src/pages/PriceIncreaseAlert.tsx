@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { ParsedPurchaseItem } from "../types/purchase";
-import { formatRupiah, formatPercent, formatDate } from "../utils/formatters";
+import { formatRupiah, formatPercent, formatDate, byPurchaseDateAsc } from "../utils/formatters";
 import PageLayout from "../components/PageLayout";
 import StatCard from "../components/StatCard";
 import DataTable from "../components/DataTable";
@@ -50,11 +50,7 @@ export default function PriceIncreaseAlert({
     Object.entries(grouped).forEach(([itemName, itemGroup]) => {
       const sorted = itemGroup
         .filter((i) => i.unitCost > 0)
-        .sort(
-          (a, b) =>
-            new Date(a.purchaseDate).getTime() -
-            new Date(b.purchaseDate).getTime(),
-        );
+        .sort(byPurchaseDateAsc);
 
       for (let i = 1; i < sorted.length; i++) {
         const prev = sorted[i - 1];

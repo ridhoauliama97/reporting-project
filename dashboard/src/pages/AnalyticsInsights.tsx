@@ -181,14 +181,29 @@ export default function AnalyticsInsights({
   const [summaries, setSummaries] = useState<Record<string, string>>({});
   const [pendingSummary, setPendingSummary] = useState<string | null>(null);
 
+  const dateRangeRef = useRef(dateRange);
+  useEffect(() => {
+    dateRangeRef.current = dateRange;
+  }, [dateRange]);
+
   useEffect(() => {
     setSummaries({});
   }, [dateRange.start, dateRange.end]);
 
   const handleGenerateSummary = (reportId: string) => {
     if (pendingSummary) return;
+    const targetStart = dateRange.start;
+    const targetEnd = dateRange.end;
     setPendingSummary(reportId);
     window.setTimeout(() => {
+      const current = dateRangeRef.current;
+      if (
+        current.start?.getTime() !== targetStart?.getTime() ||
+        current.end?.getTime() !== targetEnd?.getTime()
+      ) {
+        setPendingSummary(null);
+        return;
+      }
       setSummaries((prev) => ({
         ...prev,
         [reportId]: generateReportSummary(reportId, items),
