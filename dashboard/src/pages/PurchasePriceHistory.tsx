@@ -6,15 +6,22 @@ import StatCard from "../components/StatCard";
 import DataTable from "../components/DataTable";
 import ChartCard from "../components/ChartCard";
 import EmptyState from "../components/EmptyState";
-import { TrendingUpIcon } from "lucide-react";
+import { TrendingUpIcon, CheckIcon, ChevronsUpDownIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 import {
   LineChart,
   Line,
@@ -42,6 +49,8 @@ export default function PurchasePriceHistory({
   onDateRangeChange,
 }: PurchasePriceHistoryProps) {
   const [selectedItem, setSelectedItem] = useState<string>("");
+  const [comboboxOpen, setComboboxOpen] = useState(false);
+  const [comboboxSearch, setComboboxSearch] = useState("");
 
   const uniqueItems = useMemo(() => {
     const itemMap = new Map<string, string>();
@@ -125,18 +134,58 @@ export default function PurchasePriceHistory({
           <label className="text-sm font-medium text-muted-foreground">
             Pilih Item
           </label>
-          <Select value={selectedItem} onValueChange={setSelectedItem}>
-            <SelectTrigger className="w-full md:w-96">
-              <SelectValue placeholder="-- Pilih Item --" />
-            </SelectTrigger>
-            <SelectContent>
-              {uniqueItems.map((item) => (
-                <SelectItem key={item.name} value={item.name}>
-                  {item.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-expanded={comboboxOpen}
+                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 md:w-96"
+              >
+                {selectedItem || (
+                  <span className="text-muted-foreground">-- Pilih Item --</span>
+                )}
+                <ChevronsUpDownIcon className="size-4 shrink-0 opacity-50" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-full min-w-72 p-0 md:w-96">
+              <Command>
+                <CommandInput
+                  placeholder="Cari item..."
+                  value={comboboxSearch}
+                  onValueChange={setComboboxSearch}
+                />
+                <CommandList>
+                  <CommandEmpty>Tidak ada item ditemukan.</CommandEmpty>
+                  <CommandGroup>
+                    {uniqueItems.map((item) => (
+                      <CommandItem
+                        key={item.name}
+                        value={item.name}
+                        onSelect={(currentValue) => {
+                          setSelectedItem(currentValue);
+                          setComboboxOpen(false);
+                          setComboboxSearch("");
+                        }}
+                      >
+                        <CheckIcon
+                          className={cn(
+                            "mr-2 size-4",
+                            selectedItem === item.name
+                              ? "opacity-100"
+                              : "opacity-0",
+                          )}
+                        />
+                        <HighlightMatch
+                          text={item.name}
+                          query={comboboxSearch}
+                        />
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </CardContent>
       </Card>
 
@@ -216,5 +265,21 @@ export default function PurchasePriceHistory({
         />
       )}
     </PageLayout>
+  );
+}
+
+function HighlightMatch({ text, query }: { text: string; query: string }) {
+  const q = query.trim().toLowerCase();
+  if (!q) return <>{text}</>;
+  const idx = text.toLowerCase().indexOf(q);
+  if (idx === -1) return <>{text}</>;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark className="rounded-sm bg-primary/15 px-0.5 text-foreground">
+        {text.slice(idx, idx + q.length)}
+      </mark>
+      {text.slice(idx + q.length)}
+    </>
   );
 }
