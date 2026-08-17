@@ -5,6 +5,7 @@ import {
   formatPercent,
   formatDate,
   getMonthYear,
+  getMonthLabel,
 } from "@/utils/formatters";
 import { REPORTS } from "@/utils/reports";
 
@@ -226,19 +227,27 @@ export function generateReportSummary(
       return `Periode ${period}: ${formatNumber(rows.length)} transaksi memiliki selisih qty (${formatNumber(neg.length)} diterima kurang, ${formatNumber(rows.length - neg.length)} lebih). Total selisih ${formatNumber(round2(totalDiff))} unit.`;
     }
     case "material-cost": {
-      const scoped = items.filter(
-        (i) =>
-          i.itemCategory === "BAHAN BAKU" || i.itemCategory === "BAHAN PENDUKUNG",
-      );
-      if (scoped.length === 0) {
-        return `Periode ${period}: tidak ada transaksi bahan baku/bahan pendukung pada rentang ini.`;
-      }
-      const baku = sum(scoped.filter((i) => i.itemCategory === "BAHAN BAKU"), "netTotal");
-      const pendukung = sum(
-        scoped.filter((i) => i.itemCategory === "BAHAN PENDUKUNG"),
-        "netTotal",
-      );
-      return `Periode ${period}: biaya material total ${formatRupiahCompact(baku + pendukung)} — bahan baku ${formatRupiahCompact(baku)} dan bahan pendukung ${formatRupiahCompact(pendukung)}.`;
+      const categoryTotals: Record<string, number> = {};
+      const monthTotals: Record<string, number> = {};
+      items.forEach((i) => {
+        categoryTotals[i.itemCategory] =
+          (categoryTotals[i.itemCategory] || 0) + i.netTotal;
+        const monthKey = getMonthYear(i.purchaseDate);
+        if (monthKey) {
+          monthTotals[monthKey] = (monthTotals[monthKey] || 0) + i.netTotal;
+        }
+      });
+      const total = sum(items, "netTotal");
+      const categoryList = Object.entries(categoryTotals)
+        .sort((a, b) => b[1] - a[1])
+        .map(([c, v]) => `${c}: ${formatRupiahCompact(v)}`)
+        .join(", ");
+      const months = Object.keys(monthTotals).sort();
+      const avgPerMonth = months.length > 0 ? total / months.length : 0;
+      const highestMonth = months
+        .map((m) => ({ m, v: monthTotals[m] }))
+        .sort((a, b) => b.v - a.v)[0];
+      return `Periode ${period}: biaya material total ${formatRupiahCompact(total)} dari ${formatNumber(items.length)} transaksi, mencakup seluruh kategori. Per kategori: ${categoryList}. Rata-rata ${formatRupiahCompact(avgPerMonth)}/bulan; puncak di ${highestMonth ? getMonthLabel(highestMonth.m) : "-"} (${highestMonth ? formatRupiahCompact(highestMonth.v) : "-"}).`;
     }
     case "price-alert": {
       const grouped: Record<string, ParsedPurchaseItem[]> = {};

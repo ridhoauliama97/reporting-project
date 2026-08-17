@@ -15,7 +15,8 @@ import {
   FileTextIcon,
   FolderCheckIcon,
 } from "lucide-react";
-import type { ParsedPurchaseItem } from "@/types/purchase";
+import type { ParsedPurchaseItem, ItemCategory } from "@/types/purchase";
+import { CATEGORY_LABELS } from "@/types/purchase";
 import { getMonthYear, getMonthLabel } from "@/utils/formatters";
 
 export interface ReportExport {
@@ -367,44 +368,39 @@ export const REPORTS: ReportDefinition[] = [
   {
     id: "material-cost",
     name: "Material Cost Trends",
-    description: "Biaya material bulanan: bahan baku & pendukung",
+    description: "Biaya material bulanan per kategori item (5 kategori)",
     icon: FactoryIcon,
     getData: (items) => {
-      const scoped = items.filter(
-        (item) =>
-          item.itemCategory === "BAHAN BAKU" ||
-          item.itemCategory === "BAHAN PENDUKUNG",
-      );
+      const categories = Object.keys(CATEGORY_LABELS) as ItemCategory[];
       const monthly: Record<
         string,
-        { bahanBaku: number; bahanPendukung: number; sampleDate: string }
+        { sampleDate: string; [key: string]: number | string }
       > = {};
-      scoped.forEach((item) => {
+      items.forEach((item) => {
         const month = getMonthYear(item.purchaseDate);
         if (!month) return;
         if (!monthly[month]) {
-          monthly[month] = {
-            bahanBaku: 0,
-            bahanPendukung: 0,
-            sampleDate: item.purchaseDate,
-          };
+          monthly[month] = { sampleDate: item.purchaseDate };
+          categories.forEach((cat) => {
+            monthly[month][cat] = 0;
+          });
         }
-        if (item.itemCategory === "BAHAN BAKU") {
-          monthly[month].bahanBaku += item.netTotal;
-        } else {
-          monthly[month].bahanPendukung += item.netTotal;
-        }
+        monthly[month][item.itemCategory] =
+          ((monthly[month][item.itemCategory] as number) || 0) + item.netTotal;
       });
       const rows = Object.entries(monthly)
         .sort((a, b) => a[0].localeCompare(b[0]))
         .map(([_, d]) => [
           getMonthLabel(d.sampleDate),
-          d.bahanBaku,
-          d.bahanPendukung,
-          d.bahanBaku + d.bahanPendukung,
+          ...categories.map((cat) => (d[cat] as number) ?? 0),
+          categories.reduce((sum, cat) => sum + ((d[cat] as number) ?? 0), 0),
         ]);
       return {
-        headers: ["Bulan", "Bahan Baku", "Bahan Pendukung", "Total"],
+        headers: [
+          "Bulan",
+          ...categories.map((cat) => CATEGORY_LABELS[cat]),
+          "Total",
+        ],
         rows,
       };
     },
