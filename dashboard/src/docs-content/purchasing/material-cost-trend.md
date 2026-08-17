@@ -1,4 +1,4 @@
-# Material Cost Trend (Tren Biaya Material)
+# Material Cost Trends (Tren Biaya Material)
 
 ## Deskripsi
 Tren biaya pembelian dari waktu ke waktu (per bulan) — untuk memantau perkembangan biaya per kategori item.

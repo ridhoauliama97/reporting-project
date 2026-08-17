@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import type { ParsedPurchaseItem } from "../types/purchase";
 import PageLayout from "../components/PageLayout";
+import EmptyState from "../components/EmptyState";
 import {
   Card,
   CardContent,
@@ -108,9 +109,9 @@ function SectionHeader({
   return (
     <div className="flex items-center gap-3">
       <div
-        className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${accentClasses[accent]}`}
+        className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${accentClasses[accent]}`}
       >
-        <Icon className="size-5" />
+        <Icon className="size-4" />
       </div>
       <div className="min-w-0">
         <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
@@ -242,21 +243,14 @@ export default function AnalyticsInsights({
       onDateRangeChange={onDateRangeChange}
     >
       {!hasData && (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center gap-2 p-8 text-center">
-            <AlertTriangleIcon className="size-8 text-muted-foreground" />
-            <p className="text-sm font-medium">
-              Tidak ada data pada rentang tanggal ini
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Ubah rentang tanggal untuk melihat insight, atau buka Chat dengan
-              Aurora untuk menanyakan seluruh data.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={AlertTriangleIcon}
+          title="Tidak ada data pada rentang tanggal ini"
+          description="Ubah rentang tanggal untuk melihat insight, atau buka Chat dengan Aurora untuk menanyakan seluruh data."
+        />
       )}
 
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-4">
         <section className="flex flex-col gap-3">
           <SectionHeader
             icon={SparklesIcon}
@@ -264,7 +258,7 @@ export default function AnalyticsInsights({
             description="Rekomendasi actionable dari gabungan seluruh laporan, diurutkan berdasarkan urgensi."
             count={recommendations.length}
           />
-          <div className="grid gap-3 lg:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-2">
             {recommendations.map((rec) => {
               const style = URGENCY_STYLES[rec.level];
               const Icon = style.icon;
@@ -278,7 +272,7 @@ export default function AnalyticsInsights({
                       <Badge
                         className={`shrink-0 gap-1 font-medium ${style.badge}`}
                       >
-                        <Icon className="size-3" />
+                        <Icon className="size-3.5" />
                         {rec.level}
                       </Badge>
                     </div>
@@ -286,7 +280,7 @@ export default function AnalyticsInsights({
                   <CardContent className="flex-1 pb-2 text-sm text-muted-foreground">
                     <p>{rec.message}</p>
                   </CardContent>
-                  <CardFooter className="border-t pt-3">
+                  <CardFooter className="border-t p-4">
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span>Laporan :</span>
                       <SourceLink reportId={rec.sourceReportId} />
@@ -367,7 +361,7 @@ export default function AnalyticsInsights({
             count={spendInsights.length}
             accent="blue"
           />
-          <div className="grid gap-3 lg:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-2">
             {spendInsights.map((insight) => (
               <Card key={insight.id} className="flex flex-col">
                 <CardHeader className="pb-2">
@@ -385,7 +379,7 @@ export default function AnalyticsInsights({
                     </p>
                   )}
                 </CardContent>
-                <CardFooter className="border-t pt-3">
+                <CardFooter className="border-t p-4">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span>Laporan :</span>
                     <SourceLink reportId={insight.sourceReportId} />

@@ -1,4 +1,4 @@
-# Purchase Lead Time (Lead Time Pembelian)
+# Supplier Lead Time (Lead Time Pembelian)
 
 ## Deskripsi
 Distribusi lama waktu proses pembelian — dari permintaan hingga invoice — disajikan sebagai histogram.

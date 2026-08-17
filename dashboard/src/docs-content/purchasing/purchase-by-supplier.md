@@ -1,4 +1,4 @@
-# Purchase By Supplier (Pembelian per Supplier)
+# Purchase by Supplier (Pembelian per Supplier)
 
 ## Deskripsi
 Ringkasan pembelian yang **dikelompokkan per supplier** — untuk melihat porsi nilai dan aktivitas masing-masing supplier dalam periode terpilih.

@@ -1,39 +1,44 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useEffect, useMemo, useState, Suspense, lazy } from 'react';
-import { parseAllItems, filterByDateRange } from './utils/formatters';
-import type { PurchaseItem, ParsedPurchaseItem } from './types/purchase';
-import purchaseDataUrl from './data/purchase-data.json?url';
-import Layout from './components/Layout';
-import { Button } from './components/ui/button';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import { useEffect, useMemo, useState, Suspense, lazy } from "react";
+import { parseAllItems, filterByDateRange } from "./utils/formatters";
+import type { PurchaseItem, ParsedPurchaseItem } from "./types/purchase";
+import purchaseDataUrl from "./data/purchase-data.json?url";
+import Layout from "./components/Layout";
+import { Button } from "./components/ui/button";
 
-const PurchaseSummary = lazy(() => import('./pages/PurchaseSummary'));
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const PurchaseBySupplier = lazy(() => import('./pages/PurchaseBySupplier'));
-const SupplierRanking = lazy(() => import('./pages/SupplierRanking'));
-const SupplierQuality = lazy(() => import('./pages/SupplierQuality'));
-const SupplierDelivery = lazy(() => import('./pages/SupplierDelivery'));
-const PurchasePriceHistory = lazy(() => import('./pages/PurchasePriceHistory'));
-const PurchaseVariance = lazy(() => import('./pages/PurchaseVariance'));
-const MaterialCostTrend = lazy(() => import('./pages/MaterialCostTrend'));
-const PriceIncreaseAlert = lazy(() => import('./pages/PriceIncreaseAlert'));
-const PurchaseLeadTime = lazy(() => import('./pages/PurchaseLeadTime'));
-const OutstandingPO = lazy(() => import('./pages/OutstandingPO'));
-const OpenPO = lazy(() => import('./pages/OpenPO'));
-const ClosedPO = lazy(() => import('./pages/ClosedPO'));
-const SupplierScorecard = lazy(() => import('./pages/SupplierScorecard'));
-const ReportsExports = lazy(() => import('./pages/ReportsExports'));
-const AnalyticsInsights = lazy(() => import('./pages/AnalyticsInsights'));
-const WarehousePlaceholder = lazy(() => import('./pages/WarehousePlaceholder'));
-const DocsPage = lazy(() => import('./pages/DocsPage'));
+const PurchaseSummary = lazy(() => import("./pages/PurchaseSummary"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const PurchaseBySupplier = lazy(() => import("./pages/PurchaseBySupplier"));
+const SupplierRanking = lazy(() => import("./pages/SupplierRanking"));
+const SupplierQuality = lazy(() => import("./pages/SupplierQuality"));
+const SupplierDelivery = lazy(() => import("./pages/SupplierDelivery"));
+const PurchasePriceHistory = lazy(() => import("./pages/PurchasePriceHistory"));
+const PurchaseVariance = lazy(() => import("./pages/PurchaseVariance"));
+const MaterialCostTrend = lazy(() => import("./pages/MaterialCostTrend"));
+const PriceIncreaseAlert = lazy(() => import("./pages/PriceIncreaseAlert"));
+const PurchaseLeadTime = lazy(() => import("./pages/PurchaseLeadTime"));
+const OutstandingPO = lazy(() => import("./pages/OutstandingPO"));
+const OpenPO = lazy(() => import("./pages/OpenPO"));
+const ClosedPO = lazy(() => import("./pages/ClosedPO"));
+const SupplierScorecard = lazy(() => import("./pages/SupplierScorecard"));
+const ReportsExports = lazy(() => import("./pages/ReportsExports"));
+const AnalyticsInsights = lazy(() => import("./pages/AnalyticsInsights"));
+const WarehousePlaceholder = lazy(() => import("./pages/WarehousePlaceholder"));
+const DocsPage = lazy(() => import("./pages/DocsPage"));
 
 const WAREHOUSES: Record<string, string> = {
-  'gudang-bahan-baku': '01: GUDANG BAHAN BAKU',
-  'gudang-barang-jadi': '04: GUDANG BARANG JADI',
-  'gudang-sparepart': '07: GUDANG SPAREPART',
-  'cbd-sparepart': '09: CBD SPAREPART',
-  'gudang-wip': '51: GUDANG WIP',
-  'gudang-pekanbaru': '54: GUDANG PEKANBARU',
-  'kantor-sales': '24: KANTOR SALES',
+  "gudang-bahan-baku": "01: GUDANG BAHAN BAKU",
+  "gudang-barang-jadi": "04: GUDANG BARANG JADI",
+  "gudang-sparepart": "07: GUDANG SPAREPART",
+  "cbd-sparepart": "09: CBD SPAREPART",
+  "gudang-wip": "51: GUDANG WIP",
+  "gudang-pekanbaru": "54: GUDANG PEKANBARU",
+  "kantor-sales": "24: KANTOR SALES",
 };
 
 function getDefaultDateRange() {
@@ -113,7 +118,10 @@ function App() {
                 <p className="text-sm text-muted-foreground">
                   Gagal memuat data. Periksa koneksi lalu coba lagi.
                 </p>
-                <Button variant="outline" onClick={() => setLoadKey((k) => k + 1)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setLoadKey((k) => k + 1)}
+                >
                   Coba Lagi
                 </Button>
               </div>
@@ -129,7 +137,10 @@ function App() {
                   }
                 >
                   <Routes>
-                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                    <Route
+                      path="/"
+                      element={<Navigate to="/dashboard" replace />}
+                    />
                     <Route
                       path="/dashboard"
                       element={

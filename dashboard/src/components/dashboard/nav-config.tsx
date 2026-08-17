@@ -34,7 +34,11 @@ export interface NavItem {
 }
 
 export const DASHBOARD_MENU_ITEMS: NavItem[] = [
-  { title: "Dashboard", url: "/dashboard", icon: <LayoutDashboardIcon /> },
+  {
+    title: "Statistics Overview",
+    url: "/dashboard",
+    icon: <LayoutDashboardIcon />,
+  },
 ];
 
 export const PURCHASING_MENU_ITEMS: NavItem[] = [

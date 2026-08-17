@@ -5,6 +5,7 @@ import PageLayout from "../components/PageLayout";
 import StatCard from "../components/StatCard";
 import DataTable from "../components/DataTable";
 import InfoBanner from "../components/InfoBanner";
+import { Badge } from "@/components/ui/badge";
 
 interface DateRange {
   start: Date | null;
@@ -32,9 +33,11 @@ function getRating(score: number): string {
 }
 
 function getRatingColor(rating: string): string {
-  if (rating === "Excellent") return "bg-green-100 text-green-700";
-  if (rating === "Good") return "bg-blue-100 text-blue-700";
-  return "bg-red-100 text-red-700";
+  if (rating === "Excellent")
+    return "bg-teal-500/10 text-teal-600 dark:bg-teal-500/20 dark:text-teal-400";
+  if (rating === "Good")
+    return "bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400";
+  return "bg-red-500/10 text-red-600 dark:bg-red-500/20 dark:text-red-400";
 }
 
 export default function SupplierScorecard({
@@ -159,11 +162,9 @@ export default function SupplierScorecard({
       label: "Rating",
       align: "center" as const,
       render: (item: SupplierScore) => (
-        <span
-          className={`px-2 py-1 rounded text-sm font-medium ${getRatingColor(item.rating)}`}
-        >
+        <Badge variant="outline" className={getRatingColor(item.rating)}>
           {item.rating}
-        </span>
+        </Badge>
       ),
     },
   ];

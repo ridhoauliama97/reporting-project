@@ -5,6 +5,7 @@ import PageLayout from "../components/PageLayout";
 import StatCard from "../components/StatCard";
 import DataTable from "../components/DataTable";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 
 interface DateRange {
@@ -124,17 +125,18 @@ export default function PriceIncreaseAlert({
       align: "right" as const,
       sortable: true,
       render: (item: PriceIncreaseItem) => (
-        <span
-          className={`px-2 py-1 rounded text-sm font-medium ${
+        <Badge
+          variant="outline"
+          className={
             item.increasePercent >= 20
-              ? "bg-red-100 text-red-700"
+              ? "bg-red-500/10 text-red-600 dark:bg-red-500/20 dark:text-red-400"
               : item.increasePercent >= 15
-                ? "bg-orange-100 text-orange-700"
-                : "bg-yellow-100 text-yellow-700"
-          }`}
+                ? "bg-orange-500/10 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400"
+                : "bg-yellow-500/10 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-400"
+          }
         >
           {formatPercent(item.increasePercent)}
-        </span>
+        </Badge>
       ),
     },
   ];

@@ -175,14 +175,14 @@ export default function MaterialCostTrend({
 
   return (
     <PageLayout
-      title="Material Cost Trend"
+      title="Material Cost Trends"
       subtitle="Tren biaya pembelian per bulan berdasarkan kategori yang dipilih."
       dateRange={dateRange}
       onDateRangeChange={onDateRangeChange}
     >
       <Card>
-        <CardContent className="p-4">
-          <label className="mb-3 block text-sm font-medium text-muted-foreground">
+        <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
+          <label className="shrink-0 text-sm font-medium text-muted-foreground">
             Filter Kategori
           </label>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">

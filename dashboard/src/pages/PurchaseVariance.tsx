@@ -81,7 +81,13 @@ export default function PurchaseVariance({
       align: "right" as const,
       sortable: true,
       render: (item: VarianceItem) => (
-        <span className={item.variance < 0 ? "text-red-600" : "text-green-600"}>
+        <span
+          className={
+            item.variance < 0
+              ? "font-medium text-red-600 dark:text-red-400"
+              : "font-medium text-emerald-600 dark:text-emerald-400"
+          }
+        >
           {item.variance > 0 ? "+" : ""}
           {formatNumber(item.variance)}
         </span>

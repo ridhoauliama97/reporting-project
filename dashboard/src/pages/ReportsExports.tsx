@@ -76,8 +76,8 @@ export default function ReportsExports({
               <CardContent className="flex flex-1 flex-col gap-3 p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex min-w-0 items-start gap-3">
-                    <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-teal-500/10">
-                      <Icon className="size-5 text-teal-600 dark:text-teal-400" />
+                    <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-teal-500/10">
+                      <Icon className="size-4 text-teal-600 dark:text-teal-400" />
                     </div>
                     <div className="min-w-0">
                       <h3 className="truncate text-sm font-semibold">
@@ -102,7 +102,7 @@ export default function ReportsExports({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-9"
+                      className="h-10 md:h-8"
                       disabled={!hasData || exportingId !== null}
                     >
                       <DownloadIcon />

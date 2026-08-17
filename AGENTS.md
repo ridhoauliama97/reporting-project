@@ -74,7 +74,8 @@ Pages #4 (Supplier Quality), #11 (Outstanding PO), #12 (Open PO), #13 (Closed PO
 
 - Route `/docs` renders **outside** the dashboard `Layout` shell (`App.tsx` has `<Route path="/docs">` as a sibling of the `path="*"` Layout wrapper); it has its own shell (header + `ThemeToggle` + back link).
 - Content lives in `dashboard/src/docs-content/{menu}/{slug}.md` (markdown), registered in `docs-content/index.tsx` (`DOCS_MENUS`, `getDocContent`, `resolveDoc`). **Adding a menu = new folder + one config entry** — no component changes.
-- `DocsPage.tsx` renders markdown with `react-markdown`; styling is plain CSS under `.docs-content` in `index.css` (not a Tailwind typography plugin).
+- `DOCS_MENUS` mirrors the dashboard sidebar: menus & submenus use the **same lucide icons as `nav-config.tsx`**, titles match sidebar 1:1 (Statistics Overview → Dashboard; Purchasing → 16 submenus; Overview → Tentang Aplikasi/Istilah). DocsSubmenu has an `icon` field rendered by `DocsPage`.
+- `DocsPage.tsx` renders markdown with `react-markdown` **+ `remark-gfm`** (tables must not regress to raw `|` text); styling is plain CSS under `.docs-content` in `index.css` (not a Tailwind typography plugin).
 - Every page has a matching `.md` doc; update both when a page's behavior changes (spec: `prompt.md` per-page notes live in "Per-Page Notes" below).
 
 ## Analytics & AI Insights

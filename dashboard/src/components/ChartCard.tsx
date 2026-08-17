@@ -12,7 +12,7 @@ export default function ChartCard({ title, description, children, className }: C
   return (
     <Card className={className}>
       <CardHeader>
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <CardTitle className="text-sm font-semibold tracking-tight">{title}</CardTitle>
         {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
       <CardContent className="h-80">{children}</CardContent>

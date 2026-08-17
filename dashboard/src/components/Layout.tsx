@@ -6,7 +6,7 @@ import { NAV_GROUPS } from "@/components/dashboard/nav-config";
 import { SiteHeader } from "@/components/dashboard/site-header";
 
 const PAGE_TITLES: Record<string, string> = {
-  "/dashboard": "Dashboard",
+  "/dashboard": "Statistics Overview",
   "/summary": "Purchase Summary",
   "/by-supplier": "Purchase by Supplier",
   "/ranking": "Supplier Ranking",
@@ -50,7 +50,7 @@ interface LayoutProps {
 
 export default function Layout({ children, dataCount }: LayoutProps) {
   const { pathname } = useLocation();
-  const title = PAGE_TITLES[pathname] ?? "Dashboard Purchase";
+  const title = PAGE_TITLES[pathname] ?? "Statistics Overview";
   const breadcrumb = getBreadcrumb(pathname);
 
   return (

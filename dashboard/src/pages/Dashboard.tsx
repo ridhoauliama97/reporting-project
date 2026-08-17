@@ -2,15 +2,8 @@ import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import type { ParsedPurchaseItem } from "@/types/purchase";
 import { ITEM_CATEGORIES, CATEGORY_LABELS } from "@/types/purchase";
-import {
-  formatRupiah,
-  formatNumber,
-  formatPercent,
-} from "@/utils/formatters";
-import {
-  generateOverallSummary,
-  priceIncreaseAlerts,
-} from "@/utils/analytics";
+import { formatRupiah, formatNumber, formatPercent } from "@/utils/formatters";
+import { generateOverallSummary, priceIncreaseAlerts } from "@/utils/analytics";
 import PageLayout from "../components/PageLayout";
 import { SectionCards } from "../components/dashboard/section-cards";
 import {
@@ -76,7 +69,7 @@ function PreviewCard({
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold">
             <span
-              className={`flex size-7 shrink-0 items-center justify-center rounded-lg ${accent}`}
+              className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${accent}`}
             >
               <Icon className="size-4" />
             </span>
@@ -168,12 +161,14 @@ export default function Dashboard({
 
     items.forEach((item) => {
       const cat = item.itemCategory as string;
-      if (categoryTotals[cat] !== undefined) categoryTotals[cat] += item.netTotal;
+      if (categoryTotals[cat] !== undefined)
+        categoryTotals[cat] += item.netTotal;
 
       const name = item.supplierName || "-";
       supplierTotals[name] = (supplierTotals[name] || 0) + item.netTotal;
       if (item.poPiOverdueDays > 0) {
-        if (!supplierOverdue[name]) supplierOverdue[name] = { count: 0, days: [] };
+        if (!supplierOverdue[name])
+          supplierOverdue[name] = { count: 0, days: [] };
         supplierOverdue[name].count += 1;
         supplierOverdue[name].days.push(item.poPiOverdueDays);
       }
@@ -183,17 +178,23 @@ export default function Dashboard({
       }
     });
 
-    const alertRows = priceIncreaseAlerts(items).slice(0, 5).map((a) => ({
-      key: `alert-${a.item}`,
-      label: a.item,
-      sublabel: `${formatRupiah(a.prev)} → ${formatRupiah(a.curr)} per unit`,
-      value: `+${formatPercent(a.increase * 100)}`,
-      valueClass: "text-red-600 dark:text-red-400",
-    }));
+    const alertRows = priceIncreaseAlerts(items)
+      .slice(0, 5)
+      .map((a) => ({
+        key: `alert-${a.item}`,
+        label: a.item,
+        sublabel: `${formatRupiah(a.prev)} → ${formatRupiah(a.curr)} per unit`,
+        value: `+${formatPercent(a.increase * 100)}`,
+        valueClass: "text-red-600 dark:text-red-400",
+      }));
 
     const varianceRows = items
       .filter((i) => i.qtyOrdered > 0)
-      .map((i) => ({ key: i.purchaseNumber, item: i, variance: i.quantity - i.qtyOrdered }))
+      .map((i) => ({
+        key: i.purchaseNumber,
+        item: i,
+        variance: i.quantity - i.qtyOrdered,
+      }))
       .filter((r) => r.variance !== 0)
       .sort((a, b) => Math.abs(b.variance) - Math.abs(a.variance))
       .slice(0, 5)
@@ -251,8 +252,8 @@ export default function Dashboard({
 
   return (
     <PageLayout
-      title={`${getGreeting()}, User`}
-      subtitle="Ini adalah ringkasan laporan untuk periode bulan ini. Selamat bekerja! 👋"
+      title={`${getGreeting()}, User. 👋`}
+      subtitle="Here's a quick overview of your purchasing data."
       dateRange={dateRange}
       onDateRangeChange={onDateRangeChange}
     >
@@ -266,10 +267,11 @@ export default function Dashboard({
             </span>
             <div>
               <CardTitle className="text-sm font-semibold tracking-tight">
-                Ringkasan AI Keseluruhan
+                Ai Generated Summary
               </CardTitle>
               <CardDescription className="text-xs">
-                Otomatis diperbarui mengikuti rentang tanggal aktif
+                Rangkuman ini otomatis diperbarui sesuai rentang tanggal aktif
+                yang dipilih
               </CardDescription>
             </div>
           </div>

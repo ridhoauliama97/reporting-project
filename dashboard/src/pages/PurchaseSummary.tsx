@@ -155,7 +155,7 @@ export default function PurchaseSummary({
       dateRange={dateRange}
       onDateRangeChange={onDateRangeChange}
     >
-      <div className="grid grid-cols-2 md:grid-cols-3 2xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
         {ITEM_CATEGORIES.map((cat) => (
           <StatCard
             key={cat}

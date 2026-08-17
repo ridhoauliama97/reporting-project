@@ -1,17 +1,22 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
-import { ChevronRightIcon, FileTextIcon, SearchIcon } from "lucide-react";
-import { DOCS_MENUS, getDocContent, resolveDoc } from "@/docs-content";
+import remarkGfm from "remark-gfm";
+import {
+  ChartSplineIcon,
+  ChevronRightIcon,
+  SearchIcon,
+} from "lucide-react";
+import { DOCS_MENUS, getDocContent, resolveDoc, type DocsSubmenu } from "@/docs-content";
 import { Input } from "@/components/ui/input";
 import ThemeToggle from "@/components/ThemeToggle";
 
 function SubmenuButton({
-  title,
+  sub,
   active,
   onClick,
 }: {
-  title: string;
+  sub: DocsSubmenu;
   active: boolean;
   onClick: () => void;
 }) {
@@ -25,8 +30,8 @@ function SubmenuButton({
           : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
       }`}
     >
-      <FileTextIcon className="size-3.5 shrink-0" />
-      <span className="truncate">{title}</span>
+      <span className="shrink-0 opacity-70">{sub.icon}</span>
+      <span className="truncate">{sub.title}</span>
     </button>
   );
 }
@@ -84,12 +89,12 @@ export default function DocsPage() {
       <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
         <div className="flex h-14 items-center gap-3 px-4 md:px-6">
           <a
-            href="/summary"
+            href="/dashboard"
             className="flex items-center gap-2 font-semibold"
             title="Kembali ke Dashboard"
           >
-            <div className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <FileTextIcon className="size-4!" />
+            <div className="flex size-6 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
+              <ChartSplineIcon className="size-4!" />
             </div>
             <span className="hidden sm:inline">Database Report</span>
             <span className="hidden text-muted-foreground sm:inline">/</span>
@@ -116,7 +121,7 @@ export default function DocsPage() {
           </select>
           <div className="ml-auto flex items-center gap-1">
             <a
-              href="/summary"
+              href="/dashboard"
               className="hidden text-sm text-muted-foreground transition-colors hover:text-foreground md:inline"
             >
               Kembali ke Dashboard
@@ -166,7 +171,7 @@ export default function DocsPage() {
                       {submenus.map((sub) => (
                         <SubmenuButton
                           key={sub.slug}
-                          title={sub.title}
+                          sub={sub}
                           active={
                             active.menuSlug === menu.slug && active.slug === sub.slug
                           }
@@ -192,7 +197,9 @@ export default function DocsPage() {
               {activeTitle.menuTitle} / {activeTitle.subTitle}
             </p>
             <article className="docs-content">
-              <ReactMarkdown>{content}</ReactMarkdown>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {content}
+              </ReactMarkdown>
             </article>
           </div>
         </main>
