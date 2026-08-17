@@ -185,7 +185,17 @@ function App() {
               />
             }
           />
-          <Route path="/analytics-insights" element={<AnalyticsInsights />} />
+          <Route
+            path="/analytics-insights"
+            element={
+              <AnalyticsInsights
+                items={filteredItems}
+                allItems={allItems}
+                dateRange={dateRange}
+                onDateRangeChange={setDateRange}
+              />
+            }
+          />
         </Routes>
         </Suspense>
       </Layout>
