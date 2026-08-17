@@ -1,18 +1,19 @@
 # Material Cost Trend (Tren Biaya Material)
 
 ## Deskripsi
-Tren biaya pembelian material dari waktu ke waktu (per bulan) — untuk memantau perkembangan biaya bahan baku dan bahan pendukung.
+Tren biaya pembelian dari waktu ke waktu (per bulan) — untuk memantau perkembangan biaya per kategori item.
 
 ## Scope
-Hanya kategori `BAHAN BAKU` dan `BAHAN PENDUKUNG` — terdapat **toggle kategori** untuk memilih salah satu atau keduanya.
+Seluruh **5 kategori** item tersedia di filter: `BAHAN BAKU`, `BAHAN PENDUKUNG`, `SPAREPART`, `WORK IN PROGRESS`, `BARANG DAGANG` — **semua dicentang secara default**. Chart dan tabel mengikuti kategori yang dicentang.
 
 ## Fitur
-- **4 kartu statistik**: Total Biaya Material, Rata-rata Biaya per Bulan, Bulan dengan Biaya Tertinggi, Trend vs Bulan Lalu (%)
-- **Chart**: line/area — total `netTotal` per bulan (dari `purchaseDate`), satu garis per kategori
-- **Tabel**: Bulan, Bahan Baku (Rp), Bahan Pendukung (Rp), Total (Rp)
+- **Filter Kategori (checkbox 5 kategori)** — centang/hilangkan centang untuk memilih kategori yang ditampilkan
+- **4 kartu statistik**: Total Biaya Pembelian, Rata-rata Biaya per Bulan, Bulan dengan Biaya Tertinggi, Trend vs Bulan Lalu (%)
+- **Chart**: line/area — total `netTotal` per bulan (dari `purchaseDate`), satu garis per kategori terpilih
+- **Tabel**: Bulan, kolom per kategori terpilih (Rp), Total (Rp)
 
 ## Data yang Diproses
-Baris invoice kategori `BAHAN BAKU`/`BAHAN PENDUKUNG` dalam rentang tanggal aktif, diagregasi per bulan.
+Baris invoice dalam rentang tanggal aktif dari kategori yang dicentang, diagregasi per bulan.
 
 ## Catatan
-Kategori lain (`SPAREPART`, `WORK IN PROGRESS`, `BARANG DAGANG`) tidak termasuk scope laporan ini.
+Jika semua kategori di-uncheck, grafik menampilkan pesan untuk memilih minimal satu kategori.

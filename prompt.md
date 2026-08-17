@@ -64,10 +64,10 @@ Quantity variance: `variance = quantity - qtyOrdered` per row (only where `qtyOr
 **Table**: only rows where variance ≠ 0 — Tanggal Purchase, Nomor Purchase, Nama Item, Nama Supplier, Qty Ordered, Qty Invoiced, Selisih (red if short, green if over).
 
 ### 8. Material Cost Trend
-Scope: `itemCategory` in (`BAHAN BAKU`, `BAHAN PENDUKUNG`). Add a category toggle filter alongside date range.
-**Widgets** (4 cards): Total Biaya Material, Rata-rata Biaya per Bulan, Bulan dengan Biaya Tertinggi, Trend vs Bulan Lalu (%).
-**Chart**: line/area — total `netTotal` by month (from `purchaseDate`), one line per category.
-**Table**: Bulan, Bahan Baku (Rp), Bahan Pendukung (Rp), Total (Rp).
+Scope: all 5 `itemCategory` values (`BAHAN BAKU`, `BAHAN PENDUKUNG`, `SPAREPART`, `WORK IN PROGRESS`, `BARANG DAGANG`). Category checkbox filter (all checked by default) alongside date range; chart & table follow checked categories.
+**Widgets** (4 cards): Total Biaya Pembelian, Rata-rata Biaya per Bulan, Bulan dengan Biaya Tertinggi, Trend vs Bulan Lalu (%).
+**Chart**: line/area — total `netTotal` by month (from `purchaseDate`), one line per checked category.
+**Table**: Bulan, one column per checked category (Rp), Total (Rp).
 
 ### 9. Price Increase Alert
 Per `itemName`, sort purchases by `purchaseDate`; compare each `unitCost` to the previous purchase of the same item. Flag if increase ≥ threshold (configurable input, default 10%).

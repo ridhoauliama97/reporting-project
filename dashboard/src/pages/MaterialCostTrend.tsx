@@ -35,54 +35,92 @@ interface MaterialCostTrendProps {
   onDateRangeChange: (range: DateRange) => void;
 }
 
+const CATEGORIES = [
+  "BAHAN BAKU",
+  "BAHAN PENDUKUNG",
+  "SPAREPART",
+  "WORK IN PROGRESS",
+  "BARANG DAGANG",
+] as const;
+
+const CATEGORY_LABELS: Record<string, string> = {
+  "BAHAN BAKU": "Bahan Baku",
+  "BAHAN PENDUKUNG": "Bahan Pendukung",
+  SPAREPART: "Sparepart",
+  "WORK IN PROGRESS": "Work In Progress",
+  "BARANG DAGANG": "Barang Dagang",
+};
+
+const CATEGORY_COLORS = [
+  "var(--color-chart-1)",
+  "var(--color-chart-2)",
+  "var(--color-chart-3)",
+  "var(--color-chart-4)",
+  "var(--color-chart-5)",
+];
+
 export default function MaterialCostTrend({
   items,
   dateRange,
   onDateRangeChange,
 }: MaterialCostTrendProps) {
-  const [showBahanBaku, setShowBahanBaku] = useState(true);
-  const [showBahanPendukung, setShowBahanPendukung] = useState(true);
+  const [selected, setSelected] = useState<Set<string>>(
+    () => new Set(CATEGORIES),
+  );
 
-  const materialItems = useMemo(() => {
-    return items.filter(
-      (item) =>
-        item.itemCategory === "BAHAN BAKU" ||
-        item.itemCategory === "BAHAN PENDUKUNG",
-    );
-  }, [items]);
+  const toggleCategory = (category: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(category)) {
+        next.delete(category);
+      } else {
+        next.add(category);
+      }
+      return next;
+    });
+  };
 
-  const monthlyData = useMemo(() => {
-    const grouped: Record<
-      string,
-      { bahanBaku: number; bahanPendukung: number; total: number }
-    > = {};
+  const selectedCategories = CATEGORIES.filter((c) => selected.has(c));
 
-    materialItems.forEach((item) => {
+  interface MonthRow {
+  month: string;
+  label: string;
+  total: number;
+  [category: string]: number | string;
+}
+
+  const filteredItems = useMemo(
+    () => items.filter((item) => selected.has(item.itemCategory)),
+    [items, selected],
+  );
+
+  const monthlyData = useMemo<MonthRow[]>(() => {
+    const grouped: Record<string, MonthRow> = {};
+
+    filteredItems.forEach((item) => {
       const monthKey = getMonthYear(item.purchaseDate);
       if (!monthKey) return;
       if (!grouped[monthKey]) {
-        grouped[monthKey] = { bahanBaku: 0, bahanPendukung: 0, total: 0 };
+        grouped[monthKey] = {
+          month: monthKey,
+          label: getMonthLabel(monthKey),
+          total: 0,
+        };
       }
-      if (item.itemCategory === "BAHAN BAKU") {
-        grouped[monthKey].bahanBaku += item.netTotal;
-      } else {
-        grouped[monthKey].bahanPendukung += item.netTotal;
-      }
+      grouped[monthKey][item.itemCategory] =
+        ((grouped[monthKey][item.itemCategory] as number) ?? 0) +
+        item.netTotal;
       grouped[monthKey].total += item.netTotal;
     });
 
-    return Object.entries(grouped)
-      .map(([key, data]) => ({
-        month: key,
-        label: getMonthLabel(key),
-        ...data,
-      }))
-      .sort((a, b) => a.month.localeCompare(b.month));
-  }, [materialItems]);
+    return Object.values(grouped).sort((a, b) =>
+      a.month.localeCompare(b.month),
+    );
+  }, [filteredItems]);
 
   const totalCost = useMemo(
-    () => materialItems.reduce((sum, i) => sum + i.netTotal, 0),
-    [materialItems],
+    () => filteredItems.reduce((sum, i) => sum + i.netTotal, 0),
+    [filteredItems],
   );
   const avgPerMonth =
     monthlyData.length > 0 ? totalCost / monthlyData.length : 0;
@@ -100,45 +138,45 @@ export default function MaterialCostTrend({
       ? ((currentMonth.total - prevMonth.total) / prevMonth.total) * 100
       : 0;
 
-  const chartData = monthlyData.map((m) => ({
-    name: m.label,
-    "Bahan Baku": m.bahanBaku,
-    "Bahan Pendukung": m.bahanPendukung,
-  }));
+  const chartData = monthlyData.map((m) => {
+    const row: Record<string, number | string> = { name: m.label };
+    selectedCategories.forEach((category) => {
+      row[CATEGORY_LABELS[category]] = Number(m[category] ?? 0);
+    });
+    return row;
+  });
 
-  const tableData = monthlyData.map((m) => ({
-    month: m.label,
-    bahanBaku: m.bahanBaku,
-    bahanPendukung: m.bahanPendukung,
-    total: m.total,
-  }));
+  const tableData = monthlyData.map((m) => {
+    const row: Record<string, number | string> = { month: m.label };
+    selectedCategories.forEach((category) => {
+      row[CATEGORY_LABELS[category]] = m[category] ?? 0;
+    });
+    row.total = m.total;
+    return row;
+  });
 
   const columns = [
     { key: "month", label: "Bulan", sortable: true },
-    {
-      key: "bahanBaku",
-      label: "Bahan Baku",
+    ...selectedCategories.map((category) => ({
+      key: CATEGORY_LABELS[category],
+      label: CATEGORY_LABELS[category],
       align: "right" as const,
-      render: (item: any) => formatRupiah(item.bahanBaku),
-    },
-    {
-      key: "bahanPendukung",
-      label: "Bahan Pendukung",
-      align: "right" as const,
-      render: (item: any) => formatRupiah(item.bahanPendukung),
-    },
+      render: (item: any) => formatRupiah(Number(item[CATEGORY_LABELS[category]])),
+    })),
     {
       key: "total",
       label: "Total",
       align: "right" as const,
-      render: (item: any) => formatRupiah(item.total),
+      render: (item: any) => formatRupiah(Number(item.total)),
     },
   ];
+
+  const noneSelected = selectedCategories.length === 0;
 
   return (
     <PageLayout
       title="Material Cost Trend"
-      subtitle="Tren biaya material per bulan, termasuk Bahan Baku dan Bahan Pendukung."
+      subtitle="Tren biaya pembelian per bulan berdasarkan kategori yang dipilih."
       dateRange={dateRange}
       onDateRangeChange={onDateRangeChange}
     >
@@ -148,27 +186,25 @@ export default function MaterialCostTrend({
             Filter Kategori
           </label>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <label className="flex cursor-pointer items-center gap-2 text-sm">
-              <Checkbox
-                checked={showBahanBaku}
-                onCheckedChange={(checked) => setShowBahanBaku(!!checked)}
-              />
-              <span>Bahan Baku</span>
-            </label>
-            <label className="flex cursor-pointer items-center gap-2 text-sm">
-              <Checkbox
-                checked={showBahanPendukung}
-                onCheckedChange={(checked) => setShowBahanPendukung(!!checked)}
-              />
-              <span>Bahan Pendukung</span>
-            </label>
+            {CATEGORIES.map((category) => (
+              <label
+                key={category}
+                className="flex cursor-pointer items-center gap-2 text-sm"
+              >
+                <Checkbox
+                  checked={selected.has(category)}
+                  onCheckedChange={() => toggleCategory(category)}
+                />
+                <span>{CATEGORY_LABELS[category]}</span>
+              </label>
+            ))}
           </div>
         </CardContent>
       </Card>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          title="Total Biaya Material"
+          title="Total Biaya Pembelian"
           value={formatRupiah(totalCost)}
         />
         <StatCard
@@ -189,55 +225,53 @@ export default function MaterialCostTrend({
 
       <ChartCard
         title="Grafik Tren Biaya per Bulan"
-        description="Total netto Bahan Baku dan Bahan Pendukung per bulan"
+        description="Total netto per kategori terpilih per bulan"
       >
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-            <XAxis
-              dataKey="name"
-              className="text-xs text-muted-foreground"
-              tickLine={false}
-              axisLine={false}
-              minTickGap={28}
-              interval="preserveStartEnd"
-              angle={-35}
-              textAnchor="end"
-              height={50}
-              tickMargin={6}
-            />
-            <YAxis
-              tickFormatter={(v) => formatRupiahCompact(Number(v))}
-              className="text-xs text-muted-foreground"
-              tickLine={false}
-              axisLine={false}
-              width={110}
-            />
-            <Tooltip
-              formatter={(value) => formatRupiah(Number(value))}
-              contentStyle={{ borderRadius: 8 }}
-            />
-            <Legend />
-            {showBahanBaku && (
-              <Line
-                type="monotone"
-                dataKey="Bahan Baku"
-                stroke="var(--color-chart-1)"
-                strokeWidth={2}
-                dot={false}
+        {noneSelected ? (
+          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+            Pilih minimal satu kategori untuk menampilkan grafik.
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+              <XAxis
+                dataKey="name"
+                className="text-xs text-muted-foreground"
+                tickLine={false}
+                axisLine={false}
+                minTickGap={28}
+                interval="preserveStartEnd"
+                angle={-35}
+                textAnchor="end"
+                height={50}
+                tickMargin={6}
               />
-            )}
-            {showBahanPendukung && (
-              <Line
-                type="monotone"
-                dataKey="Bahan Pendukung"
-                stroke="var(--color-chart-2)"
-                strokeWidth={2}
-                dot={false}
+              <YAxis
+                tickFormatter={(v) => formatRupiahCompact(Number(v))}
+                className="text-xs text-muted-foreground"
+                tickLine={false}
+                axisLine={false}
+                width={110}
               />
-            )}
-          </LineChart>
-        </ResponsiveContainer>
+              <Tooltip
+                formatter={(value) => formatRupiah(Number(value))}
+                contentStyle={{ borderRadius: 8 }}
+              />
+              <Legend />
+              {selectedCategories.map((category, idx) => (
+                <Line
+                  key={category}
+                  type="monotone"
+                  dataKey={CATEGORY_LABELS[category]}
+                  stroke={CATEGORY_COLORS[idx]}
+                  strokeWidth={2}
+                  dot={false}
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        )}
       </ChartCard>
 
       <DataTable columns={columns} data={tableData} />
