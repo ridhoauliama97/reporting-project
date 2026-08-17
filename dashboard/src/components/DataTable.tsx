@@ -52,7 +52,8 @@ const stickyZone = {
   },
   body: {
     no: "sticky left-0 z-10 w-12 border-r border-border bg-card text-center text-muted-foreground tabular-nums group-hover:bg-muted",
-    first: "sticky left-12 z-10 border-r border-border bg-card group-hover:bg-muted",
+    first:
+      "sticky left-12 z-10 border-r border-border bg-card group-hover:bg-muted",
   },
   footer: {
     no: "sticky left-0 z-10 w-12 border-r border-border bg-muted",
@@ -356,7 +357,7 @@ export default function DataTable<T extends Record<string, any>>({
                   disabled={exporting !== null}
                 >
                   <DownloadIcon />
-                  {exporting ? "Mengekspor…" : "Ekspor"}
+                  {exporting ? "Mengekspor…" : "Export"}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -382,159 +383,159 @@ export default function DataTable<T extends Record<string, any>>({
       <div className="relative">
         <Table tableContainerRef={scrollRef}>
           <TableHeader>
-              <TableRow className="bg-muted hover:bg-muted">
-                <TableHead
-                  className={cn(
-                    "cursor-pointer select-none",
-                    stickyZone.header.no,
-                    canScrollLeft && STICKY_SHADOW,
+            <TableRow className="bg-muted hover:bg-muted">
+              <TableHead
+                className={cn(
+                  "cursor-pointer select-none",
+                  stickyZone.header.no,
+                  canScrollLeft && STICKY_SHADOW,
+                )}
+                onClick={() => handleSort("__no__")}
+              >
+                <span className="inline-flex items-center gap-1">
+                  No
+                  {sortConfig?.key === "__no__" ? (
+                    sortConfig.direction === "asc" ? (
+                      <ChevronUpIcon className="size-3.5" />
+                    ) : (
+                      <ChevronDownIcon className="size-3.5" />
+                    )
+                  ) : (
+                    <ChevronsUpDownIcon className="size-3.5 opacity-50" />
                   )}
-                  onClick={() => handleSort("__no__")}
+                </span>
+              </TableHead>
+              {visibleColumnsList.map((col) => (
+                <TableHead
+                  key={col.key}
+                  className={cn(
+                    col.sortable && "cursor-pointer select-none",
+                    col.key === visibleColumnsList[0]?.key &&
+                      stickyZone.header.first,
+                    col.key === visibleColumnsList[0]?.key &&
+                      canScrollLeft &&
+                      STICKY_SHADOW,
+                  )}
+                  onClick={() => col.sortable && handleSort(col.key)}
+                  style={{ textAlign: "center" }}
                 >
                   <span className="inline-flex items-center gap-1">
-                    No
-                    {sortConfig?.key === "__no__" ? (
-                      sortConfig.direction === "asc" ? (
-                        <ChevronUpIcon className="size-3.5" />
+                    {col.label}
+                    {col.sortable &&
+                      (sortConfig?.key === col.key ? (
+                        sortConfig.direction === "asc" ? (
+                          <ChevronUpIcon className="size-3.5" />
+                        ) : (
+                          <ChevronDownIcon className="size-3.5" />
+                        )
                       ) : (
-                        <ChevronDownIcon className="size-3.5" />
-                      )
-                    ) : (
-                      <ChevronsUpDownIcon className="size-3.5 opacity-50" />
-                    )}
+                        <ChevronsUpDownIcon className="size-3.5 opacity-50" />
+                      ))}
                   </span>
                 </TableHead>
-                {visibleColumnsList.map((col) => (
-                  <TableHead
-                    key={col.key}
-                    className={cn(
-                      col.sortable && "cursor-pointer select-none",
-                      col.key === visibleColumnsList[0]?.key &&
-                        stickyZone.header.first,
-                      col.key === visibleColumnsList[0]?.key &&
-                        canScrollLeft &&
-                        STICKY_SHADOW,
-                    )}
-                    onClick={() => col.sortable && handleSort(col.key)}
-                    style={{ textAlign: "center" }}
-                  >
-                    <span className="inline-flex items-center gap-1">
-                      {col.label}
-                      {col.sortable &&
-                        (sortConfig?.key === col.key ? (
-                          sortConfig.direction === "asc" ? (
-                            <ChevronUpIcon className="size-3.5" />
-                          ) : (
-                            <ChevronDownIcon className="size-3.5" />
-                          )
-                        ) : (
-                          <ChevronsUpDownIcon className="size-3.5 opacity-50" />
-                        ))}
-                    </span>
-                  </TableHead>
-                ))}
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedData.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={visibleColumnsList.length + 1}
+                  className="h-24 text-center text-muted-foreground"
+                >
+                  Tidak ada data
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedData.length === 0 ? (
-                <TableRow>
+            ) : (
+              paginatedData.map((item, idx) => (
+                <TableRow
+                  key={`${String(
+                    (item as Record<string, unknown>).purchaseNumber ?? idx,
+                  )}-${originalIndexMap.get(item) ?? idx}`}
+                  className="group hover:bg-muted"
+                >
                   <TableCell
-                    colSpan={visibleColumnsList.length + 1}
-                    className="h-24 text-center text-muted-foreground"
+                    className={cn(
+                      stickyZone.body.no,
+                      canScrollLeft && STICKY_SHADOW,
+                    )}
                   >
-                    Tidak ada data
+                    {(originalIndexMap.get(item) ?? idx) + 1}
                   </TableCell>
-                </TableRow>
-              ) : (
-                paginatedData.map((item, idx) => (
-                  <TableRow
-                    key={`${String(
-                      (item as Record<string, unknown>).purchaseNumber ?? idx,
-                    )}-${originalIndexMap.get(item) ?? idx}`}
-                    className="group hover:bg-muted"
-                  >
+                  {visibleColumnsList.map((col) => (
                     <TableCell
+                      key={col.key}
                       className={cn(
-                        stickyZone.body.no,
-                        canScrollLeft && STICKY_SHADOW,
+                        "whitespace-nowrap tabular-nums",
+                        col.key === visibleColumnsList[0]?.key &&
+                          stickyZone.body.first,
+                        col.key === visibleColumnsList[0]?.key &&
+                          canScrollLeft &&
+                          STICKY_SHADOW,
                       )}
+                      style={{
+                        textAlign: col.align === "right" ? "right" : "left",
+                      }}
                     >
-                      {(originalIndexMap.get(item) ?? idx) + 1}
+                      {col.render ? col.render(item) : (item[col.key] ?? "-")}
                     </TableCell>
-                    {visibleColumnsList.map((col) => (
+                  ))}
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+          {totals && (
+            <TableFooter>
+              <TableRow className="bg-muted hover:bg-muted">
+                <TableCell
+                  className={cn(
+                    stickyZone.footer.no,
+                    canScrollLeft && STICKY_SHADOW,
+                  )}
+                />
+                {visibleColumnsList.map((col) => {
+                  const isFirst = col.key === visibleColumnsList[0]?.key;
+                  const stickyClass = cn(
+                    isFirst && stickyZone.footer.first,
+                    isFirst && canScrollLeft && STICKY_SHADOW,
+                  );
+                  if (isFirst) {
+                    return (
+                      <TableCell
+                        key={col.key}
+                        className={cn("font-semibold", stickyClass)}
+                        style={{
+                          textAlign: col.align === "right" ? "right" : "left",
+                        }}
+                      >
+                        Grand Total
+                      </TableCell>
+                    );
+                  }
+                  if (Object.prototype.hasOwnProperty.call(totals, col.key)) {
+                    return (
                       <TableCell
                         key={col.key}
                         className={cn(
-                          "whitespace-nowrap tabular-nums",
-                          col.key === visibleColumnsList[0]?.key &&
-                            stickyZone.body.first,
-                          col.key === visibleColumnsList[0]?.key &&
-                            canScrollLeft &&
-                            STICKY_SHADOW,
+                          "font-semibold tabular-nums",
+                          stickyClass,
                         )}
                         style={{
                           textAlign: col.align === "right" ? "right" : "left",
                         }}
                       >
-                        {col.render ? col.render(item) : (item[col.key] ?? "-")}
+                        {col.render
+                          ? col.render({ [col.key]: totals[col.key] } as T)
+                          : totals[col.key]}
                       </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-            {totals && (
-              <TableFooter>
-                <TableRow className="bg-muted hover:bg-muted">
-                  <TableCell
-                    className={cn(
-                      stickyZone.footer.no,
-                      canScrollLeft && STICKY_SHADOW,
-                    )}
-                  />
-                  {visibleColumnsList.map((col) => {
-                    const isFirst = col.key === visibleColumnsList[0]?.key;
-                    const stickyClass = cn(
-                      isFirst && stickyZone.footer.first,
-                      isFirst && canScrollLeft && STICKY_SHADOW,
                     );
-                    if (isFirst) {
-                      return (
-                        <TableCell
-                          key={col.key}
-                          className={cn("font-semibold", stickyClass)}
-                          style={{
-                            textAlign: col.align === "right" ? "right" : "left",
-                          }}
-                        >
-                          Grand Total
-                        </TableCell>
-                      );
-                    }
-                    if (Object.prototype.hasOwnProperty.call(totals, col.key)) {
-                      return (
-                        <TableCell
-                          key={col.key}
-                          className={cn(
-                            "font-semibold tabular-nums",
-                            stickyClass,
-                          )}
-                          style={{
-                            textAlign: col.align === "right" ? "right" : "left",
-                          }}
-                        >
-                          {col.render
-                            ? col.render({ [col.key]: totals[col.key] } as T)
-                            : totals[col.key]}
-                        </TableCell>
-                      );
-                    }
-                    return <TableCell key={col.key} className={stickyClass} />;
-                  })}
-                </TableRow>
-              </TableFooter>
-            )}
-          </Table>
+                  }
+                  return <TableCell key={col.key} className={stickyClass} />;
+                })}
+              </TableRow>
+            </TableFooter>
+          )}
+        </Table>
         <div
           className={cn(
             "pointer-events-none absolute inset-y-0 right-0 w-8 bg-linear-to-l from-black/10 to-transparent transition-opacity duration-200 dark:from-white/10",

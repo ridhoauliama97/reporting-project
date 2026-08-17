@@ -97,41 +97,41 @@ export default function ReportsExports({
               </CardContent>
               <CardFooter className="flex items-center justify-between gap-2 border-t p-4">
                 <div className="flex items-center gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-10 md:h-8"
-                      disabled={!hasData || exportingId !== null}
-                    >
-                      <DownloadIcon />
-                      {exportingId === report.id ? "Mengekspor…" : "Ekspor"}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onSelect={() => handleExport("csv", report.id)}
-                    >
-                      CSV
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={() => handleExport("excel", report.id)}
-                    >
-                      Excel
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={() => handleExport("pdf", report.id)}
-                    >
-                      PDF
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                {exportErrorId === report.id && (
-                  <span className="text-xs text-red-600 dark:text-red-400">
-                    Gagal mengekspor
-                  </span>
-                )}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-10 md:h-8"
+                        disabled={!hasData || exportingId !== null}
+                      >
+                        <DownloadIcon />
+                        {exportingId === report.id ? "Mengekspor…" : "Export"}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onSelect={() => handleExport("csv", report.id)}
+                      >
+                        CSV
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onSelect={() => handleExport("excel", report.id)}
+                      >
+                        Excel
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onSelect={() => handleExport("pdf", report.id)}
+                      >
+                        PDF
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  {exportErrorId === report.id && (
+                    <span className="text-xs text-red-600 dark:text-red-400">
+                      Gagal mengekspor
+                    </span>
+                  )}
                 </div>
                 {!hasData && (
                   <Badge
