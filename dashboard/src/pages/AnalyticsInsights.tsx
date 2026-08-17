@@ -64,6 +64,7 @@ interface ChatMessage {
   role: "user" | "ai";
   content: string;
   sources: string[];
+  followUp?: string;
 }
 
 const REPORT_PATHS: Record<string, string> = {
@@ -224,6 +225,7 @@ export default function AnalyticsInsights({
           role: "ai",
           content: answer.text,
           sources: answer.sources,
+          followUp: answer.followUp,
         },
       ]);
       setThinking(false);
@@ -554,6 +556,16 @@ export default function AnalyticsInsights({
                         <SourceLink key={sourceId} reportId={sourceId} />
                       ))}
                     </div>
+                  )}
+                  {message.role === "ai" && message.followUp && (
+                    <button
+                      type="button"
+                      onClick={() => handleSend(message.followUp ?? "")}
+                      className="rounded-lg border border-dashed px-3 py-1.5 text-left text-xs text-muted-foreground transition-colors hover:border-teal-500/50 hover:text-teal-600 dark:hover:text-teal-400"
+                    >
+                      <SparklesIcon className="mr-1 inline size-3" />
+                      Lanjut: {message.followUp}
+                    </button>
                   )}
                 </div>
               </div>

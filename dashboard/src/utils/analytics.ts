@@ -37,6 +37,7 @@ export interface SpendInsight {
 export interface ChatAnswer {
   text: string;
   sources: string[];
+  followUp?: string;
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
@@ -784,7 +785,7 @@ export function answerQuestion(
       text += `, harga satuan terakhir ${formatRupiahCompact(maxRow.unitCost)}/${maxRow.uom} dari ${maxRow.supplierName}`;
     }
     text += ".";
-    return { text, sources: ["price-history"] };
+    return { text, sources: ["price-history"], followUp: "Item apa yang harganya naik paling tinggi?" };
   }
 
   if (/telat|terlambat|keterlambatan|delay|overdue/.test(q)) {
@@ -806,6 +807,7 @@ export function answerQuestion(
     return {
       text: `${scopePrefix}, tercatat ${formatNumber(totalOverdue)} keterlambatan. Urutan supplier paling sering telat: ${list}.`,
       sources: ["delivery"],
+      followUp: "Berapa rata-rata lead time PO?",
     };
   }
 
@@ -819,6 +821,7 @@ export function answerQuestion(
     return {
       text: `${scopePrefix}, 5 supplier terbesar berdasarkan nilai pembelian: ${list}.`,
       sources: ["ranking", "by-supplier"],
+      followUp: "Supplier mana yang paling sering telat kirim?",
     };
   }
 
@@ -829,6 +832,7 @@ export function answerQuestion(
     return {
       text: `${scopePrefix}, ada ${formatNumber(names.length)} supplier aktif. Tiga terbesar: ${top3}.`,
       sources: ["by-supplier"],
+      followUp: "Top 5 supplier terbesar?",
     };
   }
 
@@ -841,6 +845,7 @@ export function answerQuestion(
     return {
       text: `${scopePrefix}, item dengan harga satuan tertinggi: ${max.itemName} ${formatRupiahCompact(max.unitCost)}/${max.uom} (${max.supplierName}).`,
       sources: ["price-history"],
+      followUp: "Total pembelian per kategori?",
     };
   }
 
@@ -854,6 +859,7 @@ export function answerQuestion(
     return {
       text: `${scopePrefix}, rata-rata lead time PR→invoice ${avgPr} hari dan PO→invoice ${avgPo} hari dari ${formatNumber(rows.length)} transaksi.`,
       sources: ["lead-time"],
+      followUp: "Supplier mana yang paling sering telat kirim?",
     };
   }
 
@@ -871,6 +877,7 @@ export function answerQuestion(
     return {
       text: `${scopePrefix}, ${formatNumber(alerts.length)} kenaikan harga ≥ 10% terdeteksi. Terbesar: ${top3}.`,
       sources: ["price-alert"],
+      followUp: "Berapa total pembelian periode ini?",
     };
   }
 
@@ -890,6 +897,7 @@ export function answerQuestion(
     return {
       text: `${scopePrefix}, ${formatNumber(rows.length)} transaksi memiliki selisih qty (${formatNumber(neg.length)} kurang dari pesanan, total selisih ${formatNumber(totalDiff)} unit).`,
       sources: ["variance"],
+      followUp: "Berapa rata-rata lead time PO?",
     };
   }
 
@@ -905,6 +913,7 @@ export function answerQuestion(
     return {
       text: `${scopePrefix}, total pembelian per kategori: ${list}.`,
       sources: ["material-cost", "purchase-summary"],
+      followUp: "Item apa yang harganya naik paling tinggi?",
     };
   }
 
@@ -918,6 +927,7 @@ export function answerQuestion(
     return {
       text: `${scopePrefix}, kategori ${categoryMatch[0]}: ${formatNumber(rows.length)} transaksi senilai ${formatRupiahCompact(sum(rows, "netTotal"))}.`,
       sources: ["material-cost"],
+      followUp: "Item apa yang harganya naik paling tinggi?",
     };
   }
 
@@ -931,6 +941,7 @@ export function answerQuestion(
     return {
       text: `${scopePrefix}, gudang dengan pembelian terbesar: ${list}.`,
       sources: ["purchase-summary"],
+      followUp: "Top 5 supplier terbesar?",
     };
   }
 
@@ -955,6 +966,7 @@ export function answerQuestion(
     return {
       text: `${scopePrefix}, peringkat skor supplier: ${list}.`,
       sources: ["scorecard"],
+      followUp: "Supplier mana yang paling sering telat kirim?",
     };
   }
 
@@ -970,6 +982,7 @@ export function answerQuestion(
     return {
       text: `${scopePrefix}, peluang penghematan yang terdeteksi: ${list}. Detail lengkap ada di section Analisis Pengeluaran halaman ini.`,
       sources: ["by-supplier", "ranking"],
+      followUp: "Berapa total pembelian periode ini?",
     };
   }
 
@@ -979,12 +992,14 @@ export function answerQuestion(
     return {
       text: `${scopePrefix}, total pembelian mencapai ${formatRupiahCompact(total)} dari ${formatNumber(count)} transaksi.`,
       sources: ["purchase-summary"],
+      followUp: "Total pembelian per kategori?",
     };
   }
 
   return {
     text: `Saya belum bisa menjawab pertanyaan itu. Coba tanyakan, misalnya: "supplier mana yang paling sering telat?", "berapa total pembelian?", "item apa yang harganya naik?", "top 5 supplier terbesar?", "berapa rata-rata lead time?", atau "total pembelian per kategori?". Jawaban dihitung dari data asli ${note}.`,
     sources: [],
+    followUp: "Berapa total pembelian periode ini?",
   };
 }
 
