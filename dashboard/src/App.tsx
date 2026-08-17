@@ -10,6 +10,7 @@ import type { PurchaseItem, ParsedPurchaseItem } from "./types/purchase";
 import purchaseDataUrl from "./data/purchase-data.json?url";
 import Layout from "./components/Layout";
 import { Button } from "./components/ui/button";
+import { Analytics } from '@vercel/analytics/react';
 
 const PurchaseSummary = lazy(() => import("./pages/PurchaseSummary"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -291,6 +292,7 @@ function App() {
           }
         />
       </Routes>
+      <Analytics />
     </Router>
   );
 }
