@@ -51,7 +51,6 @@ export default function PurchasePriceHistory({
   const [selectedItem, setSelectedItem] = useState<string>("");
   const [comboboxOpen, setComboboxOpen] = useState(false);
   const [comboboxSearch, setComboboxSearch] = useState("");
-  const [activeItem, setActiveItem] = useState("");
 
   const uniqueItems = useMemo(() => {
     const itemMap = new Map<string, string>();
@@ -149,7 +148,7 @@ export default function PurchasePriceHistory({
               </button>
             </PopoverTrigger>
             <PopoverContent className="w-full min-w-72 p-0 md:w-96">
-              <Command value={activeItem} onValueChange={setActiveItem}>
+              <Command>
                 <CommandInput
                   placeholder="Cari item..."
                   value={comboboxSearch}
@@ -158,10 +157,8 @@ export default function PurchasePriceHistory({
                 <CommandList>
                   <CommandEmpty>Tidak ada item ditemukan.</CommandEmpty>
                   <CommandGroup>
-                    {uniqueItems.map((item) => {
-                      const isActive =
-                        item.name === selectedItem || item.name === activeItem;
-                      return (
+                    {uniqueItems.map((item) => (
+                      
                         <CommandItem
                           key={item.name}
                           value={item.name}
@@ -179,17 +176,9 @@ export default function PurchasePriceHistory({
                                 : "opacity-0",
                             )}
                           />
-                          {isActive ? (
-                            <HighlightMatch
-                              text={item.name}
-                              query={comboboxSearch}
-                            />
-                          ) : (
-                            <span>{item.name}</span>
-                          )}
+                          <span>{item.name}</span>
                         </CommandItem>
-                      );
-                    })}
+                    ))}
                   </CommandGroup>
                 </CommandList>
               </Command>
@@ -277,18 +266,3 @@ export default function PurchasePriceHistory({
   );
 }
 
-function HighlightMatch({ text, query }: { text: string; query: string }) {
-  const q = query.trim().toLowerCase();
-  if (!q) return <>{text}</>;
-  const idx = text.toLowerCase().indexOf(q);
-  if (idx === -1) return <>{text}</>;
-  return (
-    <>
-      {text.slice(0, idx)}
-      <mark className="rounded-sm bg-primary/15 px-0.5 text-foreground">
-        {text.slice(idx, idx + q.length)}
-      </mark>
-      {text.slice(idx + q.length)}
-    </>
-  );
-}
