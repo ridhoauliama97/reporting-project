@@ -1,7 +1,7 @@
 "use client";
 
 import type { ParsedPurchaseItem } from "@/types/purchase";
-import { formatRupiah, formatNumber } from "@/utils/formatters";
+import { formatRupiah, formatRupiahCompact, formatNumber } from "@/utils/formatters";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -62,11 +62,14 @@ export function SectionCards({ items, prevItems }: SectionCardsProps) {
     <div className="grid grid-cols-1 gap-4 *:data-[slot=card]:bg-linear-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card *:data-[slot=card]:shadow-xs *:data-[slot=card]:transition-shadow *:data-[slot=card]:hover:shadow-md @xl/main:grid-cols-2 @5xl/main:grid-cols-4 dark:*:data-[slot=card]:bg-card">
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Total Nilai Pembelian</CardDescription>
-          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {formatRupiah(total)}
+          <CardDescription className="min-w-0">Total Nilai Pembelian</CardDescription>
+          <CardTitle
+            className="min-w-0 text-2xl font-semibold tabular-nums @[250px]/card:text-3xl"
+            title={formatRupiah(total)}
+          >
+            {formatRupiahCompact(total)}
           </CardTitle>
-          <CardAction>
+          <CardAction className="min-w-0">
             <TrendBadge value={pctChange(total, prevTotal)} />
           </CardAction>
         </CardHeader>
@@ -82,11 +85,11 @@ export function SectionCards({ items, prevItems }: SectionCardsProps) {
       </Card>
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Jumlah Transaksi</CardDescription>
-          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+          <CardDescription className="min-w-0">Jumlah Transaksi</CardDescription>
+          <CardTitle className="min-w-0 text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
             {formatNumber(count)}
           </CardTitle>
-          <CardAction>
+          <CardAction className="min-w-0">
             <TrendBadge value={pctChange(count, prevCount)} />
           </CardAction>
         </CardHeader>
@@ -99,11 +102,11 @@ export function SectionCards({ items, prevItems }: SectionCardsProps) {
       </Card>
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Supplier Aktif</CardDescription>
-          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+          <CardDescription className="min-w-0">Supplier Aktif</CardDescription>
+          <CardTitle className="min-w-0 text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
             {formatNumber(suppliers)}
           </CardTitle>
-          <CardAction>
+          <CardAction className="min-w-0">
             <TrendBadge value={pctChange(suppliers, prevSuppliers)} />
           </CardAction>
         </CardHeader>
@@ -118,11 +121,14 @@ export function SectionCards({ items, prevItems }: SectionCardsProps) {
       </Card>
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Rata-rata Nilai per Transaksi</CardDescription>
-          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {formatRupiah(avg)}
+          <CardDescription className="min-w-0">Rata-rata Nilai per Transaksi</CardDescription>
+          <CardTitle
+            className="min-w-0 text-2xl font-semibold tabular-nums @[250px]/card:text-3xl"
+            title={formatRupiah(avg)}
+          >
+            {formatRupiahCompact(avg)}
           </CardTitle>
-          <CardAction>
+          <CardAction className="min-w-0">
             <TrendBadge
               value={
                 avg > 0 && prevCount > 0
