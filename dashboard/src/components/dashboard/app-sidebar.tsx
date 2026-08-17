@@ -1,7 +1,6 @@
 import * as React from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Collapsible as CollapsiblePrimitive } from "radix-ui";
-import purchaseData from "@/data/purchase-data.json";
 import { formatNumber } from "@/utils/formatters";
 import { NAV_GROUPS, type NavGroup } from "./nav-config";
 
@@ -81,7 +80,10 @@ function CollapsibleMenuGroup({ group }: { group: NavGroup }) {
   );
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({
+  dataCount,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & { dataCount?: number }) {
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -127,7 +129,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <NavLink to="/summary" className="text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5">
                   <DatabaseIcon className="size-3.5" />v{__APP_VERSION__} ·{" "}
-                  {formatNumber(purchaseData.length)} item
+                  {formatNumber(dataCount ?? 0)} item
                 </span>
               </NavLink>
             </SidebarMenuButton>

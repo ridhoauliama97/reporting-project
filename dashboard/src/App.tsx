@@ -1,8 +1,10 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useState, useMemo, Suspense, lazy } from 'react';
+import { useEffect, useMemo, useState, Suspense, lazy } from 'react';
 import { parseAllItems, filterByDateRange } from './utils/formatters';
-import purchaseData from './data/purchase-data.json';
+import type { PurchaseItem, ParsedPurchaseItem } from './types/purchase';
+import purchaseDataUrl from './data/purchase-data.json?url';
 import Layout from './components/Layout';
+import { Button } from './components/ui/button';
 
 const PurchaseSummary = lazy(() => import('./pages/PurchaseSummary'));
 const PurchaseBySupplier = lazy(() => import('./pages/PurchaseBySupplier'));
@@ -40,16 +42,49 @@ function getDefaultDateRange() {
   return { start, end };
 }
 
-function App() {
-  const allItems = useMemo(() => parseAllItems(purchaseData as any[]), []);
-
-  const [dateRange, setDateRange] = useState<{ start: Date | null; end: Date | null }>(
-    getDefaultDateRange()
+function LoadingScreen() {
+  return (
+    <div className="flex min-h-[50vh] items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="size-8 animate-spin rounded-full border-2 border-border border-t-foreground" />
+        <p className="text-sm text-muted-foreground">Memuat data...</p>
+      </div>
+    </div>
   );
+}
+
+function App() {
+  const [allItems, setAllItems] = useState<ParsedPurchaseItem[]>([]);
+  const [loadError, setLoadError] = useState(false);
+  const [loadKey, setLoadKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadError(false);
+    fetch(purchaseDataUrl)
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data: PurchaseItem[]) => {
+        if (!cancelled) setAllItems(parseAllItems(data));
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [loadKey]);
+
+  const [dateRange, setDateRange] = useState<{
+    start: Date | null;
+    end: Date | null;
+  }>(getDefaultDateRange());
 
   const filteredItems = useMemo(
     () => filterByDateRange(allItems, dateRange.start, dateRange.end),
-    [allItems, dateRange]
+    [allItems, dateRange],
   );
 
   return (
@@ -61,7 +96,7 @@ function App() {
             <Suspense
               fallback={
                 <div className="flex min-h-[50vh] items-center justify-center">
-                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-foreground" />
+                  <div className="size-8 animate-spin rounded-full border-2 border-border border-t-foreground" />
                 </div>
               }
             >
@@ -72,152 +107,165 @@ function App() {
         <Route
           path="*"
           element={
-            <Layout>
-              <Suspense
-                fallback={
-                  <div className="flex min-h-[50vh] items-center justify-center">
-                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-foreground" />
-                  </div>
-                }
-              >
-                <Routes>
-                  <Route path="/" element={<Navigate to="/summary" replace />} />
-          <Route
-            path="/summary"
-            element={
-              <PurchaseSummary
-                items={filteredItems}
-                allItems={allItems}
-                dateRange={dateRange}
-                onDateRangeChange={setDateRange}
-              />
-            }
-          />
-          <Route
-            path="/by-supplier"
-            element={
-              <PurchaseBySupplier
-                items={filteredItems}
-                dateRange={dateRange}
-                onDateRangeChange={setDateRange}
-              />
-            }
-          />
-          <Route
-            path="/ranking"
-            element={
-              <SupplierRanking
-                items={filteredItems}
-                dateRange={dateRange}
-                onDateRangeChange={setDateRange}
-              />
-            }
-          />
-          <Route path="/quality" element={<SupplierQuality />} />
-          <Route
-            path="/delivery"
-            element={
-              <SupplierDelivery
-                items={filteredItems}
-                dateRange={dateRange}
-                onDateRangeChange={setDateRange}
-              />
-            }
-          />
-          <Route
-            path="/price-history"
-            element={
-              <PurchasePriceHistory
-                items={filteredItems}
-                dateRange={dateRange}
-                onDateRangeChange={setDateRange}
-              />
-            }
-          />
-          <Route
-            path="/variance"
-            element={
-              <PurchaseVariance
-                items={filteredItems}
-                dateRange={dateRange}
-                onDateRangeChange={setDateRange}
-              />
-            }
-          />
-          <Route
-            path="/material-cost"
-            element={
-              <MaterialCostTrend
-                items={filteredItems}
-                dateRange={dateRange}
-                onDateRangeChange={setDateRange}
-              />
-            }
-          />
-          <Route
-            path="/price-alert"
-            element={
-              <PriceIncreaseAlert
-                items={filteredItems}
-                dateRange={dateRange}
-                onDateRangeChange={setDateRange}
-              />
-            }
-          />
-          <Route
-            path="/lead-time"
-            element={
-              <PurchaseLeadTime
-                items={filteredItems}
-                dateRange={dateRange}
-                onDateRangeChange={setDateRange}
-              />
-            }
-          />
-          <Route path="/outstanding-po" element={<OutstandingPO />} />
-          <Route path="/open-po" element={<OpenPO />} />
-          <Route path="/closed-po" element={<ClosedPO />} />
-          {Object.entries(WAREHOUSES).map(([slug, name]) => (
-            <Route
-              key={slug}
-              path={`/warehouse/${slug}`}
-              element={<WarehousePlaceholder name={name} />}
-            />
-          ))}
-          <Route
-            path="/scorecard"
-            element={
-              <SupplierScorecard
-                items={filteredItems}
-                dateRange={dateRange}
-                onDateRangeChange={setDateRange}
-              />
-            }
-          />
-          <Route
-            path="/reports-exports"
-            element={
-              <ReportsExports
-                items={filteredItems}
-                dateRange={dateRange}
-                onDateRangeChange={setDateRange}
-              />
-            }
-          />
-          <Route
-            path="/analytics-insights"
-            element={
-              <AnalyticsInsights
-                items={filteredItems}
-                allItems={allItems}
-                dateRange={dateRange}
-                onDateRangeChange={setDateRange}
-              />
-            }
-          />
-        </Routes>
-              </Suspense>
-            </Layout>
+            loadError ? (
+              <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3">
+                <p className="text-sm text-muted-foreground">
+                  Gagal memuat data. Periksa koneksi lalu coba lagi.
+                </p>
+                <Button variant="outline" onClick={() => setLoadKey((k) => k + 1)}>
+                  Coba Lagi
+                </Button>
+              </div>
+            ) : allItems.length === 0 ? (
+              <LoadingScreen />
+            ) : (
+              <Layout dataCount={allItems.length}>
+                <Suspense
+                  fallback={
+                    <div className="flex min-h-[50vh] items-center justify-center">
+                      <div className="size-8 animate-spin rounded-full border-2 border-border border-t-foreground" />
+                    </div>
+                  }
+                >
+                  <Routes>
+                    <Route path="/" element={<Navigate to="/summary" replace />} />
+                    <Route
+                      path="/summary"
+                      element={
+                        <PurchaseSummary
+                          items={filteredItems}
+                          allItems={allItems}
+                          dateRange={dateRange}
+                          onDateRangeChange={setDateRange}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/by-supplier"
+                      element={
+                        <PurchaseBySupplier
+                          items={filteredItems}
+                          dateRange={dateRange}
+                          onDateRangeChange={setDateRange}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/ranking"
+                      element={
+                        <SupplierRanking
+                          items={filteredItems}
+                          dateRange={dateRange}
+                          onDateRangeChange={setDateRange}
+                        />
+                      }
+                    />
+                    <Route path="/quality" element={<SupplierQuality />} />
+                    <Route
+                      path="/delivery"
+                      element={
+                        <SupplierDelivery
+                          items={filteredItems}
+                          dateRange={dateRange}
+                          onDateRangeChange={setDateRange}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/price-history"
+                      element={
+                        <PurchasePriceHistory
+                          items={filteredItems}
+                          dateRange={dateRange}
+                          onDateRangeChange={setDateRange}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/variance"
+                      element={
+                        <PurchaseVariance
+                          items={filteredItems}
+                          dateRange={dateRange}
+                          onDateRangeChange={setDateRange}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/material-cost"
+                      element={
+                        <MaterialCostTrend
+                          items={filteredItems}
+                          dateRange={dateRange}
+                          onDateRangeChange={setDateRange}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/price-alert"
+                      element={
+                        <PriceIncreaseAlert
+                          items={filteredItems}
+                          dateRange={dateRange}
+                          onDateRangeChange={setDateRange}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/lead-time"
+                      element={
+                        <PurchaseLeadTime
+                          items={filteredItems}
+                          dateRange={dateRange}
+                          onDateRangeChange={setDateRange}
+                        />
+                      }
+                    />
+                    <Route path="/outstanding-po" element={<OutstandingPO />} />
+                    <Route path="/open-po" element={<OpenPO />} />
+                    <Route path="/closed-po" element={<ClosedPO />} />
+                    {Object.entries(WAREHOUSES).map(([slug, name]) => (
+                      <Route
+                        key={slug}
+                        path={`/warehouse/${slug}`}
+                        element={<WarehousePlaceholder name={name} />}
+                      />
+                    ))}
+                    <Route
+                      path="/scorecard"
+                      element={
+                        <SupplierScorecard
+                          items={filteredItems}
+                          dateRange={dateRange}
+                          onDateRangeChange={setDateRange}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/reports-exports"
+                      element={
+                        <ReportsExports
+                          items={filteredItems}
+                          dateRange={dateRange}
+                          onDateRangeChange={setDateRange}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/analytics-insights"
+                      element={
+                        <AnalyticsInsights
+                          items={filteredItems}
+                          allItems={allItems}
+                          dateRange={dateRange}
+                          onDateRangeChange={setDateRange}
+                        />
+                      }
+                    />
+                  </Routes>
+                </Suspense>
+              </Layout>
+            )
           }
         />
       </Routes>
