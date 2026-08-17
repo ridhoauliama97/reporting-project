@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronUpIcon,
   ChevronDownIcon,
@@ -42,18 +42,21 @@ import {
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
+const STICKY_SHADOW =
+  "shadow-[12px_0_16px_-10px_rgba(0,0,0,0.35)] dark:shadow-[12px_0_16px_-10px_rgba(0,0,0,0.7)]";
+
 const stickyZone = {
   header: {
-    no: "sticky left-0 z-10 w-12 border-r border-border bg-muted/50 text-center",
-    first: "sticky left-12 z-10 border-r border-border bg-muted/50",
+    no: "sticky left-0 z-10 w-12 border-r border-border bg-muted text-center",
+    first: "sticky left-12 z-10 border-r border-border bg-muted",
   },
   body: {
-    no: "sticky left-0 z-10 w-12 border-r border-border bg-card text-center text-muted-foreground tabular-nums group-hover:bg-muted/50",
-    first: "sticky left-12 z-10 border-r border-border bg-card group-hover:bg-muted/50",
+    no: "sticky left-0 z-10 w-12 border-r border-border bg-card text-center text-muted-foreground tabular-nums group-hover:bg-muted",
+    first: "sticky left-12 z-10 border-r border-border bg-card group-hover:bg-muted",
   },
   footer: {
-    no: "sticky left-0 z-10 w-12 border-r border-border bg-muted/50",
-    first: "sticky left-12 z-10 border-r border-border bg-muted/50",
+    no: "sticky left-0 z-10 w-12 border-r border-border bg-muted",
+    first: "sticky left-12 z-10 border-r border-border bg-muted",
   },
 } as const;
 
@@ -111,18 +114,26 @@ export default function DataTable<T extends Record<string, any>>({
   );
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
 
-  const updateScrollIndicators = () => {
+  const updateScrollIndicators = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
     setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 4);
-  };
+    setCanScrollLeft(el.scrollLeft > 0);
+  }, []);
 
   useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
     updateScrollIndicators();
+    el.addEventListener("scroll", updateScrollIndicators);
     window.addEventListener("resize", updateScrollIndicators);
-    return () => window.removeEventListener("resize", updateScrollIndicators);
-  }, [data, visibleColumns]);
+    return () => {
+      el.removeEventListener("scroll", updateScrollIndicators);
+      window.removeEventListener("resize", updateScrollIndicators);
+    };
+  }, [data, visibleColumns, updateScrollIndicators]);
 
   const filteredData = useMemo(() => {
     if (!searchable || !searchTerm) return data;
@@ -134,16 +145,27 @@ export default function DataTable<T extends Record<string, any>>({
     );
   }, [data, searchable, searchTerm, searchFields]);
 
+  const originalIndexMap = useMemo(() => {
+    const map = new Map<T, number>();
+    filteredData.forEach((item, idx) => map.set(item, idx));
+    return map;
+  }, [filteredData]);
+
   const sortedData = useMemo(() => {
     if (!sortConfig) return filteredData;
-    return [...filteredData].sort((a, b) => {
-      const aVal = a[sortConfig.key];
-      const bVal = b[sortConfig.key];
+    const indexed = filteredData.map((item, idx) => ({ item, idx }));
+    indexed.sort((a, b) => {
+      if (sortConfig.key === "__no__") {
+        return sortConfig.direction === "asc" ? a.idx - b.idx : b.idx - a.idx;
+      }
+      const aVal = a.item[sortConfig.key];
+      const bVal = b.item[sortConfig.key];
       const comparison = String(aVal).localeCompare(String(bVal), "id", {
         numeric: true,
       });
       return sortConfig.direction === "asc" ? comparison : -comparison;
     });
+    return indexed.map((d) => d.item);
   }, [filteredData, sortConfig]);
 
   const rowsPerPageOptions = PAGE_SIZE_OPTIONS.includes(rowsPerPage)
@@ -336,16 +358,29 @@ export default function DataTable<T extends Record<string, any>>({
         </div>
       </div>
       <div className="relative">
-        <div
-          ref={scrollRef}
-          onScroll={updateScrollIndicators}
-          className="overflow-x-auto"
-        >
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50 hover:bg-muted/50">
-                <TableHead className={stickyZone.header.no}>
-                  No
+        <Table tableContainerRef={scrollRef}>
+          <TableHeader>
+              <TableRow className="bg-muted hover:bg-muted">
+                <TableHead
+                  className={cn(
+                    "cursor-pointer select-none",
+                    stickyZone.header.no,
+                    canScrollLeft && STICKY_SHADOW,
+                  )}
+                  onClick={() => handleSort("__no__")}
+                >
+                  <span className="inline-flex items-center gap-1">
+                    No
+                    {sortConfig?.key === "__no__" ? (
+                      sortConfig.direction === "asc" ? (
+                        <ChevronUpIcon className="size-3.5" />
+                      ) : (
+                        <ChevronDownIcon className="size-3.5" />
+                      )
+                    ) : (
+                      <ChevronsUpDownIcon className="size-3.5 opacity-50" />
+                    )}
+                  </span>
                 </TableHead>
                 {visibleColumnsList.map((col) => (
                   <TableHead
@@ -354,6 +389,9 @@ export default function DataTable<T extends Record<string, any>>({
                       col.sortable && "cursor-pointer select-none",
                       col.key === visibleColumnsList[0]?.key &&
                         stickyZone.header.first,
+                      col.key === visibleColumnsList[0]?.key &&
+                        canScrollLeft &&
+                        STICKY_SHADOW,
                     )}
                     onClick={() => col.sortable && handleSort(col.key)}
                     style={{ textAlign: "center" }}
@@ -388,13 +426,18 @@ export default function DataTable<T extends Record<string, any>>({
               ) : (
                 paginatedData.map((item, idx) => (
                   <TableRow
-                    key={String(
+                    key={`${String(
                       (item as Record<string, unknown>).purchaseNumber ?? idx,
-                    )}
-                    className="group"
+                    )}-${originalIndexMap.get(item) ?? idx}`}
+                    className="group hover:bg-muted"
                   >
-                    <TableCell className={stickyZone.body.no}>
-                      {(currentPage - 1) * rowsPerPage + idx + 1}
+                    <TableCell
+                      className={cn(
+                        stickyZone.body.no,
+                        canScrollLeft && STICKY_SHADOW,
+                      )}
+                    >
+                      {(originalIndexMap.get(item) ?? idx) + 1}
                     </TableCell>
                     {visibleColumnsList.map((col) => (
                       <TableCell
@@ -403,6 +446,9 @@ export default function DataTable<T extends Record<string, any>>({
                           "whitespace-nowrap tabular-nums",
                           col.key === visibleColumnsList[0]?.key &&
                             stickyZone.body.first,
+                          col.key === visibleColumnsList[0]?.key &&
+                            canScrollLeft &&
+                            STICKY_SHADOW,
                         )}
                         style={{
                           textAlign: col.align === "right" ? "right" : "left",
@@ -417,13 +463,19 @@ export default function DataTable<T extends Record<string, any>>({
             </TableBody>
             {totals && (
               <TableFooter>
-                <TableRow className="bg-muted/50 hover:bg-muted/50">
-                  <TableCell className={stickyZone.footer.no} />
+                <TableRow className="bg-muted hover:bg-muted">
+                  <TableCell
+                    className={cn(
+                      stickyZone.footer.no,
+                      canScrollLeft && STICKY_SHADOW,
+                    )}
+                  />
                   {visibleColumnsList.map((col) => {
                     const isFirst = col.key === visibleColumnsList[0]?.key;
-                    const stickyClass = isFirst
-                      ? stickyZone.footer.first
-                      : "";
+                    const stickyClass = cn(
+                      isFirst && stickyZone.footer.first,
+                      isFirst && canScrollLeft && STICKY_SHADOW,
+                    );
                     if (isFirst) {
                       return (
                         <TableCell
@@ -461,7 +513,6 @@ export default function DataTable<T extends Record<string, any>>({
               </TableFooter>
             )}
           </Table>
-        </div>
         <div
           className={cn(
             "pointer-events-none absolute inset-y-0 right-0 w-8 bg-linear-to-l from-black/10 to-transparent transition-opacity duration-200 dark:from-white/10",
