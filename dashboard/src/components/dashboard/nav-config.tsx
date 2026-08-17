@@ -33,8 +33,11 @@ export interface NavItem {
   icon: React.ReactNode;
 }
 
-export const PURCHASING_MENU_ITEMS: NavItem[] = [
+export const DASHBOARD_MENU_ITEMS: NavItem[] = [
   { title: "Dashboard", url: "/dashboard", icon: <LayoutDashboardIcon /> },
+];
+
+export const PURCHASING_MENU_ITEMS: NavItem[] = [
   { title: "Purchase Summary", url: "/summary", icon: <FileTextIcon /> },
   {
     title: "Purchase by Supplier",
@@ -136,9 +139,16 @@ export interface NavGroup {
   icon: React.ReactNode;
   items: NavItem[];
   disabled?: boolean;
+  flat?: boolean;
 }
 
 export const NAV_GROUPS: NavGroup[] = [
+  {
+    title: "Dashboard",
+    icon: <LayoutDashboardIcon />,
+    items: DASHBOARD_MENU_ITEMS,
+    flat: true,
+  },
   {
     title: "Purchasing",
     icon: <ShoppingCartIcon />,

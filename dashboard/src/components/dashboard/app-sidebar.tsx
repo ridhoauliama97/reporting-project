@@ -18,7 +18,12 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
-import { ChartSplineIcon, ChevronRightIcon, DatabaseIcon, BookOpenIcon } from "lucide-react";
+import {
+  ChartSplineIcon,
+  ChevronRightIcon,
+  DatabaseIcon,
+  BookOpenIcon,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 function CollapsibleMenuGroup({ group }: { group: NavGroup }) {
@@ -39,6 +44,22 @@ function CollapsibleMenuGroup({ group }: { group: NavGroup }) {
           >
             Coming Soon
           </Badge>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  }
+  if (group.flat) {
+    return (
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          asChild
+          isActive={pathname === group.items[0].url}
+          className="data-[active=true]:bg-sidebar-primary data-[active=true]:text-sidebar-primary-foreground data-[active=true]:[&>svg]:text-sidebar-primary-foreground data-[active=true]:font-medium data-[active=true]:shadow-sm"
+        >
+          <NavLink to={group.items[0].url}>
+            {group.items[0].icon}
+            <span>{group.items[0].title}</span>
+          </NavLink>
         </SidebarMenuButton>
       </SidebarMenuItem>
     );
@@ -126,7 +147,7 @@ export function AppSidebar({
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild className="cursor-default">
-              <NavLink to="/summary" className="text-xs text-muted-foreground">
+              <NavLink to="/" className="text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5">
                   <DatabaseIcon className="size-3.5" />v{__APP_VERSION__} ·{" "}
                   {formatNumber(dataCount ?? 0)} item

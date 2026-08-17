@@ -4,7 +4,8 @@ Dashboard reporting (frontend-only) berbasis **Vite + React 19 + TypeScript + Ta
 
 ## Fitur
 
-- **17 item menu Purchasing**: Dashboard (landing: 4 KPI + ringkasan AI overall + 6 preview laporan) + 14 laporan analisis (Ringkasan Pembelian, Pembelian per Supplier, Ranking & Scorecard Supplier, Delivery, Riwayat Harga, Varians, Tren Biaya Material, Alert Kenaikan Harga, Lead Time, dst.) + Reports & Exports + Analytics & AI Insights.
+- **Menu Dashboard** (menu terpisah di atas Purchasing): landing page dengan sapaan, 4 KPI (Total Nilai Pembelian, Jumlah Transaksi, Supplier Aktif, Rata-rata per Transaksi), ringkasan AI overall, dan 6 mini-preview laporan.
+- **16 item menu Purchasing**: 14 laporan analisis (Ringkasan Pembelian, Pembelian per Supplier, Ranking & Scorecard Supplier, Delivery, Riwayat Harga, Varians, Tren Biaya Material, Alert Kenaikan Harga, Lead Time, dst.) + Reports & Exports + Analytics & AI Insights.
 - **Analytics & AI Insights** — mesin analisis rule-based deterministik: ringkasan AI per laporan, rekomendasi keputusan (Info/Perhatian/Urgent), deteksi anomali, analisis pengeluaran & potensi hemat, dan chat Q&A ("Tanya Data").
 - **Reports & Exports** — akses & ekspor semua laporan dalam satu tempat, digerakkan 1 Date Filter.
 - **Filter rentang tanggal** (`DateFilter`) yang menggerakkan semua widget, tabel, dan chart di setiap halaman.

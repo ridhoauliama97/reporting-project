@@ -3,9 +3,9 @@ import { Link } from "react-router-dom";
 import type { ParsedPurchaseItem } from "@/types/purchase";
 import { ITEM_CATEGORIES, CATEGORY_LABELS } from "@/types/purchase";
 import {
+  formatRupiah,
   formatNumber,
   formatPercent,
-  formatRupiahCompact,
 } from "@/utils/formatters";
 import {
   generateOverallSummary,
@@ -43,15 +43,33 @@ interface DashboardProps {
   onDateRangeChange: (range: DateRange) => void;
 }
 
+interface PreviewRow {
+  key: string;
+  label: string;
+  sublabel?: string;
+  value: string;
+  valueClass?: string;
+}
+
 interface PreviewCardProps {
   icon: React.ComponentType<{ className?: string }>;
   accent: string;
   title: string;
+  description: string;
   to: string;
-  children: React.ReactNode;
+  rows: PreviewRow[];
+  emptyText: string;
 }
 
-function PreviewCard({ icon: Icon, accent, title, to, children }: PreviewCardProps) {
+function PreviewCard({
+  icon: Icon,
+  accent,
+  title,
+  description,
+  to,
+  rows,
+  emptyText,
+}: PreviewCardProps) {
   return (
     <Card className="flex flex-col">
       <CardHeader className="pb-2">
@@ -72,10 +90,48 @@ function PreviewCard({ icon: Icon, accent, title, to, children }: PreviewCardPro
             <ArrowRightIcon className="size-3" />
           </Link>
         </div>
+        <CardDescription className="text-xs">{description}</CardDescription>
       </CardHeader>
-      <CardContent className="flex-1 pb-4 text-sm">{children}</CardContent>
+      <CardContent className="flex-1 pb-4 text-sm">
+        {rows.length === 0 ? (
+          <p className="text-muted-foreground">{emptyText}</p>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            {rows.map((row) => (
+              <div
+                key={row.key}
+                className="flex items-center justify-between gap-2"
+              >
+                <div className="min-w-0">
+                  <div className="truncate">{row.label}</div>
+                  {row.sublabel && (
+                    <div className="truncate text-xs text-muted-foreground">
+                      {row.sublabel}
+                    </div>
+                  )}
+                </div>
+                <span
+                  className={`shrink-0 font-medium tabular-nums ${
+                    row.valueClass ?? ""
+                  }`}
+                >
+                  {row.value}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
     </Card>
   );
+}
+
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Selamat pagi";
+  if (hour < 15) return "Selamat siang";
+  if (hour < 18) return "Selamat sore";
+  return "Selamat malam";
 }
 
 export default function Dashboard({
@@ -100,7 +156,7 @@ export default function Dashboard({
     [items, allItems],
   );
 
-  const stats = useMemo(() => {
+  const previews = useMemo(() => {
     const categoryTotals: Record<string, number> = {};
     ITEM_CATEGORIES.forEach((cat) => {
       categoryTotals[cat] = 0;
@@ -108,12 +164,7 @@ export default function Dashboard({
     const supplierTotals: Record<string, number> = {};
     const supplierOverdue: Record<string, { count: number; days: number[] }> =
       {};
-    let leadCount = 0;
-    let leadPrSum = 0;
-    let leadPoSum = 0;
-    let overdueTotal = 0;
-    let varianceCount = 0;
-    let varianceDiff = 0;
+    const supplierLead: Record<string, number[]> = {};
 
     items.forEach((item) => {
       const cat = item.itemCategory as string;
@@ -122,60 +173,86 @@ export default function Dashboard({
       const name = item.supplierName || "-";
       supplierTotals[name] = (supplierTotals[name] || 0) + item.netTotal;
       if (item.poPiOverdueDays > 0) {
-        overdueTotal += 1;
         if (!supplierOverdue[name]) supplierOverdue[name] = { count: 0, days: [] };
         supplierOverdue[name].count += 1;
         supplierOverdue[name].days.push(item.poPiOverdueDays);
       }
-
-      if (item.prPiDays > 0 || item.poPiDays > 0) {
-        leadCount += 1;
-        if (item.prPiDays > 0) leadPrSum += item.prPiDays;
-        if (item.poPiDays > 0) leadPoSum += item.poPiDays;
-      }
-
-      if (item.qtyOrdered > 0) {
-        const variance = item.quantity - item.qtyOrdered;
-        if (variance !== 0) {
-          varianceCount += 1;
-          varianceDiff += variance;
-        }
+      if (item.poPiDays > 0) {
+        if (!supplierLead[name]) supplierLead[name] = [];
+        supplierLead[name].push(item.poPiDays);
       }
     });
 
-    const topSuppliers = Object.entries(supplierTotals)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3);
-    const total = items.reduce((s, i) => s + i.netTotal, 0);
-    const topCategory = Object.entries(categoryTotals)
-      .sort((a, b) => b[1] - a[1])
-      .filter(([, v]) => v > 0)[0];
-    const worstOverdue = Object.entries(supplierOverdue)
-      .sort((a, b) => b[1].count - a[1].count)
-      .slice(0, 3);
-    const alerts = priceIncreaseAlerts(items);
-    const topAlert = alerts[0];
+    const alertRows = priceIncreaseAlerts(items).slice(0, 5).map((a) => ({
+      key: `alert-${a.item}`,
+      label: a.item,
+      sublabel: `${formatRupiah(a.prev)} → ${formatRupiah(a.curr)} per unit`,
+      value: `+${formatPercent(a.increase * 100)}`,
+      valueClass: "text-red-600 dark:text-red-400",
+    }));
+
+    const varianceRows = items
+      .filter((i) => i.qtyOrdered > 0)
+      .map((i) => ({ key: i.purchaseNumber, item: i, variance: i.quantity - i.qtyOrdered }))
+      .filter((r) => r.variance !== 0)
+      .sort((a, b) => Math.abs(b.variance) - Math.abs(a.variance))
+      .slice(0, 5)
+      .map((r, i) => ({
+        key: `var-${i}`,
+        label: r.item.purchaseNumber,
+        sublabel: r.item.itemName,
+        value: `${formatNumber(r.variance)} unit`,
+      }));
 
     return {
-      categoryTotals,
-      topCategory,
-      topSuppliers,
-      total,
-      overdueTotal,
-      worstOverdue,
-      avgPr: leadCount > 0 ? leadPrSum / leadCount : 0,
-      avgPo: leadCount > 0 ? leadPoSum / leadCount : 0,
-      alerts,
-      topAlert,
-      varianceCount,
-      varianceDiff,
+      categoryRows: Object.entries(categoryTotals)
+        .filter(([, v]) => v > 0)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([cat, value]) => ({
+          key: `cat-${cat}`,
+          label: CATEGORY_LABELS[cat as keyof typeof CATEGORY_LABELS] ?? cat,
+          value: formatRupiah(value),
+        })),
+      supplierRows: Object.entries(supplierTotals)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([name, value], idx) => ({
+          key: `sup-${name}`,
+          label: `${idx + 1}. ${name}`,
+          value: formatRupiah(value),
+        })),
+      overdueRows: Object.entries(supplierOverdue)
+        .sort((a, b) => b[1].count - a[1].count)
+        .slice(0, 5)
+        .map(([name, d]) => ({
+          key: `over-${name}`,
+          label: name,
+          sublabel: `rata-rata ${formatNumber(Math.round(d.days.reduce((a, b) => a + b, 0) / d.days.length))} hari keterlambatan`,
+          value: `${formatNumber(d.count)}x`,
+        })),
+      leadRows: Object.entries(supplierLead)
+        .map(([name, days]) => ({
+          name,
+          avg: days.reduce((a, b) => a + b, 0) / days.length,
+        }))
+        .sort((a, b) => b.avg - a.avg)
+        .slice(0, 5)
+        .map(({ name, avg }) => ({
+          key: `lead-${name}`,
+          label: name,
+          sublabel: `rata-rata PO → Invoice`,
+          value: `${formatNumber(Math.round(avg * 10) / 10)} hari`,
+        })),
+      alertRows,
+      varianceRows,
     };
   }, [items]);
 
   return (
     <PageLayout
-      title="Dashboard"
-      subtitle="Rangkuman statistik keseluruhan laporan purchasing dan insight utama."
+      title={`${getGreeting()}, User`}
+      subtitle="Ini adalah ringkasan laporan untuk periode bulan ini. Selamat bekerja! 👋"
       dateRange={dateRange}
       onDateRangeChange={onDateRangeChange}
     >
@@ -206,157 +283,62 @@ export default function Dashboard({
         <PreviewCard
           icon={LayersIcon}
           accent="bg-teal-500/10 text-teal-600 dark:text-teal-400"
-          title="Kategori Pembelian"
+          title="Purchase Summary"
+          description="Distribusi nilai pembelian per kategori pada periode aktif."
           to="/summary"
-        >
-          <div className="flex flex-col gap-1.5">
-            {Object.entries(stats.categoryTotals)
-              .filter(([, v]) => v > 0)
-              .sort((a, b) => b[1] - a[1])
-              .map(([cat, value]) => (
-                <div
-                  key={cat}
-                  className="flex items-center justify-between gap-2"
-                >
-                  <span className="truncate text-muted-foreground">
-                    {CATEGORY_LABELS[cat as keyof typeof CATEGORY_LABELS] ?? cat}
-                  </span>
-                  <span className="font-medium tabular-nums">
-                    {formatRupiahCompact(value)}
-                  </span>
-                </div>
-              ))}
-          </div>
-        </PreviewCard>
+          rows={previews.categoryRows}
+          emptyText="Tidak ada transaksi pada periode ini."
+        />
 
         <PreviewCard
           icon={Building2Icon}
           accent="bg-blue-500/10 text-blue-600 dark:text-blue-400"
-          title="Supplier Terbesar"
+          title="Supplier Ranking"
+          description="Supplier dengan total nilai pembelian terbesar pada periode aktif."
           to="/ranking"
-        >
-          <div className="flex flex-col gap-1.5">
-            {stats.topSuppliers.map(([name, value], idx) => (
-              <div
-                key={name}
-                className="flex items-center justify-between gap-2"
-              >
-                <span className="truncate text-muted-foreground">
-                  <span className="mr-1.5 font-semibold text-foreground">
-                    {idx + 1}.
-                  </span>
-                  {name}
-                </span>
-                <span className="font-medium tabular-nums">
-                  {formatRupiahCompact(value)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </PreviewCard>
+          rows={previews.supplierRows}
+          emptyText="Tidak ada transaksi pada periode ini."
+        />
 
         <PreviewCard
           icon={TruckIcon}
           accent="bg-amber-500/10 text-amber-600 dark:text-amber-400"
-          title="Keterlambatan Pengiriman"
+          title="Supplier Delivery Performance"
+          description="Supplier dengan keterlambatan PO → Invoice terbanyak pada periode aktif."
           to="/delivery"
-        >
-          {stats.overdueTotal === 0 ? (
-            <p className="text-muted-foreground">
-              Tidak ada keterlambatan pada periode ini.
-            </p>
-          ) : (
-            <div className="flex flex-col gap-1.5">
-              <p className="font-medium">
-                {formatNumber(stats.overdueTotal)} transaksi terlambat
-              </p>
-              {stats.worstOverdue.map(([name, d]) => (
-                <div
-                  key={name}
-                  className="flex items-center justify-between gap-2 text-muted-foreground"
-                >
-                  <span className="truncate">{name}</span>
-                  <span className="font-medium tabular-nums">
-                    {formatNumber(d.count)}x ·{" "}
-                    {formatNumber(Math.round(d.days.reduce((a, b) => a + b, 0) / d.days.length))} hari
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </PreviewCard>
+          rows={previews.overdueRows}
+          emptyText="Tidak ada keterlambatan pada periode ini."
+        />
 
         <PreviewCard
           icon={TimerIcon}
           accent="bg-purple-500/10 text-purple-600 dark:text-purple-400"
-          title="Lead Time Rata-rata"
+          title="Supplier Lead Time"
+          description="Supplier dengan rata-rata lead time PO → Invoice terlama pada periode aktif."
           to="/lead-time"
-        >
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">PR → Invoice</span>
-              <span className="font-medium tabular-nums">
-                {stats.avgPr > 0 ? `${formatNumber(Math.round(stats.avgPr * 10) / 10)} hari` : "-"}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">PO → Invoice</span>
-              <span className="font-medium tabular-nums">
-                {stats.avgPo > 0 ? `${formatNumber(Math.round(stats.avgPo * 10) / 10)} hari` : "-"}
-              </span>
-            </div>
-          </div>
-        </PreviewCard>
+          rows={previews.leadRows}
+          emptyText="Tidak ada data durasi PO → Invoice pada periode ini."
+        />
 
         <PreviewCard
           icon={AlertTriangleIcon}
           accent="bg-red-500/10 text-red-600 dark:text-red-400"
-          title="Kenaikan Harga"
+          title="Price Increase Alert"
+          description="Item dengan kenaikan harga berurutan ≥ 10% pada periode aktif."
           to="/price-alert"
-        >
-          {!stats.topAlert ? (
-            <p className="text-muted-foreground">
-              Tidak ada kenaikan harga berurutan ≥ 10%.
-            </p>
-          ) : (
-            <div className="flex flex-col gap-1.5">
-              <p className="font-medium">
-                {formatNumber(stats.alerts.length)} item terdeteksi
-              </p>
-              <p className="text-muted-foreground">
-                <span className="truncate">{stats.topAlert.item}</span> naik{" "}
-                <span className="font-semibold text-red-600 dark:text-red-400">
-                  {formatPercent(stats.topAlert.increase * 100)}
-                </span>
-              </p>
-            </div>
-          )}
-        </PreviewCard>
+          rows={previews.alertRows}
+          emptyText="Tidak ada kenaikan harga berurutan ≥ 10%."
+        />
 
         <PreviewCard
           icon={TrendingUpIcon}
           accent="bg-cyan-500/10 text-cyan-600 dark:text-cyan-400"
-          title="Selisih Qty (Variance)"
+          title="Purchase Variance"
+          description="Transaksi dengan selisih qty terhadap qty pesanan pada periode aktif."
           to="/variance"
-        >
-          {stats.varianceCount === 0 ? (
-            <p className="text-muted-foreground">
-              Semua transaksi sesuai qty pesanan.
-            </p>
-          ) : (
-            <div className="flex flex-col gap-1.5">
-              <p className="font-medium">
-                {formatNumber(stats.varianceCount)} transaksi tidak sesuai
-              </p>
-              <p className="text-muted-foreground">
-                Total selisih{" "}
-                <span className="font-medium tabular-nums">
-                  {formatNumber(stats.varianceDiff)} unit
-                </span>
-              </p>
-            </div>
-          )}
-        </PreviewCard>
+          rows={previews.varianceRows}
+          emptyText="Semua transaksi sesuai qty pesanan."
+        />
       </div>
     </PageLayout>
   );

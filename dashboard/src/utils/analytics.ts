@@ -1,5 +1,6 @@
 import type { ParsedPurchaseItem } from "@/types/purchase";
 import {
+  formatRupiah,
   formatRupiahCompact,
   formatNumber,
   formatPercent,
@@ -342,12 +343,12 @@ export function generateOverallSummary(
   const anomalies = detectAnomalies(items, allItems);
   const urgentAnomalies = anomalies.filter((a) => a.severity === "Urgent");
 
-  let text = `Periode ${period}: total pembelian ${formatRupiahCompact(total)} dari ${formatNumber(count)} transaksi dengan ${formatNumber(suppliers)} supplier aktif. `;
+  let text = `Periode ${period}: total pembelian ${formatRupiah(total)} dari ${formatNumber(count)} transaksi dengan ${formatNumber(suppliers)} supplier aktif. `;
   if (topCategory) {
     text += `Kategori terbesar: ${topCategory[0]} (${formatPercent((topCategory[1] / total) * 100)} dari total). `;
   }
   if (topSupplier) {
-    text += `Supplier terbesar: ${topSupplier[0]} (${formatRupiahCompact(topSupplier[1].total)}, ${formatPercent(topShare)}). `;
+    text += `Supplier terbesar: ${topSupplier[0]} (${formatRupiah(topSupplier[1].total)}, ${formatPercent(topShare)}). `;
   }
   text += `Tingkat keterlambatan ${formatPercent(lateRate)} (${formatNumber(overdueCount)} dari ${formatNumber(count)} transaksi)`;
   if (leadRows.length > 0) {
