@@ -499,7 +499,7 @@ export default function AnalyticsInsights({
           <SheetHeader className="border-b">
             <SheetTitle className="flex items-center gap-2">
               <BotIcon className="size-4 text-teal-600 dark:text-teal-400" />
-              AI Assitant Personal : Aurora
+              AI Assistant Personal : Aurora
             </SheetTitle>
             <SheetDescription>
               Hi! Saya Aurora, asisten AI pribadi dari Ridho Aulia Mahqoma
