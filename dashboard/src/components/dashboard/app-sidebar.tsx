@@ -1,7 +1,6 @@
 import * as React from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Collapsible as CollapsiblePrimitive } from "radix-ui";
-import { formatNumber } from "@/utils/formatters";
 import { NAV_GROUPS, type NavGroup } from "./nav-config";
 
 import {
@@ -146,13 +145,13 @@ export function AppSidebar({
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild className="cursor-default">
-              <NavLink to="/" className="text-xs text-muted-foreground">
-                <span className="flex items-center gap-1.5">
-                  <DatabaseIcon className="size-3.5" />v{__APP_VERSION__} ·{" "}
-                  {formatNumber(dataCount ?? 0)} item
-                </span>
-              </NavLink>
+            <SidebarMenuButton asChild disabled>
+              {/* <NavLink to="/" className=""> */}
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <DatabaseIcon className="size-3.5" />
+                Version · v{__APP_VERSION__}
+              </span>
+              {/* </NavLink> */}
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
