@@ -90,7 +90,7 @@ export const PURCHASING_MENU_ITEMS: NavItem[] = [
     icon: <FileOutputIcon />,
   },
   {
-    title: "AI Insights & Analytics",
+    title: "Analytics & AI Insights",
     url: "/analytics-insights",
     icon: <BrainCircuitIcon />,
   },

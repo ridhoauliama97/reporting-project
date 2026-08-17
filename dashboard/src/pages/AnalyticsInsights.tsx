@@ -250,7 +250,7 @@ export default function AnalyticsInsights({
             </p>
             <p className="text-xs text-muted-foreground">
               Ubah rentang tanggal untuk melihat insight, atau buka Chat dengan
-              Data untuk menanyakan seluruh data.
+              Aurora untuk menanyakan seluruh data.
             </p>
           </CardContent>
         </Card>
@@ -288,7 +288,7 @@ export default function AnalyticsInsights({
                   </CardContent>
                   <CardFooter className="border-t pt-3">
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>Sumber:</span>
+                      <span>Laporan :</span>
                       <SourceLink reportId={rec.sourceReportId} />
                     </div>
                   </CardFooter>
@@ -340,7 +340,7 @@ export default function AnalyticsInsights({
                         {anomaly.message}
                       </p>
                       <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>Sumber:</span>
+                        <span>Laporan :</span>
                         <SourceLink reportId={anomaly.sourceReportId} />
                       </div>
                     </div>
@@ -387,7 +387,7 @@ export default function AnalyticsInsights({
                 </CardContent>
                 <CardFooter className="border-t pt-3">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>Sumber:</span>
+                    <span>Laporan :</span>
                     <SourceLink reportId={insight.sourceReportId} />
                   </div>
                 </CardFooter>
@@ -491,7 +491,7 @@ export default function AnalyticsInsights({
         className="fixed right-4 bottom-4 z-40 h-12 gap-2 rounded-full px-5 shadow-lg"
       >
         <MessageSquareTextIcon className="size-5" />
-        <span className="hidden sm:inline">Tanya Data</span>
+        <span className="hidden sm:inline">Tanya Aurora</span>
       </Button>
 
       <Sheet open={chatOpen} onOpenChange={setChatOpen}>
@@ -499,12 +499,14 @@ export default function AnalyticsInsights({
           <SheetHeader className="border-b">
             <SheetTitle className="flex items-center gap-2">
               <BotIcon className="size-4 text-teal-600 dark:text-teal-400" />
-              Chat dengan Data
+              AI Assitant Personal : Aurora
             </SheetTitle>
             <SheetDescription>
-              Tanya apa saja tentang data purchasing. Jawaban dihitung dari data
-              asli; sebutkan bulan/tahun untuk scope khusus, atau gunakan filter
-              tanggal aktif.
+              Hi! Saya Aurora, asisten AI pribadi dari Ridho Aulia Mahqoma
+              Angkat. Saat ini fitur saya masih belum sempurna dan masih dalam
+              tahap pengembangan. <br /> Silahkan tanya apa saja tentang data
+              purchasing. Jawaban dihitung dari data asli; sebutkan bulan/tahun
+              untuk scope khusus, atau gunakan filter tanggal aktif.
             </SheetDescription>
           </SheetHeader>
           <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
@@ -564,7 +566,7 @@ export default function AnalyticsInsights({
                       className="rounded-lg border border-dashed px-3 py-1.5 text-left text-xs text-muted-foreground transition-colors hover:border-teal-500/50 hover:text-teal-600 dark:hover:text-teal-400"
                     >
                       <SparklesIcon className="mr-1 inline size-3" />
-                      Lanjut: {message.followUp}
+                      Pertanyaan rekomendasi : {message.followUp}
                     </button>
                   )}
                 </div>

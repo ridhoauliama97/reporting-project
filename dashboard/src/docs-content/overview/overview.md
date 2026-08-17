@@ -14,7 +14,7 @@
 Field `itemCategory` memiliki tepat 5 nilai:
 
 | Nilai | Keterangan |
-|---|---|
+| --- | --- |
 | `BAHAN BAKU` | Bahan mentah produksi |
 | `BAHAN PENDUKUNG` | Bahan penunjang produksi |
 | `SPAREPART` | Suku cadang |
@@ -24,9 +24,11 @@ Field `itemCategory` memiliki tepat 5 nilai:
 ## Fitur Global (Berlaku di Semua Halaman)
 
 ### Date Filter
+
 Filter rentang tanggal yang menggerakkan **semua** widget, tabel, dan chart di halaman tersebut. Filter mengikuti tanggal `purchaseDate` (beberapa halaman menggunakan `poDate`/`prDate` sesuai metriknya).
 
 ### DataTable
+
 Tabel data dengan kemampuan:
 
 - **Search** — cari kata kunci pada semua kolom
@@ -36,4 +38,5 @@ Tabel data dengan kemampuan:
 - **Kolom toggle** — pilih kolom yang ditampilkan, dikelompokkan per kategori
 
 ### Dark Mode
+
 Toggle tema terang/gelap yang tersimpan di `localStorage` (key: `theme`), berlaku di seluruh aplikasi termasuk halaman ini.
