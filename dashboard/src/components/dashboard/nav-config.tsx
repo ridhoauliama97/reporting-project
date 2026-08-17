@@ -34,7 +34,8 @@ export interface NavItem {
 }
 
 export const PURCHASING_MENU_ITEMS: NavItem[] = [
-  { title: "Purchase Summary", url: "/summary", icon: <LayoutDashboardIcon /> },
+  { title: "Dashboard", url: "/dashboard", icon: <LayoutDashboardIcon /> },
+  { title: "Purchase Summary", url: "/summary", icon: <FileTextIcon /> },
   {
     title: "Purchase by Supplier",
     url: "/by-supplier",

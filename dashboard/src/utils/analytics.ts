@@ -297,6 +297,66 @@ export function generateReportSummary(
   }
 }
 
+export function generateOverallSummary(
+  items: ParsedPurchaseItem[],
+  allItems: ParsedPurchaseItem[],
+): string {
+  if (items.length === 0) {
+    return "Tidak ada transaksi pada rentang tanggal aktif, sehingga ringkasan keseluruhan tidak dapat dibuat.";
+  }
+  const period = getPeriodLabel(items);
+  const total = sum(items, "netTotal");
+  const count = items.length;
+  const grouped = groupBySupplier(items);
+  const suppliers = Object.keys(grouped).length;
+
+  const categoryTotals: Record<string, number> = {};
+  items.forEach((i) => {
+    categoryTotals[i.itemCategory] =
+      (categoryTotals[i.itemCategory] || 0) + i.netTotal;
+  });
+  const topCategory = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0];
+
+  const topSupplier = Object.entries(grouped).sort((a, b) => b[1].total - a[1].total)[0];
+  const topShare = total > 0 && topSupplier ? (topSupplier[1].total / total) * 100 : 0;
+
+  const overdueCount = Object.values(grouped).reduce(
+    (acc, d) => acc + d.overdueCount,
+    0,
+  );
+  const lateRate = count > 0 ? (overdueCount / count) * 100 : 0;
+
+  const leadRows = items.filter((i) => i.prPiDays > 0 || i.poPiDays > 0);
+  const avgPr = leadRows.length
+    ? round1(avg(leadRows.map((r) => r.prPiDays).filter((d) => d > 0)))
+    : 0;
+  const avgPo = leadRows.length
+    ? round1(avg(leadRows.map((r) => r.poPiDays).filter((d) => d > 0)))
+    : 0;
+
+  const alerts = priceIncreaseAlerts(items);
+  const varianceRows = items
+    .filter((i) => i.qtyOrdered > 0)
+    .map((i) => ({ ...i, variance: i.quantity - i.qtyOrdered }))
+    .filter((i) => i.variance !== 0);
+  const anomalies = detectAnomalies(items, allItems);
+  const urgentAnomalies = anomalies.filter((a) => a.severity === "Urgent");
+
+  let text = `Periode ${period}: total pembelian ${formatRupiahCompact(total)} dari ${formatNumber(count)} transaksi dengan ${formatNumber(suppliers)} supplier aktif. `;
+  if (topCategory) {
+    text += `Kategori terbesar: ${topCategory[0]} (${formatPercent((topCategory[1] / total) * 100)} dari total). `;
+  }
+  if (topSupplier) {
+    text += `Supplier terbesar: ${topSupplier[0]} (${formatRupiahCompact(topSupplier[1].total)}, ${formatPercent(topShare)}). `;
+  }
+  text += `Tingkat keterlambatan ${formatPercent(lateRate)} (${formatNumber(overdueCount)} dari ${formatNumber(count)} transaksi)`;
+  if (leadRows.length > 0) {
+    text += `; rata-rata lead time PR→invoice ${avgPr} hari, PO→invoice ${avgPo} hari`;
+  }
+  text += `. Terdeteksi ${formatNumber(alerts.length)} kenaikan harga ≥ 10%, ${formatNumber(varianceRows.length)} transaksi dengan selisih qty, dan ${formatNumber(anomalies.length)} anomali (${formatNumber(urgentAnomalies.length)} urgent).`;
+  return text;
+}
+
 export function generateRecommendations(
   items: ParsedPurchaseItem[],
   allItems: ParsedPurchaseItem[],
@@ -422,7 +482,7 @@ export function generateRecommendations(
   );
 }
 
-function priceIncreaseAlerts(items: ParsedPurchaseItem[]) {
+export function priceIncreaseAlerts(items: ParsedPurchaseItem[]) {
   const grouped: Record<string, ParsedPurchaseItem[]> = {};
   items.forEach((item) => {
     if (!grouped[item.itemName]) grouped[item.itemName] = [];

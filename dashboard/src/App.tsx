@@ -7,6 +7,7 @@ import Layout from './components/Layout';
 import { Button } from './components/ui/button';
 
 const PurchaseSummary = lazy(() => import('./pages/PurchaseSummary'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
 const PurchaseBySupplier = lazy(() => import('./pages/PurchaseBySupplier'));
 const SupplierRanking = lazy(() => import('./pages/SupplierRanking'));
 const SupplierQuality = lazy(() => import('./pages/SupplierQuality'));
@@ -128,13 +129,23 @@ function App() {
                   }
                 >
                   <Routes>
-                    <Route path="/" element={<Navigate to="/summary" replace />} />
+                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                    <Route
+                      path="/dashboard"
+                      element={
+                        <Dashboard
+                          items={filteredItems}
+                          allItems={allItems}
+                          dateRange={dateRange}
+                          onDateRangeChange={setDateRange}
+                        />
+                      }
+                    />
                     <Route
                       path="/summary"
                       element={
                         <PurchaseSummary
                           items={filteredItems}
-                          allItems={allItems}
                           dateRange={dateRange}
                           onDateRangeChange={setDateRange}
                         />

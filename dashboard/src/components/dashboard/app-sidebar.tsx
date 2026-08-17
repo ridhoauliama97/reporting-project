@@ -93,7 +93,7 @@ export function AppSidebar({
               asChild
               className="data-[slot=sidebar-menu-button]:p-1.5!"
             >
-              <NavLink to="/summary">
+              <NavLink to="/dashboard">
                 <div className="flex size-6 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
                   <ChartSplineIcon className="size-4!" />
                 </div>

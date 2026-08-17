@@ -33,6 +33,7 @@ export const DOCS_MENUS: DocsMenu[] = [
     slug: "purchasing",
     icon: <ShoppingCartIcon />,
     submenus: [
+      { title: "Dashboard", slug: "dashboard" },
       { title: "Purchase Summary", slug: "purchase-summary" },
       { title: "Purchase By Supplier", slug: "purchase-by-supplier" },
       { title: "Supplier Ranking", slug: "supplier-ranking" },

@@ -1,7 +1,7 @@
 # Purchase Summary (Ringkasan Pembelian)
 
 ## Deskripsi
-Tabel ringkasan **seluruh transaksi pembelian** pada rentang tanggal yang dipilih — satu baris per line item invoice. Halaman utama dashboard yang menjadi titik masuk seluruh laporan.
+Tabel ringkasan **seluruh transaksi pembelian** pada rentang tanggal yang dipilih — satu baris per line item invoice. Kini berfokus pada tabel lengkap; ringkasan statistik dan snapshot laporan lain tersedia di halaman **Dashboard** (`/dashboard`).
 
 ## Fitur
 - **Full line-item table** — menampilkan setiap baris invoice dengan detail lengkap

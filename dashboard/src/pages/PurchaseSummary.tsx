@@ -5,7 +5,6 @@ import { formatRupiah, formatNumber, formatDate } from "../utils/formatters";
 import PageLayout from "../components/PageLayout";
 import StatCard from "../components/StatCard";
 import DataTable from "../components/DataTable";
-import { SectionCards } from "../components/dashboard/section-cards";
 
 interface DateRange {
   start: Date | null;
@@ -14,7 +13,6 @@ interface DateRange {
 
 interface PurchaseSummaryProps {
   items: ParsedPurchaseItem[];
-  allItems: ParsedPurchaseItem[];
   dateRange: DateRange;
   onDateRangeChange: (range: DateRange) => void;
 }
@@ -69,7 +67,6 @@ const DEFAULT_VISIBLE = [
 
 export default function PurchaseSummary({
   items,
-  allItems,
   dateRange,
   onDateRangeChange,
 }: PurchaseSummaryProps) {
@@ -94,17 +91,6 @@ export default function PurchaseSummary({
     () => items.reduce((sum, item) => sum + item.netTotal, 0),
     [items],
   );
-
-  const prevItems = useMemo(() => {
-    if (!dateRange.start || !dateRange.end) return undefined;
-    const len = dateRange.end.getTime() - dateRange.start.getTime();
-    const prevStart = new Date(dateRange.start.getTime() - len - 86400000);
-    const prevEnd = new Date(dateRange.start.getTime() - 86400000);
-    return allItems.filter((item) => {
-      const d = new Date(item.purchaseDate);
-      return d >= prevStart && d <= prevEnd;
-    });
-  }, [allItems, dateRange]);
 
   const columns = [
     { key: "purchaseNumber", label: "Nomor Purchase", sortable: true },
@@ -169,7 +155,6 @@ export default function PurchaseSummary({
       dateRange={dateRange}
       onDateRangeChange={onDateRangeChange}
     >
-      <SectionCards items={items} prevItems={prevItems} />
       <div className="grid grid-cols-2 md:grid-cols-3 2xl:grid-cols-6 gap-4">
         {ITEM_CATEGORIES.map((cat) => (
           <StatCard

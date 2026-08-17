@@ -6,6 +6,7 @@ import { NAV_GROUPS } from "@/components/dashboard/nav-config";
 import { SiteHeader } from "@/components/dashboard/site-header";
 
 const PAGE_TITLES: Record<string, string> = {
+  "/dashboard": "Dashboard",
   "/summary": "Purchase Summary",
   "/by-supplier": "Purchase by Supplier",
   "/ranking": "Supplier Ranking",

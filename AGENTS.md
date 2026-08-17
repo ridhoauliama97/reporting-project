@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**Purchasing dashboard** — frontend-only Vite + React 19 + TypeScript + Tailwind CSS v4 + shadcn/ui app. Real dataset (`purchase-data.json`, ~3,010 invoice line items); never use mock data. Sidebar has one active menu (**Purchasing**, 16 items: 14 reports + Reports & Exports + Analytics & AI Insights; **Warehouse** group is disabled "Coming Soon") and a footer **Documentation** link that opens `/docs` in a new tab.
+**Purchasing dashboard** — frontend-only Vite + React 19 + TypeScript + Tailwind CSS v4 + shadcn/ui app. Real dataset (`purchase-data.json`, ~3,010 invoice line items); never use mock data. Sidebar has one active menu (**Purchasing**, 17 items: Dashboard landing + 14 reports + Reports & Exports + Analytics & AI Insights; **Warehouse** group is disabled "Coming Soon") and a footer **Documentation** link that opens `/docs` in a new tab. Landing page is `/dashboard` (4 KPI cards with trend, overall AI summary, 6 report previews; Purchase Summary keeps only the full line-item table).
 
 ## Key Files
 
@@ -97,7 +97,7 @@ dashboard/src/
 │   ├── EmptyState.tsx # Placeholder pages
 │   ├── InfoBanner.tsx # Data-limitation notes
 │   └── ThemeToggle.tsx
-├── pages/            # 14 reports + ReportsExports, AnalyticsInsights, DocsPage, WarehousePlaceholder
+├── pages/            # Dashboard + 14 reports + ReportsExports, AnalyticsInsights, DocsPage, WarehousePlaceholder
 ├── docs-content/     # {menu}/{slug}.md + index.tsx config (see Documentation Hub)
 ├── utils/formatters.ts # parseAllItems, formatRupiah, formatRupiahCompact, formatPercent, filterByDateRange
 ├── utils/analytics.ts  # rule-based insight engine (no LLM)
