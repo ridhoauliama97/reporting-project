@@ -3,7 +3,11 @@ import { Link } from "react-router-dom";
 import type { ParsedPurchaseItem } from "@/types/purchase";
 import { ITEM_CATEGORIES, CATEGORY_LABELS } from "@/types/purchase";
 import { formatRupiah, formatNumber, formatPercent } from "@/utils/formatters";
-import { generateOverallSummary, priceIncreaseAlerts } from "@/utils/analytics";
+import {
+  generateOverallSummary,
+  priceIncreaseAlerts,
+  getVarianceRows,
+} from "@/utils/analytics";
 import PageLayout from "../components/PageLayout";
 import { SectionCards } from "../components/dashboard/section-cards";
 import {
@@ -190,14 +194,12 @@ export default function Dashboard({
         valueClass: "text-red-600 dark:text-red-400",
       }));
 
-    const varianceRows = items
-      .filter((i) => i.qtyOrdered > 0)
-      .map((i) => ({
-        key: i.purchaseNumber,
-        item: i,
-        variance: i.quantity - i.qtyOrdered,
+    const varianceRows = getVarianceRows(items)
+      .map((r) => ({
+        key: r.purchaseNumber,
+        item: r,
+        variance: r.variance,
       }))
-      .filter((r) => r.variance !== 0)
       .sort((a, b) => Math.abs(b.variance) - Math.abs(a.variance))
       .slice(0, 5)
       .map((r, i) => ({

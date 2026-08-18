@@ -109,6 +109,13 @@ function avg(values: number[]): number {
   return values.reduce((a, b) => a + b, 0) / values.length;
 }
 
+export function getVarianceRows(items: ParsedPurchaseItem[]) {
+  return items
+    .filter((i) => i.qtyOrdered > 0)
+    .map((i) => ({ ...i, variance: i.quantity - i.qtyOrdered }))
+    .filter((i) => i.variance !== 0);
+}
+
 function getPeriodLabel(items: ParsedPurchaseItem[]): string {
   if (items.length === 0) return "periode ini";
   const dates = items
@@ -223,10 +230,7 @@ export function generateReportSummary(
       return `Periode ${period}: ${formatNumber(itemsWithPrice.length)} transaksi memiliki data harga satuan. Harga tertinggi: ${maxItem.itemName} ${formatRupiahCompact(maxItem.unitCost)}/${maxItem.uom} (${maxItem.supplierName}).`;
     }
     case "variance": {
-      const rows = items
-        .filter((i) => i.qtyOrdered > 0)
-        .map((i) => ({ ...i, variance: i.quantity - i.qtyOrdered }))
-        .filter((i) => i.variance !== 0);
+      const rows = getVarianceRows(items);
       if (rows.length === 0) {
         return `Periode ${period}: seluruh ${formatNumber(items.length)} transaksi sesuai dengan qty yang dipesan — tidak ada selisih terdeteksi.`;
       }
@@ -426,10 +430,7 @@ export function generateRecommendations(
     });
   }
 
-  const varianceRows = items
-    .filter((i) => i.qtyOrdered > 0)
-    .map((i) => ({ ...i, variance: i.quantity - i.qtyOrdered }))
-    .filter((i) => i.variance !== 0);
+  const varianceRows = getVarianceRows(items);
   const negVariance = varianceRows.filter((r) => r.variance < 0);
   if (negVariance.length >= NEGATIVE_VARIANCE_ALERT) {
     const totalShortage = round2(negVariance.reduce((a, r) => a + r.variance, 0));
@@ -955,10 +956,7 @@ export function answerQuestion(
   }
 
   if (/variance|selisih|kurang (kirim|terima)|tidak sesuai|shortage/.test(q)) {
-    const rows = scope
-      .filter((i) => i.qtyOrdered > 0)
-      .map((i) => ({ ...i, variance: i.quantity - i.qtyOrdered }))
-      .filter((i) => i.variance !== 0);
+    const rows = getVarianceRows(scope);
     if (rows.length === 0) {
       return {
         text: `${scopePrefix}, semua transaksi sesuai dengan qty yang dipesan — tidak ada selisih.`,

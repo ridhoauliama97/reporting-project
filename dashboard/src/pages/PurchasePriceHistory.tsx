@@ -37,6 +37,8 @@ interface DateRange {
   end: Date | null;
 }
 
+const MAX_VISIBLE_ITEMS = 200;
+
 interface PurchasePriceHistoryProps {
   items: ParsedPurchaseItem[];
   dateRange: DateRange;
@@ -63,6 +65,10 @@ export default function PurchasePriceHistory({
       .map(([name, code]) => ({ name, code }))
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [items]);
+
+  const comboboxItems = comboboxSearch
+    ? uniqueItems
+    : uniqueItems.slice(0, MAX_VISIBLE_ITEMS);
 
   const filteredByItem = useMemo(() => {
     if (!selectedItem) return [];
@@ -157,7 +163,7 @@ export default function PurchasePriceHistory({
                 <CommandList>
                   <CommandEmpty>Tidak ada item ditemukan.</CommandEmpty>
                   <CommandGroup>
-                    {uniqueItems.map((item) => (
+                    {comboboxItems.map((item) => (
                       
                         <CommandItem
                           key={item.name}
@@ -180,6 +186,13 @@ export default function PurchasePriceHistory({
                         </CommandItem>
                     ))}
                   </CommandGroup>
+                  {!comboboxSearch &&
+                    uniqueItems.length > MAX_VISIBLE_ITEMS && (
+                      <p className="border-t px-3 py-2 text-xs text-muted-foreground">
+                        {uniqueItems.length - MAX_VISIBLE_ITEMS} item lainnya —
+                        ketik untuk mencari
+                      </p>
+                    )}
                 </CommandList>
               </Command>
             </PopoverContent>
