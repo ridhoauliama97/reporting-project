@@ -100,10 +100,7 @@ function CollapsibleMenuGroup({ group }: { group: NavGroup }) {
   );
 }
 
-export function AppSidebar({
-  dataCount,
-  ...props
-}: React.ComponentProps<typeof Sidebar> & { dataCount?: number }) {
+export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>

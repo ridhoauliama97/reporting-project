@@ -29,7 +29,7 @@ npm run preview   # Preview production build
 
 ## CI/CD & Dynamic Version (Critical)
 
-- Push to `main` → GitHub Actions (`ci.yml`): lint+build, then auto-deploy production to Vercel (`database-report-gsu.vercel.app`). Both must pass.
+- Push to `main` → GitHub Actions (`ci.yml`): lint+build, then auto-deploy production to Vercel (`database-report-gsu.vercel.app`). PRs run the lint+build gate only; deploy fires solely on `main` push.
 - **Commit message drives the version** (`scripts/version.mjs`): `^(feat|perf)(\(.+\))?:` → minor+1 (patch reset to 0); all other prefixes (fix/ci/docs/...) → patch+1. Baseline commit = `1.0.0`. The script counts the commit itself — run it **after** committing to see the new version (before commit it reports the previous one).
 - The deploy job MUST check out with `fetch-depth: 0` — with a shallow clone the script only sees 1 commit and reports `1.0.0` (debugged and fixed in commit `643853a`; don't regress this).
 - Sidebar footer shows `v{__APP_VERSION__}` — a Vite define fed via `--build-env APP_VERSION` in the deploy step.
@@ -38,11 +38,12 @@ npm run preview   # Preview production build
 
 ## Data Handling (Critical)
 
-- **Dataset is loaded at runtime, not bundled**: `src/data/purchase-data.json` is imported via `?url` in `App.tsx` and fetched with `JSON.parse`-style `res.json()` — keeps the 2.5 MB JSON (and its parse cost) out of the main bundle. `App` gates dashboard routes on `allItems.length` (loading spinner / error + retry); sidebar footer count flows via `Layout`'s `dataCount` prop. Don't re-import the JSON statically anywhere — it would re-inflate the index bundle.
+- **Dataset is loaded at runtime, not bundled**: `src/data/purchase-data.json` is imported via `?url` in `App.tsx` and fetched with `JSON.parse`-style `res.json()` — keeps the 2.5 MB JSON (and its parse cost) out of the main bundle. `App` gates dashboard routes on `allItems.length` (loading spinner / error + retry). Don't re-import the JSON statically anywhere — it would re-inflate the index bundle.
 - **Numeric fields are strings** in the JSON: `quantity`, `unitCost`, `poUnitCost`, `netTotal`, `qtyOrdered`, `poPiDays`, `prPiDays`, `poPiOverdueDays`. Parse with `parseAllItems()` (`utils/formatters.ts`) before math.
 - **Gotcha**: `parsePurchaseItem()` converts empty string `""` to `0`, not `NaN`/`null`. Pages therefore guard with `> 0` filters (e.g. `poPiDays > 0`, `qtyOrdered > 0`) rather than null checks — follow this pattern. Empty values render as `-` in the UI.
 - Only invoiced transactions (types PI/PN/PURBB). No goods-receiving, QC, or reject data.
-- `itemCategory` has exactly 5 values: `BAHAN BAKU`, `BAHAN PENDUKUNG`, `SPAREPART`, `WORK IN PROGRESS`, `BARANG DAGANG`.
+- `itemCategory` has exactly 5 values: `BAHAN BAKU`, `BAHAN PENDUKUNG`, `SPAREPART`, `WORK IN PROGRESS`, `BARANG DAGANG` — constants `ITEM_CATEGORIES` and `CATEGORY_LABELS` live in `types/purchase.ts`; reuse them instead of hardcoding.
+- The `xlsx` dependency installs from a SheetJS CDN tarball (`cdn.sheetjs.com`) in `package.json` — fresh `npm install` needs network to that host; don't change it to the deprecated npm-registry version.
 
 ## Placeholder Pages (Never Fabricate Data)
 
@@ -52,12 +53,14 @@ Pages #4 (Supplier Quality), #11 (Outstanding PO), #12 (Open PO), #13 (Closed PO
 
 - `verbatimModuleSyntax: true` — type-only imports must use `import type`.
 - `noUnusedLocals`/`noUnusedParameters` are errors — build fails on unused vars.
+- `erasableSyntaxOnly: true` — no TS `enum`, `namespace`, or constructor parameter properties (build errors); use const objects / discriminated unions instead.
 - Path alias `@/` → `./src/` (in `vite.config.ts` + `tsconfig.app.json`); shadcn CLI reads it, so `npx shadcn@latest add <component> -o` works non-interactively (needs network to ui.shadcn.com).
 
 ## UI Conventions
 
 - All labels in Indonesian; currency as `Rp 1.234.567` (`formatRupiah`), percentages 1 decimal (`formatPercent`)
-- Date range filter (via `DateFilter`) drives every page's widgets/table/chart; filtering uses `filterByDateRange()` (defaults to `purchaseDate`, some pages pass `poDate`/`prDate`)
+- Date range filter (via `DateFilter`) drives every page's widgets/table/chart; filtering uses `filterByDateRange()` (defaults to `purchaseDate`, some pages pass `poDate`/`prDate`). **Default range is the current calendar month** (`getDefaultDateRange()` in `App.tsx`) — pages show nothing outside it until the user changes it.
+- Adding a route requires registration in three places: `App.tsx` (route + props), `Layout.tsx` (`PAGE_TITLES` for the header title), and `nav-config.tsx` (`NAV_GROUPS` for the sidebar); plus a docs page.
 - Page shell: stat widget cards (`StatCard`) → chart/table; `PageLayout` wraps pages, `ChartCard` wraps Recharts charts (CSS vars `--color-chart-1..5`, cartesian grid uses `stroke-border`)
 - Proxy-metric pages carry an `InfoBanner` note explaining the data limitation (e.g. Supplier Delivery, Supplier Scorecard)
 - Dark mode: `ThemeToggle` toggles `.dark` on `<html>`, persists via `localStorage` key `theme` (no next-themes in app code)
@@ -80,7 +83,7 @@ Pages #4 (Supplier Quality), #11 (Outstanding PO), #12 (Open PO), #13 (Closed PO
 
 ## Analytics & AI Insights
 
-`utils/analytics.ts` is a **deterministic rule-based engine** (no LLM, no backend, no API calls — the app is frontend-only). Threshold constants live at the top of the file. `AnalyticsInsights.tsx` renders summaries, recommendations (Info/Perhatian/Urgent), anomaly detection, spend analysis, and a chat sheet ("Tanya Data") with source links via `REPORT_PATHS`. Don't add LLM integration without an explicit ask.
+`utils/analytics.ts` is a **deterministic rule-based engine** (no LLM, no backend, no API calls — the app is frontend-only). Threshold constants live at the top of the file. `AnalyticsInsights.tsx` renders summaries, recommendations (Info/Perhatian/Urgent), anomaly detection, spend analysis, and a chat sheet ("Tanya Data") with source links via `REPORT_PATHS` (defined in `AnalyticsInsights.tsx`, not in the engine). Don't add LLM integration without an explicit ask.
 
 ## Project Structure
 
@@ -102,6 +105,7 @@ dashboard/src/
 ├── docs-content/     # {menu}/{slug}.md + index.tsx config (see Documentation Hub)
 ├── utils/formatters.ts # parseAllItems, formatRupiah, formatRupiahCompact, formatPercent, filterByDateRange
 ├── utils/analytics.ts  # rule-based insight engine (no LLM)
+├── utils/reports.ts    # REPORT_DEFINITIONS: per-report getData() used by ReportsExports
 ├── utils/exporter.ts   # CSV/Excel/PDF export (used by DataTable + ReportsExports)
 ├── types/purchase.ts  # PurchaseItem / ParsedPurchaseItem
 ├── data/purchase-data.json  # fetched at runtime via ?url import (see Data Handling)
