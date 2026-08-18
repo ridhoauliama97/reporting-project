@@ -15,7 +15,7 @@ import {
   FileTextIcon,
   FolderCheckIcon,
 } from "lucide-react";
-import type { ParsedPurchaseItem, ItemCategory } from "@/types/purchase";
+import type { ParsedPurchaseItem, ItemCategory, PurchaseOrder } from "@/types/purchase";
 import { CATEGORY_LABELS } from "@/types/purchase";
 import { getMonthLabel, monthKeyOf, byPurchaseDateAsc } from "@/utils/formatters";
 
@@ -29,7 +29,10 @@ export interface ReportDefinition {
   name: string;
   description: string;
   icon: LucideIcon;
-  getData: (items: ParsedPurchaseItem[]) => ReportExport;
+  getData: (
+    items: ParsedPurchaseItem[],
+    purchaseOrders?: PurchaseOrder[],
+  ) => ReportExport;
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
@@ -482,22 +485,100 @@ export const REPORTS: ReportDefinition[] = [
   {
     id: "outstanding-po",
     name: "Outstanding PO",
-    description: "PO yang masih belum ditutup",
+    description: "PO dengan penerimaan sebagian (qty diterima < qty pesan)",
     icon: ClipboardListIcon,
-    getData: () => EMPTY_EXPORT,
+    getData: (_items, purchaseOrders) => {
+      const rows = (purchaseOrders ?? [])
+        .filter((po) => po.status === "OUTSTANDING")
+        .map((po) => [
+          po.orderNumber,
+          po.orderDate,
+          po.supplierName,
+          po.targetWarehouse,
+          po.lines.length,
+          po.lines.reduce((s, l) => s + l.qtyOutstanding, 0),
+          po.purchaseOrderPercentDelivered * 100,
+          po.orderNetTotal,
+        ]);
+      return {
+        headers: [
+          "Nomor PO",
+          "Tanggal PO",
+          "Supplier",
+          "Target Gudang",
+          "Jumlah Item",
+          "Qty Belum Diterima",
+          "% Diterima",
+          "Nilai PO",
+        ],
+        rows,
+      };
+    },
   },
   {
     id: "open-po",
     name: "Open PO",
-    description: "Daftar PO yang masih berstatus terbuka",
+    description: "PO yang masih berjalan dan belum menerima pengiriman",
     icon: FileTextIcon,
-    getData: () => EMPTY_EXPORT,
+    getData: (_items, purchaseOrders) => {
+      const rows = (purchaseOrders ?? [])
+        .filter((po) => po.status === "OPEN")
+        .map((po) => [
+          po.orderNumber,
+          po.orderDate,
+          po.supplierName,
+          po.targetWarehouse,
+          po.lines.length,
+          po.lines.reduce((s, l) => s + l.qtyOutstanding, 0),
+          po.orderNetTotal,
+          po.expectedDeliveryDate,
+        ]);
+      return {
+        headers: [
+          "Nomor PO",
+          "Tanggal PO",
+          "Supplier",
+          "Target Gudang",
+          "Jumlah Item",
+          "Qty Belum Diterima",
+          "Nilai PO",
+          "Expected Delivery",
+        ],
+        rows,
+      };
+    },
   },
   {
     id: "closed-po",
     name: "Closed PO",
-    description: "Daftar PO yang sudah ditutup",
+    description: "PO yang seluruh item-nya sudah diterima penuh",
     icon: FolderCheckIcon,
-    getData: () => EMPTY_EXPORT,
+    getData: (_items, purchaseOrders) => {
+      const rows = (purchaseOrders ?? [])
+        .filter((po) => po.status === "CLOSED")
+        .map((po) => [
+          po.orderNumber,
+          po.orderDate,
+          po.supplierName,
+          po.targetWarehouse,
+          po.lines.length,
+          po.purchaseOrderPercentDelivered * 100,
+          po.orderNetTotal,
+          po.poPiDays,
+        ]);
+      return {
+        headers: [
+          "Nomor PO",
+          "Tanggal PO",
+          "Supplier",
+          "Target Gudang",
+          "Jumlah Item",
+          "% Diterima",
+          "Nilai PO",
+          "PO→Invoice (hari)",
+        ],
+        rows,
+      };
+    },
   },
 ];

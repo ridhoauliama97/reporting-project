@@ -5,6 +5,7 @@ import PageLayout from "../components/PageLayout";
 import StatCard from "../components/StatCard";
 import DataTable from "../components/DataTable";
 import ChartCard from "../components/ChartCard";
+import InfoBanner from "../components/InfoBanner";
 import {
   BarChart,
   Bar,
@@ -32,29 +33,21 @@ export default function PurchaseLeadTime({
   onDateRangeChange,
 }: PurchaseLeadTimeProps) {
   const leadTimeData = useMemo(() => {
-    return items.filter((i) => i.prPiDays > 0 || i.poPiDays > 0);
+    return items.filter(
+      (i) => i.requiredPrDays > 0 || i.prPoDays > 0 || i.poPiDays > 0,
+    );
   }, [items]);
 
-  const avgPrPiDays = useMemo(() => {
-    const valid = items.filter((i) => i.prPiDays > 0);
+  const avgDays = (field: "requiredPrDays" | "prPoDays" | "poPiDays") => {
+    const valid = items.filter((i) => i[field] > 0);
     return valid.length > 0
-      ? valid.reduce((sum, i) => sum + i.prPiDays, 0) / valid.length
+      ? valid.reduce((sum, i) => sum + i[field], 0) / valid.length
       : 0;
-  }, [items]);
+  };
 
-  const avgPoPiDays = useMemo(() => {
-    const valid = items.filter((i) => i.poPiDays > 0);
-    return valid.length > 0
-      ? valid.reduce((sum, i) => sum + i.poPiDays, 0) / valid.length
-      : 0;
-  }, [items]);
-
-  const fastest = useMemo(() => {
-    const valid = items.filter((i) => i.poPiDays > 0);
-    return valid.length > 0
-      ? valid.reduce((min, i) => (i.poPiDays < min.poPiDays ? i : min))
-      : null;
-  }, [items]);
+  const avgRequiredPrDays = avgDays("requiredPrDays");
+  const avgPrPoDays = avgDays("prPoDays");
+  const avgPoPiDays = avgDays("poPiDays");
 
   const slowest = useMemo(() => {
     const valid = items.filter((i) => i.poPiDays > 0);
@@ -103,16 +96,24 @@ export default function PurchaseLeadTime({
       render: (item: ParsedPurchaseItem) => formatDate(item.purchaseDate),
     },
     {
-      key: "prPiDays",
-      label: "Lead Time PR→Invoice (hari)",
+      key: "requiredPrDays",
+      label: "Required→PR (hari)",
       align: "right" as const,
       sortable: true,
       render: (item: ParsedPurchaseItem) =>
-        item.prPiDays > 0 ? item.prPiDays : "-",
+        item.requiredPrDays > 0 ? item.requiredPrDays : "-",
+    },
+    {
+      key: "prPoDays",
+      label: "PR→PO (hari)",
+      align: "right" as const,
+      sortable: true,
+      render: (item: ParsedPurchaseItem) =>
+        item.prPoDays > 0 ? item.prPoDays : "-",
     },
     {
       key: "poPiDays",
-      label: "Lead Time PO→Invoice (hari)",
+      label: "PO→Invoice (hari)",
       align: "right" as const,
       sortable: true,
       render: (item: ParsedPurchaseItem) =>
@@ -123,26 +124,30 @@ export default function PurchaseLeadTime({
   return (
     <PageLayout
       title="Supplier Lead Time"
-      subtitle="Analisis lead time dari Purchase Request (PR) hingga Invoice, serta dari Purchase Order (PO) hingga Invoice."
+      subtitle="Analisis lead time tiga tahap: tanggal diperlukan (Required) → Purchase Request (PR) → Purchase Order (PO) → Invoice."
       dateRange={dateRange}
       onDateRangeChange={onDateRangeChange}
     >
+      <InfoBanner>
+        Menggunakan data asli PR, PO, dan invoice. Rentang filter berlaku pada
+        tanggal purchase (invoice).
+      </InfoBanner>
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          title="Rata-rata Lead Time PR→Invoice"
-          value={`${avgPrPiDays.toFixed(1)} hari`}
+          title="Rata-rata Required→PR"
+          value={`${avgRequiredPrDays.toFixed(1)} hari`}
         />
         <StatCard
-          title="Rata-rata Lead Time PO→Invoice"
+          title="Rata-rata PR→PO"
+          value={`${avgPrPoDays.toFixed(1)} hari`}
+        />
+        <StatCard
+          title="Rata-rata PO→Invoice"
           value={`${avgPoPiDays.toFixed(1)} hari`}
         />
         <StatCard
-          title="Lead Time Tercepat"
-          value={fastest ? `${fastest.poPiDays} hari` : "-"}
-          subtitle={fastest?.purchaseNumber}
-        />
-        <StatCard
-          title="Lead Time Terlama"
+          title="Lead Time PO→Invoice Terlama"
           value={slowest ? `${slowest.poPiDays} hari` : "-"}
           subtitle={slowest?.purchaseNumber}
           accent

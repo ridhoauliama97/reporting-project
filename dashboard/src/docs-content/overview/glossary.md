@@ -12,7 +12,7 @@ Glosarium istilah teknis yang dipakai di seluruh dokumentasi dan aplikasi.
 
 ## Placeholder Page
 
-**Halaman placeholder** — halaman yang sengaja ditampilkan kosong (`EmptyState`) karena dataset memang tidak memiliki data untuk metrik tersebut (misal data QC/reject atau status PO). Ini **bukan bug** dan **bukan halaman yang belum selesai dibangun** — halaman akan terisi otomatis begitu sumber data tersedia.
+**Halaman placeholder** — halaman yang sengaja ditampilkan kosong (`EmptyState`) karena dataset memang tidak memiliki data untuk metrik tersebut (saat ini hanya data QC/reject pada #4 Supplier Quality). Ini **bukan bug** dan **bukan halaman yang belum selesai dibangun** — halaman akan terisi otomatis begitu sumber data tersedia.
 
 ## Data Invoiced
 

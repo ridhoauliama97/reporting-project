@@ -19,6 +19,14 @@ import {
   FileOutputIcon,
   BrainCircuitIcon,
   InfoIcon,
+  WarehouseIcon,
+  PackageIcon,
+  BoxesIcon,
+  ArchiveIcon,
+  StoreIcon,
+  CogIcon,
+  MapPinIcon,
+  BuildingIcon,
 } from "lucide-react";
 
 export interface DocsSubmenu {
@@ -138,6 +146,48 @@ export const DOCS_MENUS: DocsMenu[] = [
         title: "Analytics & AI Insights",
         slug: "analytics-insights",
         icon: <BrainCircuitIcon />,
+      },
+    ],
+  },
+{
+    title: "Warehouse",
+    slug: "warehouse",
+    icon: <WarehouseIcon />,
+    submenus: [
+      {
+        title: "01: GUDANG BAHAN BAKU",
+        slug: "warehouse-reports",
+        icon: <PackageIcon />,
+      },
+      {
+        title: "04: GUDANG BARANG JADI",
+        slug: "warehouse-reports",
+        icon: <BoxesIcon />,
+      },
+      {
+        title: "07: GUDANG SPAREPART",
+        slug: "warehouse-reports",
+        icon: <ArchiveIcon />,
+      },
+      {
+        title: "09: CBD SPAREPART",
+        slug: "warehouse-reports",
+        icon: <StoreIcon />,
+      },
+      {
+        title: "51: GUDANG WIP",
+        slug: "warehouse-reports",
+        icon: <CogIcon />,
+      },
+      {
+        title: "54: GUDANG PEKANBARU",
+        slug: "warehouse-reports",
+        icon: <MapPinIcon />,
+      },
+      {
+        title: "24: KANTOR SALES",
+        slug: "warehouse-reports",
+        icon: <BuildingIcon />,
       },
     ],
   },

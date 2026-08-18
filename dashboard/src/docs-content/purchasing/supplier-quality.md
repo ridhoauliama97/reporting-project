@@ -20,4 +20,4 @@ Reject Rate   = Qty Reject / Qty Diterima × 100%
 - Data penerimaan barang (goods receipt) per PO
 
 ## Status Saat Ini: Placeholder (EmptyState)
-Dataset (`purchase-data.json`) hanya berisi data invoice pembelian — **tidak ada** data QC, reject, atau goods receipt. Laporan ini belum bisa diisi angka apa pun sampai sumber data tersebut tersedia. Lihat [Istilah & Definisi](../overview/glossary) untuk penjelasan tentang placeholder page.
+Dataset pembelian tidak memuat data QC, reject, atau goods receipt (`QC By`/`QC Comment`/`Qty. Received` kosong di `purchase-by-item`). Laporan ini belum bisa diisi angka apa pun sampai sumber data tersebut tersedia. Lihat [Istilah & Definisi](../overview/glossary) untuk penjelasan tentang placeholder page.

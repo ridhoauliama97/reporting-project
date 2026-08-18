@@ -1,20 +1,28 @@
 # Outstanding PO
 
 ## Deskripsi
-Daftar Purchase Order yang barangnya **belum sepenuhnya diterima/di-invoice** — sisa kewajiban pengiriman dari supplier.
+Daftar Purchase Order yang **barangnya sudah diterima sebagian namun masih memiliki sisa kuantitas** yang belum diterima (0 < qty diterima < qty pesan).
 
 ## Kegunaan
-- Follow-up ke supplier untuk barang yang belum datang
+- Follow-up ke supplier untuk sisa kiriman yang belum tuntas
 - Acuan komitmen pembelian yang masih outstanding (belum terealisasi penuh)
 
-## Formula Standar
+## Formula
 ```
-Outstanding Qty = Qty Ordered - Qty Diterima/Invoiced
+Outstanding Qty = Qty Dipesan (Major) - Qty Diterima (Major)
+Status PO:
+- CLOSED      : qty diterima >= qty pesan (diterima penuh)
+- OUTSTANDING : 0 < qty diterima < qty pesan (diterima sebagian)
+- OPEN        : qty diterima = 0 (belum menerima pengiriman)
 ```
-Baris ditampilkan jika hasilnya > 0.
 
-## Data yang Seharusnya Diperlukan
-Status PO + qty diterima/di-invoice per PO dari waktu ke waktu (bukan hanya qty yang di-order).
+## Sumber Data
+Dataset `purchase-order-by-item` — dihitung dari `Qty. Ordered (Major)` vs `Qty. Delivered (Major)` per baris item, lalu dikelompokkan per nomor PO. Filter tanggal berlaku pada **tanggal PO**.
 
-## Status Saat Ini: Placeholder (EmptyState)
-Dataset yang ada hanya berisi transaksi **invoiced** (`PI`/`PN`/`PURBB`) — tidak ada tracking status penerimaan barang per PO untuk menghitung sisa outstanding. Lihat [Istilah & Definisi](../overview/glossary) untuk penjelasan tentang placeholder page.
+## Statistik & Visualisasi
+- 4 kartu KPI: jumlah PO, jumlah baris item, total nilai PO, qty belum diterima
+- Grafik batang nilai PO per supplier (10 terbesar)
+- Tabel detail: nomor PO, tanggal, supplier, target gudang, jumlah item, qty belum diterima, % diterima, nilai PO, expected delivery, nomor PR
+
+## Batasan
+Periode ini tercatat 1 PO berstatus outstanding (penerimaan sebagian). Status "closed" di dataset tidak eksplisit — disimpulkan dari kesesuaian qty diterima vs dipesan.

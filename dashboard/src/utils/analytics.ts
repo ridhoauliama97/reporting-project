@@ -1,4 +1,8 @@
-import type { ParsedPurchaseItem } from "@/types/purchase";
+import type {
+  ParsedPurchaseItem,
+  PurchaseOrder,
+  StockBalance,
+} from "@/types/purchase";
 import {
   formatRupiah,
   formatRupiahCompact,
@@ -221,12 +225,7 @@ function getPeriodLabel(items: ParsedPurchaseItem[]): string {
   return first === last ? first : `${first} – ${last}`;
 }
 
-const PLACEHOLDER_REPORT_IDS = new Set([
-  "quality",
-  "outstanding-po",
-  "open-po",
-  "closed-po",
-]);
+const PLACEHOLDER_REPORT_IDS = new Set(["quality"]);
 
 function placeholderSummary(reportId: string, items: ParsedPurchaseItem[]): string {
   const report = REPORTS.find((r) => r.id === reportId);
@@ -234,12 +233,47 @@ function placeholderSummary(reportId: string, items: ParsedPurchaseItem[]): stri
   if (items.length === 0) {
     return `Tidak ada transaksi pada rentang tanggal aktif, sehingga ringkasan ${name} tidak dapat dibuat.`;
   }
-  return `Dataset purchasing saat ini belum memuat data ${name.toLowerCase()} (transaksi yang tercatat hanya berjenis invoice PI/PN/PURBB). Halaman laporan ini sengaja dikosongkan sampai data terkait tersedia.`;
+  return `Dataset purchasing saat ini belum memuat data ${name.toLowerCase()} (data reject/QC tidak tercatat pada dataset pembelian). Halaman laporan ini sengaja dikosongkan sampai data terkait tersedia.`;
+}
+
+function purchaseOrderSummary(
+  orders: PurchaseOrder[],
+  status: "OPEN" | "OUTSTANDING" | "CLOSED",
+  label: string,
+  period: string,
+): string {
+  const rows = orders.filter((po) => po.status === status);
+  if (rows.length === 0) {
+    return `Periode ${period}: tidak ada PO berstatus ${label}.`;
+  }
+  const totalValue = rows.reduce((s, po) => s + po.orderNetTotal, 0);
+  const outstandingQty = rows.reduce(
+    (s, po) => s + po.lines.reduce((a, l) => a + l.qtyOutstanding, 0),
+    0,
+  );
+  const topSupplier = Object.entries(
+    rows.reduce<Record<string, number>>((acc, po) => {
+      const name = po.supplierName || "-";
+      acc[name] = (acc[name] || 0) + po.orderNetTotal;
+      return acc;
+    }, {}),
+  ).sort((a, b) => b[1] - a[1])[0];
+  const lines = rows.reduce((s, po) => s + po.lines.length, 0);
+  let text = `Periode ${period}: ${formatNumber(rows.length)} PO berstatus ${label} (${formatNumber(lines)} baris item) dengan total nilai ${formatRupiahCompact(totalValue)}`;
+  if (status !== "CLOSED") {
+    text += ` dan ${formatNumber(round2(outstandingQty))} unit belum diterima`;
+  }
+  if (topSupplier) {
+    text += `. Supplier terbesar: ${topSupplier[0]} (${formatRupiahCompact(topSupplier[1])})`;
+  }
+  text += ".";
+  return text;
 }
 
 export function generateReportSummary(
   reportId: string,
   items: ParsedPurchaseItem[],
+  purchaseOrders?: PurchaseOrder[],
 ): string {
   if (PLACEHOLDER_REPORT_IDS.has(reportId)) {
     return placeholderSummary(reportId, items);
@@ -247,6 +281,15 @@ export function generateReportSummary(
   const period = getPeriodLabel(items);
   if (items.length === 0) {
     return `Tidak ada transaksi pada rentang tanggal aktif, sehingga ringkasan laporan tidak dapat dibuat.`;
+  }
+  if (reportId === "outstanding-po") {
+    return purchaseOrderSummary(purchaseOrders ?? [], "OUTSTANDING", "Outstanding", period);
+  }
+  if (reportId === "open-po") {
+    return purchaseOrderSummary(purchaseOrders ?? [], "OPEN", "Open", period);
+  }
+  if (reportId === "closed-po") {
+    return purchaseOrderSummary(purchaseOrders ?? [], "CLOSED", "Closed", period);
   }
 
   switch (reportId) {
@@ -377,13 +420,18 @@ export function generateReportSummary(
       return `Periode ${period}: ${formatNumber(alerts.length)} kenaikan harga ≥ 10% terdeteksi. Paling ekstrem: ${top.item} naik ${formatPercent(top.increase * 100)} (${formatRupiahCompact(top.prev)} → ${formatRupiahCompact(top.curr)} per unit).`;
     }
     case "lead-time": {
-      const rows = items.filter((i) => i.prPiDays > 0 || i.poPiDays > 0);
+      const rows = items.filter(
+        (i) => i.requiredPrDays > 0 || i.prPoDays > 0 || i.poPiDays > 0,
+      );
       if (rows.length === 0) {
-        return `Periode ${period}: tidak ada data durasi PR/PO→invoice pada rentang ini.`;
+        return `Periode ${period}: tidak ada data durasi Required/PR/PO→invoice pada rentang ini.`;
       }
-      const avgPr = round1(avg(rows.map((r) => r.prPiDays).filter((d) => d > 0)));
+      const avgReq = round1(
+        avg(rows.map((r) => r.requiredPrDays).filter((d) => d > 0)),
+      );
+      const avgPr = round1(avg(rows.map((r) => r.prPoDays).filter((d) => d > 0)));
       const avgPo = round1(avg(rows.map((r) => r.poPiDays).filter((d) => d > 0)));
-      return `Periode ${period}: rata-rata lead time PR→invoice ${avgPr} hari dan PO→invoice ${avgPo} hari dari ${formatNumber(rows.length)} transaksi.`;
+      return `Periode ${period}: rata-rata lead time Required→PR ${avgReq} hari, PR→PO ${avgPr} hari, dan PO→invoice ${avgPo} hari dari ${formatNumber(rows.length)} transaksi.`;
     }
     default:
       return `Ringkasan untuk laporan ini belum tersedia.`;
@@ -419,9 +467,14 @@ export function generateOverallSummary(
   );
   const lateRate = count > 0 ? (overdueCount / count) * 100 : 0;
 
-  const leadRows = items.filter((i) => i.prPiDays > 0 || i.poPiDays > 0);
+  const leadRows = items.filter(
+    (i) => i.requiredPrDays > 0 || i.prPoDays > 0 || i.poPiDays > 0,
+  );
+  const avgReq = leadRows.length
+    ? round1(avg(leadRows.map((r) => r.requiredPrDays).filter((d) => d > 0)))
+    : 0;
   const avgPr = leadRows.length
-    ? round1(avg(leadRows.map((r) => r.prPiDays).filter((d) => d > 0)))
+    ? round1(avg(leadRows.map((r) => r.prPoDays).filter((d) => d > 0)))
     : 0;
   const avgPo = leadRows.length
     ? round1(avg(leadRows.map((r) => r.poPiDays).filter((d) => d > 0)))
@@ -444,7 +497,7 @@ export function generateOverallSummary(
   }
   text += `Tingkat keterlambatan ${formatPercent(lateRate)} (${formatNumber(overdueCount)} dari ${formatNumber(count)} transaksi)`;
   if (leadRows.length > 0) {
-    text += `; rata-rata lead time PR→invoice ${avgPr} hari, PO→invoice ${avgPo} hari`;
+    text += `; rata-rata lead time Required→PR ${avgReq} hari, PR→PO ${avgPr} hari, PO→invoice ${avgPo} hari`;
   }
   text += `. Terdeteksi ${formatNumber(alerts.length)} kenaikan harga ≥ 10%, ${formatNumber(varianceRows.length)} transaksi dengan selisih qty, dan ${formatNumber(anomalies.length)} anomali (${formatNumber(urgentAnomalies.length)} urgent).`;
   return text;
@@ -914,6 +967,8 @@ export function answerQuestion(
   question: string,
   items: ParsedPurchaseItem[],
   allItems: ParsedPurchaseItem[],
+  purchaseOrders: PurchaseOrder[] = [],
+  stockBalances: StockBalance[] = [],
 ): ChatAnswer {
   const q = question.toLowerCase().trim();
   const { scope, note } = resolveChatScope(question, items, allItems);
@@ -921,6 +976,83 @@ export function answerQuestion(
 
   if (q.length === 0) {
     return { text: "Silakan tulis pertanyaan tentang data purchasing.", sources: [] };
+  }
+
+  if (/outstanding po|po outstanding|po sebagian|belum lunas/.test(q)) {
+    const rows = purchaseOrders.filter((po) => po.status === "OUTSTANDING");
+    if (rows.length === 0) {
+      return {
+        text: `${scopePrefix}, tidak ada PO berstatus outstanding (penerimaan sebagian) pada dataset.`,
+        sources: ["outstanding-po"],
+      };
+    }
+    const list = rows
+      .map((po) => `${po.orderNumber} (${po.supplierName})`)
+      .join("; ");
+    return {
+      text: `${scopePrefix}, ${formatNumber(rows.length)} PO berstatus outstanding: ${list}.`,
+      sources: ["outstanding-po"],
+      followUp: "Ada berapa Open PO?",
+    };
+  }
+
+  if (/open po|po open|po terbuka|po belum (ada |menerima )?pengiriman|belum dikirim/.test(q)) {
+    const rows = purchaseOrders.filter((po) => po.status === "OPEN");
+    if (rows.length === 0) {
+      return {
+        text: `${scopePrefix}, tidak ada Open PO (belum menerima pengiriman) pada dataset.`,
+        sources: ["open-po"],
+      };
+    }
+    const list = rows
+      .slice(0, 5)
+      .map((po) => `${po.orderNumber} (${po.supplierName})`)
+      .join("; ");
+    return {
+      text: `${scopePrefix}, ${formatNumber(rows.length)} Open PO tercatat. Contoh: ${list}.`,
+      sources: ["open-po"],
+      followUp: "Berapa total nilai Open PO?",
+    };
+  }
+
+  if (/closed po|po closed|po selesai|po lunas|po ditutup/.test(q)) {
+    const rows = purchaseOrders.filter((po) => po.status === "CLOSED");
+    const totalValue = rows.reduce((s, po) => s + po.orderNetTotal, 0);
+    return {
+      text: `${scopePrefix}, ${formatNumber(rows.length)} PO sudah closed (diterima penuh) dengan total nilai ${formatRupiahCompact(totalValue)}.`,
+      sources: ["closed-po"],
+      followUp: "Berapa total nilai Open PO?",
+    };
+  }
+
+  if (/total nilai (open|outstanding) po|nilai (open|outstanding) po/.test(q)) {
+    const status = q.includes("outstanding") ? "OUTSTANDING" : "OPEN";
+    const rows = purchaseOrders.filter((po) => po.status === status);
+    const totalValue = rows.reduce((s, po) => s + po.orderNetTotal, 0);
+    return {
+      text: `${scopePrefix}, total nilai ${status === "OPEN" ? "Open" : "Outstanding"} PO mencapai ${formatRupiahCompact(totalValue)} dari ${formatNumber(rows.length)} PO.`,
+      sources: status === "OPEN" ? ["open-po"] : ["outstanding-po"],
+      followUp: "Supplier mana yang paling sering telat kirim?",
+    };
+  }
+
+  if (/stok|saldo|on ?hand/.test(q) && /gudang|warehouse|keseluruhan|semua|total/.test(q)) {
+    if (stockBalances.length === 0) {
+      return { text: `${scopePrefix}, tidak ada data saldo stok.`, sources: [] };
+    }
+    const totalOnHand = stockBalances.reduce((s, r) => s + r.onHand, 0);
+    const totalValue = stockBalances.reduce(
+      (s, r) => s + r.onHand * r.lastPurchaseCost,
+      0,
+    );
+    const warehouses = new Set(
+      stockBalances.map((s) => s.warehouseName).filter(Boolean),
+    ).size;
+    return {
+      text: `${scopePrefix}, total saldo stok ${formatNumber(round2(totalOnHand))} unit dari ${formatNumber(stockBalances.length)} baris item di ${formatNumber(warehouses)} gudang, dengan nilai stok ${formatRupiahCompact(totalValue)}.`,
+      sources: [],
+      followUp: "Berapa total pembelian periode ini?",
+    };
   }
 
   const categoryWords =
@@ -1150,4 +1282,6 @@ export const CHAT_SUGGESTIONS = [
   "Top 5 supplier terbesar?",
   "Berapa rata-rata lead time PO?",
   "Total pembelian per kategori?",
+  "Ada berapa Open PO?",
+  "Berapa total saldo stok di semua gudang?",
 ];

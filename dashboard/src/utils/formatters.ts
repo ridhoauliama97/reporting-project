@@ -1,11 +1,15 @@
-import type { PurchaseItem, ParsedPurchaseItem } from "../types/purchase";
+import type {
+  RawPurchaseItem,
+  ParsedPurchaseItem,
+  PurchaseBundle,
+} from "../types/purchase";
 import { format, parseISO, isValid } from "date-fns";
 import { id } from "date-fns/locale";
 
-export function parsePurchaseItem(item: PurchaseItem): ParsedPurchaseItem {
-  const parseNum = (val: string): number => {
+export function parsePurchaseItem(item: RawPurchaseItem): ParsedPurchaseItem {
+  const parseNum = (val: number | string): number => {
     if (val === "" || val === null || val === undefined) return 0;
-    const num = parseFloat(val);
+    const num = typeof val === "number" ? val : parseFloat(val);
     return isNaN(num) ? 0 : num;
   };
 
@@ -19,6 +23,20 @@ export function parsePurchaseItem(item: PurchaseItem): ParsedPurchaseItem {
     poPiDays: parseNum(item.poPiDays),
     prPiDays: parseNum(item.prPiDays),
     poPiOverdueDays: parseNum(item.poPiOverdueDays),
+    prPoDays: parseNum(item.prPoDays),
+    requiredPrDays: parseNum(item.requiredPrDays),
+    prRequiredDate: item.prRequiredDate ?? "",
+    lineTotal: parseNum(item.lineTotal),
+    lineTotalAfterTax: parseNum(item.lineTotalAfterTax),
+    qtyUsed: parseNum(item.qtyUsed),
+    qtyTransferred: parseNum(item.qtyTransferred),
+    quantityReceived: parseNum(item.quantityReceived),
+    amountReceived: parseNum(item.amountReceived),
+    qcBy: item.qcBy ?? "",
+    qcComment: item.qcComment ?? "",
+    purpose: item.purpose ?? "",
+    purchaseDetailId: item.purchaseDetailId ?? "",
+    itemId: item.itemId ?? "",
     purchaseDateObj: null,
     poDateObj: null,
     prDateObj: null,
@@ -41,7 +59,7 @@ function parseDateCached(
   return cache.get(dateStr) ?? null;
 }
 
-export function parseAllItems(items: PurchaseItem[]): ParsedPurchaseItem[] {
+export function parseAllItems(items: RawPurchaseItem[]): ParsedPurchaseItem[] {
   const dateCache = new Map<string, Date | null>();
   return items.map((item) => {
     const parsed = parsePurchaseItem(item);
@@ -50,6 +68,30 @@ export function parseAllItems(items: PurchaseItem[]): ParsedPurchaseItem[] {
     parsed.prDateObj = parseDateCached(dateCache, item.prDate);
     return parsed;
   });
+}
+
+interface RawBundle {
+  purchases: RawPurchaseItem[];
+  purchaseOrders: PurchaseBundle["purchaseOrders"];
+  purchaseRequests: PurchaseBundle["purchaseRequests"];
+  usage: PurchaseBundle["usage"];
+  stockBalances: PurchaseBundle["stockBalances"];
+  goodsTransfers: PurchaseBundle["goodsTransfers"];
+  adjustments: PurchaseBundle["adjustments"];
+  prHeaders: PurchaseBundle["prHeaders"];
+}
+
+export function parseBundle(raw: RawBundle): PurchaseBundle {
+  return {
+    purchases: parseAllItems(raw.purchases ?? []),
+    purchaseOrders: raw.purchaseOrders ?? [],
+    purchaseRequests: raw.purchaseRequests ?? [],
+    usage: raw.usage ?? [],
+    stockBalances: raw.stockBalances ?? [],
+    goodsTransfers: raw.goodsTransfers ?? [],
+    adjustments: raw.adjustments ?? [],
+    prHeaders: raw.prHeaders ?? [],
+  };
 }
 
 const rupiahFormatter = new Intl.NumberFormat("id-ID", {

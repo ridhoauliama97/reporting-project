@@ -1,19 +1,26 @@
 # Supplier Lead Time (Lead Time Pembelian)
 
 ## Deskripsi
-Distribusi lama waktu proses pembelian — dari permintaan hingga invoice — disajikan sebagai histogram.
+Distribusi lama waktu proses pembelian — dari tanggal diperlukan (Required) hingga invoice — disajikan sebagai histogram dan tabel detail per transaksi.
 
 ## Fitur
-- **4 kartu statistik**: Rata-rata Lead Time PR→Invoice (avg `prPiDays`), Rata-rata Lead Time PO→Invoice (avg `poPiDays`), Lead Time Tercepat, Lead Time Terlama
+- **4 kartu statistik**: Rata-rata Required→PR, Rata-rata PR→PO, Rata-rata PO→Invoice, Lead Time PO→Invoice Terlama
 - **Chart**: histogram `poPiDays` dengan bucket:
   - `0-3 hari`
   - `4-7 hari`
   - `8-14 hari`
   - `15+ hari`
-- **Tabel**: Nomor PR, Tanggal PR, Nomor PO, Tanggal PO, Nomor Purchase, Tanggal Purchase, Lead Time PR→Invoice (hari), Lead Time PO→Invoice (hari) — sort by Lead Time PO→Invoice descending
+- **Tabel**: Nomor PR, Tanggal PR, Nomor PO, Tanggal PO, Nomor Purchase, Tanggal Purchase, Required→PR (hari), PR→PO (hari), PO→Invoice (hari)
 
-## Data yang Diproses
-Baris invoice dengan `prPiDays`/`poPiDays` terisi, dalam rentang tanggal aktif.
+## Formula 3 Tahap
+```
+Required→PR  = Tanggal PR - Tanggal Diperlukan (Required Date)
+PR→PO        = Tanggal PO - Tanggal PR
+PO→Invoice   = Tanggal Purchase - Tanggal PO  (poPiDays)
+```
+
+## Sumber Data
+Dataset `purchase-request-by-item` (Required Date) digabung dengan `purchase-by-item` (PR/PO/Purchase Date) — ketiga tahap dihitung saat pembuatan file data laporan. Filter tanggal berlaku pada **tanggal purchase** (invoice).
 
 ## Catatan
-Hanya `prPiDays` dan `poPiDays` yang tersedia di dataset — **jangan** membuat metrik PR→PO terpisah karena data tersebut tidak ada.
+Periode ini `PR→PO` dan `Required→PR` hampir selalu terisi (PO Number tercantum di 99,3% PR) sehingga ketiga tahap dapat dianalisis secara penuh.

@@ -1,18 +1,34 @@
-import PageLayout from "../components/PageLayout";
-import EmptyState from "../components/EmptyState";
+import type { PurchaseOrder } from "../types/purchase";
+import PurchaseOrderStatus from "./PurchaseOrderStatus";
 import { ClipboardListIcon } from "lucide-react";
 
-export default function OutstandingPO() {
+interface DateRange {
+  start: Date | null;
+  end: Date | null;
+}
+
+interface OutstandingPOProps {
+  purchaseOrders: PurchaseOrder[];
+  dateRange: DateRange;
+  onDateRangeChange: (range: DateRange) => void;
+}
+
+export default function OutstandingPO({
+  purchaseOrders,
+  dateRange,
+  onDateRangeChange,
+}: OutstandingPOProps) {
   return (
-    <PageLayout
+    <PurchaseOrderStatus
+      purchaseOrders={purchaseOrders}
+      status="OUTSTANDING"
       title="Outstanding PO"
-      subtitle="Laporan status Purchase Order (PO) yang belum ter-invoice."
-    >
-      <EmptyState
-        icon={ClipboardListIcon}
-        title="Outstanding PO"
-        description="Status PO yang belum ter-invoice tidak dapat dihitung dari data ini — laporan ini hanya berisi transaksi yang sudah ter-invoice (PI/PN/PURBB)."
-      />
-    </PageLayout>
+      subtitle="Purchase Order yang sudah sebagian diterima namun masih memiliki sisa kuantitas yang belum diterima."
+      emptyTitle="Tidak ada Outstanding PO"
+      emptyDescription="Tidak ada PO dengan penerimaan sebagian (0 < qty diterima < qty pesan) pada rentang tanggal ini."
+      icon={ClipboardListIcon}
+      dateRange={dateRange}
+      onDateRangeChange={onDateRangeChange}
+    />
   );
 }

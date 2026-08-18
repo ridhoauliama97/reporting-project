@@ -13,9 +13,9 @@ import {
   lazy,
   type ReactNode,
 } from "react";
-import { parseAllItems, filterByDateRange } from "./utils/formatters";
-import type { PurchaseItem, ParsedPurchaseItem } from "./types/purchase";
-import purchaseDataUrl from "./data/purchase-data.json?url";
+import { filterByDateRange, parseBundle } from "./utils/formatters";
+import type { PurchaseBundle } from "./types/purchase";
+import reportDataUrl from "./data/purchasing-report-data.json?url";
 import Layout from "./components/Layout";
 import { Button } from "./components/ui/button";
 import { Analytics } from '@vercel/analytics/react';
@@ -37,7 +37,7 @@ const ClosedPO = lazy(() => import("./pages/ClosedPO"));
 const SupplierScorecard = lazy(() => import("./pages/SupplierScorecard"));
 const ReportsExports = lazy(() => import("./pages/ReportsExports"));
 const AnalyticsInsights = lazy(() => import("./pages/AnalyticsInsights"));
-const WarehousePlaceholder = lazy(() => import("./pages/WarehousePlaceholder"));
+const WarehousePlaceholder = lazy(() => import("./pages/WarehouseReport"));
 const DocsPage = lazy(() => import("./pages/DocsPage"));
 
 const WAREHOUSES: Record<string, string> = {
@@ -99,22 +99,22 @@ class ErrorBoundary extends Component<
 }
 
 function App() {
-  const [allItems, setAllItems] = useState<ParsedPurchaseItem[]>([]);
+  const [bundle, setBundle] = useState<PurchaseBundle | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [loadKey, setLoadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 15000);
+    const timer = setTimeout(() => controller.abort(), 30000);
     setLoadError(false);
-    fetch(purchaseDataUrl, { signal: controller.signal })
+    fetch(reportDataUrl, { signal: controller.signal })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
       })
-      .then((data: PurchaseItem[]) => {
-        if (!cancelled) setAllItems(parseAllItems(data));
+      .then((data) => {
+        if (!cancelled) setBundle(parseBundle(data));
       })
       .catch(() => {
         if (!cancelled) setLoadError(true);
@@ -132,6 +132,7 @@ function App() {
     end: Date | null;
   }>(getDefaultDateRange());
 
+  const allItems = useMemo(() => bundle?.purchases ?? [], [bundle]);
   const filteredItems = useMemo(
     () => filterByDateRange(allItems, dateRange.start, dateRange.end),
     [allItems, dateRange],
@@ -288,14 +289,51 @@ function App() {
                         />
                       }
                     />
-                    <Route path="/outstanding-po" element={<OutstandingPO />} />
-                    <Route path="/open-po" element={<OpenPO />} />
-                    <Route path="/closed-po" element={<ClosedPO />} />
+                    <Route
+                      path="/outstanding-po"
+                      element={
+                        <OutstandingPO
+                          purchaseOrders={bundle?.purchaseOrders ?? []}
+                          dateRange={dateRange}
+                          onDateRangeChange={setDateRange}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/open-po"
+                      element={
+                        <OpenPO
+                          purchaseOrders={bundle?.purchaseOrders ?? []}
+                          dateRange={dateRange}
+                          onDateRangeChange={setDateRange}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/closed-po"
+                      element={
+                        <ClosedPO
+                          purchaseOrders={bundle?.purchaseOrders ?? []}
+                          dateRange={dateRange}
+                          onDateRangeChange={setDateRange}
+                        />
+                      }
+                    />
                     {Object.entries(WAREHOUSES).map(([slug, name]) => (
                       <Route
                         key={slug}
                         path={`/warehouse/${slug}`}
-                        element={<WarehousePlaceholder name={name} />}
+                        element={
+                          <WarehousePlaceholder
+                            name={name}
+                            stockBalances={bundle?.stockBalances ?? []}
+                            usage={bundle?.usage ?? []}
+                            goodsTransfers={bundle?.goodsTransfers ?? []}
+                            adjustments={bundle?.adjustments ?? []}
+                            dateRange={dateRange}
+                            onDateRangeChange={setDateRange}
+                          />
+                        }
                       />
                     ))}
                     <Route
@@ -313,6 +351,7 @@ function App() {
                       element={
                         <ReportsExports
                           items={filteredItems}
+                          purchaseOrders={bundle?.purchaseOrders ?? []}
                           dateRange={dateRange}
                           onDateRangeChange={setDateRange}
                         />
@@ -324,6 +363,8 @@ function App() {
                         <AnalyticsInsights
                           items={filteredItems}
                           allItems={allItems}
+                          purchaseOrders={bundle?.purchaseOrders ?? []}
+                          stockBalances={bundle?.stockBalances ?? []}
                           dateRange={dateRange}
                           onDateRangeChange={setDateRange}
                         />

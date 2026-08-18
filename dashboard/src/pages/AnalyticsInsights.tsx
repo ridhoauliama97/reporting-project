@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import type { ParsedPurchaseItem } from "../types/purchase";
+import type { ParsedPurchaseItem, PurchaseOrder, StockBalance } from "../types/purchase";
 import PageLayout from "../components/PageLayout";
 import EmptyState from "../components/EmptyState";
 import {
@@ -56,6 +56,8 @@ interface DateRange {
 interface AnalyticsInsightsProps {
   items: ParsedPurchaseItem[];
   allItems: ParsedPurchaseItem[];
+  purchaseOrders: PurchaseOrder[];
+  stockBalances: StockBalance[];
   dateRange: DateRange;
   onDateRangeChange: (range: DateRange) => void;
 }
@@ -165,6 +167,8 @@ function SourceLink({ reportId }: { reportId: string }) {
 export default function AnalyticsInsights({
   items,
   allItems,
+  purchaseOrders,
+  stockBalances,
   dateRange,
   onDateRangeChange,
 }: AnalyticsInsightsProps) {
@@ -177,6 +181,17 @@ export default function AnalyticsInsights({
     [items, allItems],
   );
   const spendInsights = useMemo(() => generateSpendInsights(items), [items]);
+
+  const filteredPurchaseOrders = useMemo(() => {
+    if (!dateRange.start && !dateRange.end) return purchaseOrders;
+    return purchaseOrders.filter((po) => {
+      if (!po.orderDate) return false;
+      const date = new Date(po.orderDate);
+      if (dateRange.start && date < dateRange.start) return false;
+      if (dateRange.end && date > dateRange.end) return false;
+      return true;
+    });
+  }, [purchaseOrders, dateRange]);
 
   const [summaries, setSummaries] = useState<Record<string, string>>({});
   const [pendingSummary, setPendingSummary] = useState<string | null>(null);
@@ -206,7 +221,7 @@ export default function AnalyticsInsights({
       }
       setSummaries((prev) => ({
         ...prev,
-        [reportId]: generateReportSummary(reportId, items),
+        [reportId]: generateReportSummary(reportId, items, filteredPurchaseOrders),
       }));
       setPendingSummary(null);
     }, 450);
@@ -233,7 +248,13 @@ export default function AnalyticsInsights({
     setInput("");
     setThinking(true);
     window.setTimeout(() => {
-      const answer = answerQuestion(question, items, allItems);
+      const answer = answerQuestion(
+        question,
+        items,
+        allItems,
+        filteredPurchaseOrders,
+        stockBalances,
+      );
       setMessages((prev) => [
         ...prev,
         {

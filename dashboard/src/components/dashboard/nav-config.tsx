@@ -162,6 +162,5 @@ export const NAV_GROUPS: NavGroup[] = [
     title: "Warehouse",
     icon: <WarehouseIcon />,
     items: WAREHOUSE_MENU_ITEMS,
-    disabled: true,
   },
 ];
