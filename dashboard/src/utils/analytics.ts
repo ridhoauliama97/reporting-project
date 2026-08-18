@@ -109,6 +109,99 @@ function avg(values: number[]): number {
   return values.reduce((a, b) => a + b, 0) / values.length;
 }
 
+export interface SupplierScore {
+  supplierName: string;
+  priceScore: number;
+  timelinessScore: number;
+  totalScore: number;
+  rating: string;
+}
+
+export function getRating(score: number): string {
+  if (score >= 80) return "Excellent";
+  if (score >= 60) return "Good";
+  return "Perlu Perhatian";
+}
+
+export function computeSupplierScores(
+  items: ParsedPurchaseItem[],
+): SupplierScore[] {
+  const grouped: Record<
+    string,
+    {
+      items: ParsedPurchaseItem[];
+      priceIncreases: number[];
+      overdueDays: number[];
+      totalTransactions: number;
+    }
+  > = {};
+
+  items.forEach((item) => {
+    const name = item.supplierName || "-";
+    if (!grouped[name]) {
+      grouped[name] = {
+        items: [],
+        priceIncreases: [],
+        overdueDays: [],
+        totalTransactions: 0,
+      };
+    }
+    grouped[name].items.push(item);
+    grouped[name].totalTransactions += 1;
+    if (item.poPiOverdueDays > 0) {
+      grouped[name].overdueDays.push(item.poPiOverdueDays);
+    }
+  });
+
+  Object.entries(grouped).forEach(([, data]) => {
+    const sorted = data.items
+      .filter((i) => i.unitCost > 0)
+      .sort(byPurchaseDateAsc);
+
+    for (let i = 1; i < sorted.length; i++) {
+      const increase =
+        ((sorted[i].unitCost - sorted[i - 1].unitCost) /
+          sorted[i - 1].unitCost) *
+        100;
+      if (increase >= 10) {
+        data.priceIncreases.push(increase);
+      }
+    }
+  });
+
+  return Object.entries(grouped)
+    .map(([name, data]) => {
+      const onTimeTransactions =
+        data.totalTransactions - data.overdueDays.length;
+      const timelinessScore =
+        data.totalTransactions > 0
+          ? (onTimeTransactions / data.totalTransactions) * 100
+          : 50;
+
+      const priceIncreaseCount = data.priceIncreases.length;
+      const avgIncrease =
+        data.priceIncreases.length > 0
+          ? data.priceIncreases.reduce((a, b) => a + b, 0) /
+            data.priceIncreases.length
+          : 0;
+      const priceScore = Math.max(
+        0,
+        100 - priceIncreaseCount * 10 - avgIncrease / 2,
+      );
+
+      const totalScore = (priceScore + timelinessScore) / 2;
+
+      return {
+        supplierName: name,
+        priceScore: Math.round(priceScore),
+        timelinessScore: Math.round(timelinessScore),
+        totalScore: Math.round(totalScore),
+        rating: getRating(totalScore),
+      };
+    })
+    .sort((a, b) => b.totalScore - a.totalScore);
+}
+
 export function getVarianceRows(items: ParsedPurchaseItem[]) {
   return items
     .filter((i) => i.qtyOrdered > 0)
@@ -204,20 +297,12 @@ export function generateReportSummary(
       return `Periode ${period}: rata-rata waktu PO→invoice ${avgPoPi} hari dengan ${formatNumber(totalOverdue)} transaksi terlambat. Supplier paling sering terlambat: ${worst[0]} (${formatNumber(worst[1].overdueCount)}x, rata-rata ${round1(avg(worst[1].overdueDays))} hari).`;
     }
     case "scorecard": {
-      const grouped = groupBySupplier(items);
-      const rows = Object.entries(grouped).map(([name, d]) => {
-        const onTime = d.count - d.overdueCount;
-        const timeliness = d.count > 0 ? (onTime / d.count) * 100 : 50;
-        const score = (timeliness + 100) / 2;
-        const rating = score >= 80 ? "Excellent" : score >= 60 ? "Good" : "Perlu Perhatian";
-        return { name, score: Math.round(score), rating };
-      });
+      const rows = computeSupplierScores(items);
       if (rows.length === 0) return "Tidak ada data scorecard pada periode ini.";
-      rows.sort((a, b) => b.score - a.score);
       const best = rows[0];
       const worst = rows[rows.length - 1];
-      const avgScore = round1(avg(rows.map((r) => r.score)));
-      return `Periode ${period}: skor rata-rata supplier ${avgScore} dari 100 (berdasarkan ketepatan waktu). Terbaik: ${best.name} (${best.score}, ${best.rating}); terendah: ${worst.name} (${worst.score}, ${worst.rating}).`;
+      const avgScore = round1(avg(rows.map((r) => r.totalScore)));
+      return `Periode ${period}: skor rata-rata supplier ${avgScore} dari 100 (rata-rata skor harga & ketepatan waktu). Terbaik: ${best.supplierName} (${best.totalScore}, ${best.rating}); terendah: ${worst.supplierName} (${worst.totalScore}, ${worst.rating}).`;
     }
     case "price-history": {
       const itemsWithPrice = items.filter((i) => i.unitCost > 0);
@@ -518,16 +603,9 @@ export function priceIncreaseAlerts(items: ParsedPurchaseItem[]) {
 }
 
 function lowScoreSupplierNames(items: ParsedPurchaseItem[]): string[] {
-  const grouped = groupBySupplier(items);
-  return Object.entries(grouped)
-    .map(([name, d]) => {
-      const onTime = d.count - d.overdueCount;
-      const timeliness = d.count > 0 ? (onTime / d.count) * 100 : 50;
-      const score = (timeliness + 100) / 2;
-      return { name, score };
-    })
-    .filter((s) => s.score < 60)
-    .map((s) => s.name);
+  return computeSupplierScores(items)
+    .filter((s) => s.totalScore < 60)
+    .map((s) => s.supplierName);
 }
 
 function topConsolidationCandidate(items: ParsedPurchaseItem[]) {
@@ -1017,22 +1095,13 @@ export function answerQuestion(
   }
 
   if (/skor|scorecard|rating|perform(a|e) supplier/.test(q)) {
-    const grouped = groupBySupplier(scope);
-    const rows = Object.entries(grouped)
-      .map(([name, d]) => {
-        const onTime = d.count - d.overdueCount;
-        const timeliness = d.count > 0 ? (onTime / d.count) * 100 : 50;
-        const score = (timeliness + 100) / 2;
-        const rating = score >= 80 ? "Excellent" : score >= 60 ? "Good" : "Perlu Perhatian";
-        return { name, score: Math.round(score), rating };
-      })
-      .sort((a, b) => b.score - a.score);
+    const rows = computeSupplierScores(scope);
     if (rows.length === 0) {
       return { text: `${scopePrefix}, tidak ada data supplier.`, sources: ["scorecard"] };
     }
     const list = rows
       .slice(0, 5)
-      .map((r) => `${r.name} (${r.score}, ${r.rating})`)
+      .map((r) => `${r.supplierName} (${r.totalScore}, ${r.rating})`)
       .join("; ");
     return {
       text: `${scopePrefix}, peringkat skor supplier: ${list}.`,

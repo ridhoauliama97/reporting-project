@@ -1,6 +1,10 @@
 import { useMemo } from "react";
 import type { ParsedPurchaseItem } from "../types/purchase";
-import { formatNumber, byPurchaseDateAsc } from "../utils/formatters";
+import { formatNumber } from "../utils/formatters";
+import {
+  computeSupplierScores,
+  type SupplierScore,
+} from "../utils/analytics";
 import PageLayout from "../components/PageLayout";
 import StatCard from "../components/StatCard";
 import DataTable from "../components/DataTable";
@@ -18,20 +22,6 @@ interface SupplierScorecardProps {
   onDateRangeChange: (range: DateRange) => void;
 }
 
-interface SupplierScore {
-  supplierName: string;
-  priceScore: number;
-  timelinessScore: number;
-  totalScore: number;
-  rating: string;
-}
-
-function getRating(score: number): string {
-  if (score >= 80) return "Excellent";
-  if (score >= 60) return "Good";
-  return "Perlu Perhatian";
-}
-
 function getRatingColor(rating: string): string {
   if (rating === "Excellent")
     return "bg-teal-500/10 text-teal-600 dark:bg-teal-500/20 dark:text-teal-400";
@@ -45,82 +35,10 @@ export default function SupplierScorecard({
   dateRange,
   onDateRangeChange,
 }: SupplierScorecardProps) {
-  const supplierScores = useMemo(() => {
-    const grouped: Record<
-      string,
-      {
-        items: ParsedPurchaseItem[];
-        priceIncreases: number[];
-        overdueDays: number[];
-        totalTransactions: number;
-      }
-    > = {};
-
-    items.forEach((item) => {
-      const name = item.supplierName || "-";
-      if (!grouped[name]) {
-        grouped[name] = {
-          items: [],
-          priceIncreases: [],
-          overdueDays: [],
-          totalTransactions: 0,
-        };
-      }
-      grouped[name].items.push(item);
-      grouped[name].totalTransactions += 1;
-      if (item.poPiOverdueDays > 0) {
-        grouped[name].overdueDays.push(item.poPiOverdueDays);
-      }
-    });
-
-    Object.entries(grouped).forEach(([, data]) => {
-      const sorted = data.items
-        .filter((i) => i.unitCost > 0)
-        .sort(byPurchaseDateAsc);
-
-      for (let i = 1; i < sorted.length; i++) {
-        const increase =
-          ((sorted[i].unitCost - sorted[i - 1].unitCost) /
-            sorted[i - 1].unitCost) *
-          100;
-        if (increase >= 10) {
-          data.priceIncreases.push(increase);
-        }
-      }
-    });
-
-    return Object.entries(grouped)
-      .map(([name, data]) => {
-        const onTimeTransactions =
-          data.totalTransactions - data.overdueDays.length;
-        const timelinessScore =
-          data.totalTransactions > 0
-            ? (onTimeTransactions / data.totalTransactions) * 100
-            : 50;
-
-        const priceIncreaseCount = data.priceIncreases.length;
-        const avgIncrease =
-          data.priceIncreases.length > 0
-            ? data.priceIncreases.reduce((a, b) => a + b, 0) /
-              data.priceIncreases.length
-            : 0;
-        const priceScore = Math.max(
-          0,
-          100 - priceIncreaseCount * 10 - avgIncrease / 2,
-        );
-
-        const totalScore = (priceScore + timelinessScore) / 2;
-
-        return {
-          supplierName: name,
-          priceScore: Math.round(priceScore),
-          timelinessScore: Math.round(timelinessScore),
-          totalScore: Math.round(totalScore),
-          rating: getRating(totalScore),
-        };
-      })
-      .sort((a, b) => b.totalScore - a.totalScore);
-  }, [items]);
+  const supplierScores = useMemo(
+    () => computeSupplierScores(items),
+    [items],
+  );
 
   const topSupplier = supplierScores[0];
   const bottomSupplier = supplierScores[supplierScores.length - 1];
