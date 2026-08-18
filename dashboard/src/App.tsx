@@ -4,7 +4,15 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-import { useEffect, useMemo, useState, Suspense, lazy } from "react";
+import {
+  Component,
+  useEffect,
+  useMemo,
+  useState,
+  Suspense,
+  lazy,
+  type ReactNode,
+} from "react";
 import { parseAllItems, filterByDateRange } from "./utils/formatters";
 import type { PurchaseItem, ParsedPurchaseItem } from "./types/purchase";
 import purchaseDataUrl from "./data/purchase-data.json?url";
@@ -60,6 +68,36 @@ function LoadingScreen() {
   );
 }
 
+class ErrorBoundary extends Component<
+  { children: ReactNode },
+  { error: Error | null }
+> {
+  state: { error: Error | null } = { error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 p-6">
+          <p className="text-sm font-medium text-foreground">
+            Terjadi kesalahan tak terduga.
+          </p>
+          <p className="max-w-md text-center text-sm text-muted-foreground">
+            {this.state.error.message}
+          </p>
+          <Button variant="outline" onClick={() => this.setState({ error: null })}>
+            Muat Ulang Halaman
+          </Button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function App() {
   const [allItems, setAllItems] = useState<ParsedPurchaseItem[]>([]);
   const [loadError, setLoadError] = useState(false);
@@ -67,8 +105,10 @@ function App() {
 
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
     setLoadError(false);
-    fetch(purchaseDataUrl)
+    fetch(purchaseDataUrl, { signal: controller.signal })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
@@ -78,9 +118,12 @@ function App() {
       })
       .catch(() => {
         if (!cancelled) setLoadError(true);
-      });
+      })
+      .finally(() => clearTimeout(timer));
     return () => {
       cancelled = true;
+      clearTimeout(timer);
+      controller.abort();
     };
   }, [loadKey]);
 
@@ -96,9 +139,10 @@ function App() {
 
   return (
     <Router>
-      <Routes>
-        <Route
-          path="/docs"
+      <ErrorBoundary>
+        <Routes>
+          <Route
+            path="/docs"
           element={
             <Suspense
               fallback={
@@ -292,6 +336,7 @@ function App() {
           }
         />
       </Routes>
+      </ErrorBoundary>
       <Analytics />
     </Router>
   );

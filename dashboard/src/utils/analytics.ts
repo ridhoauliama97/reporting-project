@@ -173,7 +173,13 @@ export function generateReportSummary(
       const sorted = Object.entries(grouped).sort((a, b) => b[1].total - a[1].total);
       if (sorted.length === 0) return "Tidak ada data supplier pada periode ini.";
       const top3 = sorted.slice(0, 3);
-      return `Periode ${period}, peringkat supplier berdasarkan nilai pembelian: (1) ${top3[0][0]} ${formatRupiahCompact(top3[0][1].total)}, (2) ${top3[1][0]} ${formatRupiahCompact(top3[1][1].total)}, (3) ${top3[2][0]} ${formatRupiahCompact(top3[2][1].total)}.`;
+      const list = top3
+        .map(
+          ([name, d], idx) =>
+            `(${idx + 1}) ${name} ${formatRupiahCompact(d.total)}`,
+        )
+        .join(", ");
+      return `Periode ${period}, peringkat supplier berdasarkan nilai pembelian: ${list}.`;
     }
     case "delivery": {
       const grouped = groupBySupplier(items);
