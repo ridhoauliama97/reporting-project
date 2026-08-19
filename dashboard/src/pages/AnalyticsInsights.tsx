@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import type { ParsedPurchaseItem } from "../types/purchase";
+import type { ParsedPurchaseItem, ParsedPurchaseOrder } from "../types/purchase";
 import PageLayout from "../components/PageLayout";
 import EmptyState from "../components/EmptyState";
 import {
@@ -56,6 +56,7 @@ interface DateRange {
 interface AnalyticsInsightsProps {
   items: ParsedPurchaseItem[];
   allItems: ParsedPurchaseItem[];
+  poItems: ParsedPurchaseOrder[];
   dateRange: DateRange;
   onDateRangeChange: (range: DateRange) => void;
 }
@@ -165,6 +166,7 @@ function SourceLink({ reportId }: { reportId: string }) {
 export default function AnalyticsInsights({
   items,
   allItems,
+  poItems,
   dateRange,
   onDateRangeChange,
 }: AnalyticsInsightsProps) {
@@ -206,7 +208,7 @@ export default function AnalyticsInsights({
       }
       setSummaries((prev) => ({
         ...prev,
-        [reportId]: generateReportSummary(reportId, items),
+        [reportId]: generateReportSummary(reportId, items, poItems),
       }));
       setPendingSummary(null);
     }, 450);

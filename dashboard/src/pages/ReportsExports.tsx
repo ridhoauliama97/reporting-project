@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { AlertTriangleIcon, DownloadIcon } from "lucide-react";
-import type { ParsedPurchaseItem } from "../types/purchase";
+import type { ParsedPurchaseItem, ParsedPurchaseOrder } from "../types/purchase";
 import PageLayout from "../components/PageLayout";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,18 +21,26 @@ interface DateRange {
 
 interface ReportsExportsProps {
   items: ParsedPurchaseItem[];
+  poItems: ParsedPurchaseOrder[];
   dateRange: DateRange;
   onDateRangeChange: (range: DateRange) => void;
 }
 
 export default function ReportsExports({
   items,
+  poItems,
   dateRange,
   onDateRangeChange,
 }: ReportsExportsProps) {
   const reportData = useMemo(
-    () => REPORTS.map((report) => ({ report, data: report.getData(items) })),
-    [items],
+    () =>
+      REPORTS.map((report) => ({
+        report,
+        data: report.getPoData
+          ? report.getPoData(poItems)
+          : report.getData(items),
+      })),
+    [items, poItems],
   );
 
   const [exportingId, setExportingId] = useState<string | null>(null);

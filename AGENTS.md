@@ -26,9 +26,11 @@ npm run preview   # Preview production build
 
 - There is **no separate typecheck script** — `npm run build` runs `tsc -b` first.
 - Verify with `npm run lint` then `npm run build` before finishing.
+- `npm install` prints an `allow-scripts` warning for `core-js` postinstall — harmless (it only shows a funding message); no action needed.
 
 ## CI/CD & Dynamic Version (Critical)
 
+- Development happens on feature branches (e.g. `fix/laporan-purchasing`); **only pushing to `main` triggers production deploy** — branch pushes run lint+build via PR checks but never deploy.
 - Push to `main` → GitHub Actions (`ci.yml`): lint+build, then auto-deploy production to Vercel (`database-report-gsu.vercel.app`). Both must pass.
 - **Commit message drives the version** (`scripts/version.mjs`): `^(feat|perf)(\(.+\))?:` → minor+1 (patch reset to 0); all other prefixes (fix/ci/docs/...) → patch+1. Baseline commit = `1.0.0`. The script counts the commit itself — run it **after** committing to see the new version (before commit it reports the previous one).
 - The deploy job MUST check out with `fetch-depth: 0` — with a shallow clone the script only sees 1 commit and reports `1.0.0` (debugged and fixed in commit `643853a`; don't regress this).
@@ -42,11 +44,13 @@ npm run preview   # Preview production build
 - **Numeric fields are strings** in the JSON: `quantity`, `unitCost`, `poUnitCost`, `netTotal`, `qtyOrdered`, `poPiDays`, `prPiDays`, `poPiOverdueDays`. Parse with `parseAllItems()` (`utils/formatters.ts`) before math.
 - **Gotcha**: `parsePurchaseItem()` converts empty string `""` to `0`, not `NaN`/`null`. Pages therefore guard with `> 0` filters (e.g. `poPiDays > 0`, `qtyOrdered > 0`) rather than null checks — follow this pattern. Empty values render as `-` in the UI.
 - Only invoiced transactions (types PI/PN/PURBB). No goods-receiving, QC, or reject data.
+- **PO/PR records exist too**: the merged JSON carries `recordType: "po"` (2,996 lines) and `"pr"` (2,650, deduped). Parse with `parseAllPurchaseOrders()` (`formatters.ts`); filter by `orderDateObj` via `filterPurchaseOrdersByDateRange()`. App passes `poItems` (date-filtered) to the three PO pages.
+- PO status is derived, not stored: **Open** = `purchaseInvoice === ""`, **Closed** = `purchaseInvoice` filled, **Outstanding** = `qtyOutstanding > 0`. `pctDelivered` is a fraction (1.0000 = 100%), not a percent — multiply by 100 for display.
 - `itemCategory` has exactly 5 values: `BAHAN BAKU`, `BAHAN PENDUKUNG`, `SPAREPART`, `WORK IN PROGRESS`, `BARANG DAGANG`.
 
 ## Placeholder Pages (Never Fabricate Data)
 
-Pages #4 (Supplier Quality), #11 (Outstanding PO), #12 (Open PO), #13 (Closed PO) must stay empty-state via the `EmptyState` component with the existing messages. No invented numbers, ever. Their docs pages explain why (data not in dataset) — keep those explanations in sync.
+Page #4 (Supplier Quality) must stay empty-state via the `EmptyState` component with the existing message. No invented numbers, ever. Its docs page explains why (data not in dataset) — keep that explanation in sync.
 
 ## TypeScript Gotchas
 
@@ -82,6 +86,11 @@ Pages #4 (Supplier Quality), #11 (Outstanding PO), #12 (Open PO), #13 (Closed PO
 
 `utils/analytics.ts` is a **deterministic rule-based engine** (no LLM, no backend, no API calls — the app is frontend-only). Threshold constants live at the top of the file. `AnalyticsInsights.tsx` renders summaries, recommendations (Info/Perhatian/Urgent), anomaly detection, spend analysis, and a chat sheet ("Tanya Data") with source links via `REPORT_PATHS`. Don't add LLM integration without an explicit ask.
 
+## Shared Utils Conventions
+
+- **`round1`/`round2` live only in `utils/formatters.ts`** (single source of truth, imported by both `analytics.ts` and `reports.ts`). Never redefine them locally in another module.
+- `utils/reports.ts` exports `REPORTS` (a `ReportDefinition[]` catalog) that both `ReportsExports.tsx` and `AnalyticsInsights.tsx` consume — the export shape of every report is defined once there, not in the pages. PO reports (outstanding/open/closed) use the optional `getPoData(poItems)` field (input `ParsedPurchaseOrder[]`, date-filtered); non-PO reports use `getData(items)`. `ReportsExports` picks `getPoData` when present. Both pages receive `poItems` from App.
+
 ## Project Structure
 
 ```folder structure
@@ -100,9 +109,10 @@ dashboard/src/
 │   └── ThemeToggle.tsx
 ├── pages/            # Dashboard + 14 reports + ReportsExports, AnalyticsInsights, DocsPage, WarehousePlaceholder
 ├── docs-content/     # {menu}/{slug}.md + index.tsx config (see Documentation Hub)
-├── utils/formatters.ts # parseAllItems, formatRupiah, formatRupiahCompact, formatPercent, filterByDateRange
+├── utils/formatters.ts # parseAllItems, formatRupiah, formatRupiahCompact, formatPercent, filterByDateRange, round1, round2
 ├── utils/analytics.ts  # rule-based insight engine (no LLM)
 ├── utils/exporter.ts   # CSV/Excel/PDF export (used by DataTable + ReportsExports)
+├── utils/reports.ts    # REPORTS catalog (ReportDefinition/ReportExport): defines every report's export shape; imported by ReportsExports + analytics
 ├── types/purchase.ts  # PurchaseItem / ParsedPurchaseItem
 ├── data/purchase-data.json  # fetched at runtime via ?url import (see Data Handling)
 └── lib/              # cn() helper
@@ -112,9 +122,12 @@ dashboard/src/
 
 - #1 Purchase Summary: full line-item table with grouped "Kolom" column picker (default columns: purchaseNumber, purchaseDate, supplierName, itemName, warehouse, quantity, uom, netTotal); totals row via `totalColumns` prop
 - #5 Supplier Delivery: proxy metric from `poPiDays`/`poPiOverdueDays` (PO→Invoice, not goods receipt)
-- #6 Purchase Price History: item dropdown (`itemName`) required alongside date filter; prompt state if none selected
+- #6 Purchase Price History: item picker is a searchable combobox (Popover + Command, match highlighting on the active item); item required alongside date filter; prompt state if none selected
 - #7 Purchase Variance: `variance = quantity - qtyOrdered` only where `qtyOrdered > 0`; rows with variance ≠ 0
 - #8 Material Cost Trend: all 5 `itemCategory` values; checkbox filter (all checked by default); chart/table follow checked categories; monthly `netTotal` by month
 - #9 Price Increase Alert: per-item sequential `unitCost` increase ≥ threshold (default 10%), severity-highlighted rows
 - #10 Purchase Lead Time: histogram buckets 0-3/4-7/8-14/15+ hari; only `prPiDays`/`poPiDays` exist — don't invent PR→PO figures
+- #11 Outstanding PO: rows where `qtyOutstanding > 0` from `poItems`; StatCards = PO count (distinct orderNumber), total outstanding qty, outstanding value (qty × unitCost), top supplier; date filter applies to `orderDate`
+- #12 Open PO: rows where `purchaseInvoice === ""`; StatCards = PO count, total order value, supplier count, oldest PO
+- #13 Closed PO: rows where `purchaseInvoice !== ""`; StatCards = PO count, total order value, supplier count, avg `poPiDays`; all three PO pages show an InfoBanner explaining the derived status (no open/closed field in source)
 - #14 Supplier Scorecard: score = avg(price score, timeliness score), both 0-100; rating badge Excellent ≥80 / Good 60-79 / Perlu Perhatian <60

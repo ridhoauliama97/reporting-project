@@ -1,4 +1,4 @@
-import type { ParsedPurchaseItem } from "@/types/purchase";
+import type { ParsedPurchaseItem, ParsedPurchaseOrder } from "@/types/purchase";
 import {
   formatRupiah,
   formatRupiahCompact,
@@ -8,6 +8,8 @@ import {
   getMonthLabel,
   monthKeyOf,
   byPurchaseDateAsc,
+  round1,
+  round2,
 } from "@/utils/formatters";
 import { REPORTS } from "@/utils/reports";
 
@@ -42,9 +44,6 @@ export interface ChatAnswer {
   sources: string[];
   followUp?: string;
 }
-
-const round1 = (n: number) => Math.round(n * 10) / 10;
-const round2 = (n: number) => Math.round(n * 100) / 100;
 
 const PRICE_ANOMALY_THRESHOLD = 0.3;
 const PRICE_ANOMALY_URGENT_THRESHOLD = 0.6;
@@ -121,12 +120,7 @@ function getPeriodLabel(items: ParsedPurchaseItem[]): string {
   return first === last ? first : `${first} – ${last}`;
 }
 
-const PLACEHOLDER_REPORT_IDS = new Set([
-  "quality",
-  "outstanding-po",
-  "open-po",
-  "closed-po",
-]);
+const PLACEHOLDER_REPORT_IDS = new Set(["quality"]);
 
 function placeholderSummary(reportId: string, items: ParsedPurchaseItem[]): string {
   const report = REPORTS.find((r) => r.id === reportId);
@@ -140,12 +134,13 @@ function placeholderSummary(reportId: string, items: ParsedPurchaseItem[]): stri
 export function generateReportSummary(
   reportId: string,
   items: ParsedPurchaseItem[],
+  poItems: ParsedPurchaseOrder[] = [],
 ): string {
   if (PLACEHOLDER_REPORT_IDS.has(reportId)) {
     return placeholderSummary(reportId, items);
   }
   const period = getPeriodLabel(items);
-  if (items.length === 0) {
+  if (items.length === 0 && poItems.length === 0) {
     return `Tidak ada transaksi pada rentang tanggal aktif, sehingga ringkasan laporan tidak dapat dibuat.`;
   }
 
@@ -289,6 +284,74 @@ export function generateReportSummary(
       const avgPr = round1(avg(rows.map((r) => r.prPiDays).filter((d) => d > 0)));
       const avgPo = round1(avg(rows.map((r) => r.poPiDays).filter((d) => d > 0)));
       return `Periode ${period}: rata-rata lead time PR→invoice ${avgPr} hari dan PO→invoice ${avgPo} hari dari ${formatNumber(rows.length)} transaksi.`;
+    }
+    case "outstanding-po": {
+      if (poItems.length === 0) {
+        return `Tidak ada data PO pada rentang tanggal aktif, sehingga ringkasan Outstanding PO tidak dapat dibuat.`;
+      }
+      const outstanding = poItems.filter((po) => po.qtyOutstanding > 0);
+      if (outstanding.length === 0) {
+        return `Periode ${period}: tidak ada PO dengan sisa kuantitas belum diterima (semua qty sudah terealisasi).`;
+      }
+      const poNumbers = new Set(outstanding.map((po) => po.orderNumber)).size;
+      const totalQty = outstanding.reduce(
+        (sum, po) => sum + po.qtyOutstanding,
+        0,
+      );
+      const outstandingValue = outstanding.reduce(
+        (sum, po) => sum + po.qtyOutstanding * Math.max(po.itemUnitCost, 0),
+        0,
+      );
+      const supplierCounts: Record<string, number> = {};
+      outstanding.forEach((po) => {
+        supplierCounts[po.supplierName || "-"] =
+          (supplierCounts[po.supplierName || "-"] || 0) + 1;
+      });
+      const topSupplier = Object.entries(supplierCounts).sort(
+        (a, b) => b[1] - a[1],
+      )[0];
+      return `Periode ${period}: ${formatNumber(outstanding.length)} baris PO outstanding dari ${formatNumber(poNumbers)} nomor PO, dengan sisa kuantitas ${formatNumber(round2(totalQty))} unit senilai ${formatRupiahCompact(outstandingValue)}. Supplier paling banyak outstanding: ${topSupplier?.[0] || "-"} (${formatNumber(topSupplier?.[1] ?? 0)} baris).`;
+    }
+    case "open-po": {
+      if (poItems.length === 0) {
+        return `Tidak ada data PO pada rentang tanggal aktif, sehingga ringkasan Open PO tidak dapat dibuat.`;
+      }
+      const openPOs = poItems.filter((po) => po.purchaseInvoice === "");
+      if (openPOs.length === 0) {
+        return `Periode ${period}: seluruh PO pada rentang ini sudah ter-invoice — tidak ada PO terbuka.`;
+      }
+      const poNumbers = new Set(openPOs.map((po) => po.orderNumber)).size;
+      const totalValue = openPOs.reduce((sum, po) => sum + po.orderNetTotal, 0);
+      const oldest = openPOs.reduce<{ number: string; date: Date | null } | null>(
+        (oldest, po) => {
+          if (
+            po.orderDateObj &&
+            (!oldest || po.orderDateObj < (oldest.date ?? Infinity))
+          ) {
+            return { number: po.orderNumber, date: po.orderDateObj };
+          }
+          return oldest;
+        },
+        null,
+      );
+      return `Periode ${period}: ${formatNumber(openPOs.length)} baris PO belum ter-invoice (${formatNumber(poNumbers)} nomor PO) senilai ${formatRupiahCompact(totalValue)}. PO terbuka tertua: ${oldest?.number || "-"} (${oldest?.date ? formatDate(oldest.date.toISOString()) : "-"}).`;
+    }
+    case "closed-po": {
+      if (poItems.length === 0) {
+        return `Tidak ada data PO pada rentang tanggal aktif, sehingga ringkasan Closed PO tidak dapat dibuat.`;
+      }
+      const closedPOs = poItems.filter((po) => po.purchaseInvoice !== "");
+      if (closedPOs.length === 0) {
+        return `Periode ${period}: tidak ada PO yang sudah ter-invoice pada rentang ini.`;
+      }
+      const poNumbers = new Set(closedPOs.map((po) => po.orderNumber)).size;
+      const totalValue = closedPOs.reduce((sum, po) => sum + po.orderNetTotal, 0);
+      const validPi = closedPOs.filter((po) => po.poPiDays > 0);
+      const avgPoPi =
+        validPi.length > 0
+          ? validPi.reduce((sum, po) => sum + po.poPiDays, 0) / validPi.length
+          : 0;
+      return `Periode ${period}: ${formatNumber(closedPOs.length)} baris PO sudah ter-invoice (${formatNumber(poNumbers)} nomor PO) senilai ${formatRupiahCompact(totalValue)}. Rata-rata waktu PO→invoice ${avgPoPi > 0 ? round1(avgPoPi) : "-"} hari.`;
     }
     default:
       return `Ringkasan untuk laporan ini belum tersedia.`;

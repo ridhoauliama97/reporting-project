@@ -5,8 +5,8 @@ import {
   Navigate,
 } from "react-router-dom";
 import { useEffect, useMemo, useState, Suspense, lazy } from "react";
-import { parseAllItems, filterByDateRange } from "./utils/formatters";
-import type { PurchaseItem, ParsedPurchaseItem } from "./types/purchase";
+import { parseAllItems, parseAllPurchaseOrders, filterByDateRange, filterPurchaseOrdersByDateRange } from "./utils/formatters";
+import type { PurchaseItem, ParsedPurchaseItem, PurchaseOrderRecord, ParsedPurchaseOrder } from "./types/purchase";
 import purchaseDataUrl from "./data/purchase-data.json?url";
 import Layout from "./components/Layout";
 import { Button } from "./components/ui/button";
@@ -62,6 +62,9 @@ function LoadingScreen() {
 
 function App() {
   const [allItems, setAllItems] = useState<ParsedPurchaseItem[]>([]);
+  const [allPurchaseOrders, setAllPurchaseOrders] = useState<
+    ParsedPurchaseOrder[]
+  >([]);
   const [loadError, setLoadError] = useState(false);
   const [loadKey, setLoadKey] = useState(0);
 
@@ -73,8 +76,11 @@ function App() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
       })
-      .then((data: PurchaseItem[]) => {
-        if (!cancelled) setAllItems(parseAllItems(data));
+      .then((data: (PurchaseItem | PurchaseOrderRecord)[]) => {
+        if (!cancelled) {
+          setAllItems(parseAllItems(data as PurchaseItem[]));
+          setAllPurchaseOrders(parseAllPurchaseOrders(data as PurchaseOrderRecord[]));
+        }
       })
       .catch(() => {
         if (!cancelled) setLoadError(true);
@@ -92,6 +98,16 @@ function App() {
   const filteredItems = useMemo(
     () => filterByDateRange(allItems, dateRange.start, dateRange.end),
     [allItems, dateRange],
+  );
+
+  const filteredPurchaseOrders = useMemo(
+    () =>
+      filterPurchaseOrdersByDateRange(
+        allPurchaseOrders,
+        dateRange.start,
+        dateRange.end,
+      ),
+    [allPurchaseOrders, dateRange],
   );
 
   return (
@@ -244,9 +260,36 @@ function App() {
                         />
                       }
                     />
-                    <Route path="/outstanding-po" element={<OutstandingPO />} />
-                    <Route path="/open-po" element={<OpenPO />} />
-                    <Route path="/closed-po" element={<ClosedPO />} />
+                    <Route
+                      path="/outstanding-po"
+                      element={
+                        <OutstandingPO
+                          poItems={filteredPurchaseOrders}
+                          dateRange={dateRange}
+                          onDateRangeChange={setDateRange}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/open-po"
+                      element={
+                        <OpenPO
+                          poItems={filteredPurchaseOrders}
+                          dateRange={dateRange}
+                          onDateRangeChange={setDateRange}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/closed-po"
+                      element={
+                        <ClosedPO
+                          poItems={filteredPurchaseOrders}
+                          dateRange={dateRange}
+                          onDateRangeChange={setDateRange}
+                        />
+                      }
+                    />
                     {Object.entries(WAREHOUSES).map(([slug, name]) => (
                       <Route
                         key={slug}
@@ -269,6 +312,7 @@ function App() {
                       element={
                         <ReportsExports
                           items={filteredItems}
+                          poItems={filteredPurchaseOrders}
                           dateRange={dateRange}
                           onDateRangeChange={setDateRange}
                         />
@@ -280,6 +324,7 @@ function App() {
                         <AnalyticsInsights
                           items={filteredItems}
                           allItems={allItems}
+                          poItems={filteredPurchaseOrders}
                           dateRange={dateRange}
                           onDateRangeChange={setDateRange}
                         />

@@ -1,4 +1,5 @@
 export interface PurchaseItem {
+  recordType: string;
   purchaseNumber: string;
   purchaseType: string;
   purchaseDate: string;
@@ -44,6 +45,54 @@ export interface ParsedPurchaseItem extends Omit<PurchaseItem, 'qtyOrdered' | 'q
   purchaseDateObj: Date | null;
   poDateObj: Date | null;
   prDateObj: Date | null;
+}
+
+export interface PurchaseOrderRecord {
+  recordType: string;
+  orderNumber: string;
+  orderDate: string;
+  expectedDeliveryDate: string;
+  status: string;
+  importance: string;
+  terms: string;
+  incoterm: string;
+  deliveryDays: string;
+  poPiDays: string;
+  supplierCode: string;
+  supplierName: string;
+  itemCode: string;
+  itemName: string;
+  itemCategory: string;
+  uom: string;
+  qtyOrdered: string;
+  qtyDelivered: string;
+  qtyOutstanding: string;
+  pctDelivered: string;
+  itemUnitCost: string;
+  orderNetTotal: string;
+  prNumber: string;
+  prDate: string;
+  requestedBy: string;
+  usedBy: string;
+  targetWarehouse: string;
+  purchaseInvoice: string;
+  lastPurchaseNumber: string;
+  createdBy: string;
+  approvedBy: string;
+}
+
+export interface ParsedPurchaseOrder
+  extends Omit<PurchaseOrderRecord, 'deliveryDays' | 'poPiDays' | 'qtyOrdered' | 'qtyDelivered' | 'qtyOutstanding' | 'pctDelivered' | 'itemUnitCost' | 'orderNetTotal'> {
+  deliveryDays: number;
+  poPiDays: number;
+  qtyOrdered: number;
+  qtyDelivered: number;
+  qtyOutstanding: number;
+  pctDelivered: number;
+  itemUnitCost: number;
+  orderNetTotal: number;
+  orderDateObj: Date | null;
+  expectedDateObj: Date | null;
 }
 
 export type ItemCategory = 'BAHAN BAKU' | 'BAHAN PENDUKUNG' | 'SPAREPART' | 'WORK IN PROGRESS' | 'BARANG DAGANG';

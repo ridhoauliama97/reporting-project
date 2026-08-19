@@ -15,9 +15,9 @@ import {
   FileTextIcon,
   FolderCheckIcon,
 } from "lucide-react";
-import type { ParsedPurchaseItem, ItemCategory } from "@/types/purchase";
+import type { ParsedPurchaseItem, ParsedPurchaseOrder, ItemCategory } from "@/types/purchase";
 import { CATEGORY_LABELS } from "@/types/purchase";
-import { getMonthLabel, monthKeyOf, byPurchaseDateAsc } from "@/utils/formatters";
+import { getMonthLabel, monthKeyOf, byPurchaseDateAsc, round1, round2 } from "@/utils/formatters";
 
 export interface ReportExport {
   headers: (string | number)[];
@@ -30,10 +30,8 @@ export interface ReportDefinition {
   description: string;
   icon: LucideIcon;
   getData: (items: ParsedPurchaseItem[]) => ReportExport;
+  getPoData?: (poItems: ParsedPurchaseOrder[]) => ReportExport;
 }
-
-const round1 = (n: number) => Math.round(n * 10) / 10;
-const round2 = (n: number) => Math.round(n * 100) / 100;
 
 function groupBySupplier(items: ParsedPurchaseItem[]) {
   const grouped: Record<string, { count: number; qty: number; total: number }> =
@@ -51,6 +49,48 @@ function groupBySupplier(items: ParsedPurchaseItem[]) {
 }
 
 const EMPTY_EXPORT: ReportExport = { headers: [], rows: [] };
+
+const PO_HEADERS: (string | number)[] = [
+  "No. PO",
+  "Tanggal PO",
+  "Target Kirim",
+  "Supplier",
+  "Kode Item",
+  "Nama Item",
+  "Kategori",
+  "Satuan",
+  "Qty Dipesan",
+  "Qty Diterima",
+  "Qty Outstanding",
+  "% Diterima",
+  "Harga Satuan",
+  "Nilai PO",
+  "No. PR",
+  "Gudang Tujuan",
+  "Status Invoice",
+];
+
+function poRow(po: ParsedPurchaseOrder): (string | number)[] {
+  return [
+    po.orderNumber,
+    po.orderDate,
+    po.expectedDeliveryDate,
+    po.supplierName,
+    po.itemCode,
+    po.itemName,
+    po.itemCategory,
+    po.uom,
+    po.qtyOrdered,
+    po.qtyDelivered,
+    po.qtyOutstanding,
+    round1(po.pctDelivered * 100),
+    po.itemUnitCost,
+    po.orderNetTotal,
+    po.prNumber,
+    po.targetWarehouse,
+    po.purchaseInvoice === "" ? "Belum ter-invoice" : "Ter-invoice",
+  ];
+}
 
 export const REPORTS: ReportDefinition[] = [
   {
@@ -482,22 +522,47 @@ export const REPORTS: ReportDefinition[] = [
   {
     id: "outstanding-po",
     name: "Outstanding PO",
-    description: "PO yang masih belum ditutup",
+    description: "PO dengan sisa kuantitas belum diterima",
     icon: ClipboardListIcon,
     getData: () => EMPTY_EXPORT,
+    getPoData: (poItems) => ({
+      headers: PO_HEADERS,
+      rows: poItems
+        .filter((po) => po.qtyOutstanding > 0)
+        .sort((a, b) => b.qtyOutstanding - a.qtyOutstanding)
+        .map(poRow),
+    }),
   },
   {
     id: "open-po",
     name: "Open PO",
-    description: "Daftar PO yang masih berstatus terbuka",
+    description: "Daftar PO yang masih berstatus terbuka (belum ter-invoice)",
     icon: FileTextIcon,
     getData: () => EMPTY_EXPORT,
+    getPoData: (poItems) => ({
+      headers: PO_HEADERS,
+      rows: poItems
+        .filter((po) => po.purchaseInvoice === "")
+        .sort(
+          (a, b) =>
+            (a.orderDateObj?.getTime() ?? 0) -
+            (b.orderDateObj?.getTime() ?? 0),
+        )
+        .map(poRow),
+    }),
   },
   {
     id: "closed-po",
     name: "Closed PO",
-    description: "Daftar PO yang sudah ditutup",
+    description: "Daftar PO yang sudah ditutup (sudah ter-invoice)",
     icon: FolderCheckIcon,
     getData: () => EMPTY_EXPORT,
+    getPoData: (poItems) => ({
+      headers: PO_HEADERS,
+      rows: poItems
+        .filter((po) => po.purchaseInvoice !== "")
+        .sort((a, b) => a.orderNumber.localeCompare(b.orderNumber))
+        .map(poRow),
+    }),
   },
 ];

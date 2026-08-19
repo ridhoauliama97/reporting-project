@@ -1,4 +1,4 @@
-import type { PurchaseItem, ParsedPurchaseItem } from "../types/purchase";
+import type { PurchaseItem, ParsedPurchaseItem, PurchaseOrderRecord, ParsedPurchaseOrder } from "../types/purchase";
 import { format, parseISO, isValid } from "date-fns";
 import { id } from "date-fns/locale";
 
@@ -43,12 +43,63 @@ function parseDateCached(
 
 export function parseAllItems(items: PurchaseItem[]): ParsedPurchaseItem[] {
   const dateCache = new Map<string, Date | null>();
-  return items.map((item) => {
-    const parsed = parsePurchaseItem(item);
-    parsed.purchaseDateObj = parseDateCached(dateCache, item.purchaseDate);
-    parsed.poDateObj = parseDateCached(dateCache, item.poDate);
-    parsed.prDateObj = parseDateCached(dateCache, item.prDate);
-    return parsed;
+  return items
+    .filter((item) => item.recordType === "purchase")
+    .map((item) => {
+      const parsed = parsePurchaseItem(item);
+      parsed.purchaseDateObj = parseDateCached(dateCache, item.purchaseDate);
+      parsed.poDateObj = parseDateCached(dateCache, item.poDate);
+      parsed.prDateObj = parseDateCached(dateCache, item.prDate);
+      return parsed;
+    });
+}
+
+export function parsePurchaseOrder(item: PurchaseOrderRecord): ParsedPurchaseOrder {
+  const parseNum = (val: string): number => {
+    if (val === "" || val === null || val === undefined) return 0;
+    const num = parseFloat(val);
+    return isNaN(num) ? 0 : num;
+  };
+
+  return {
+    ...item,
+    deliveryDays: parseNum(item.deliveryDays),
+    poPiDays: parseNum(item.poPiDays),
+    qtyOrdered: parseNum(item.qtyOrdered),
+    qtyDelivered: parseNum(item.qtyDelivered),
+    qtyOutstanding: parseNum(item.qtyOutstanding),
+    pctDelivered: parseNum(item.pctDelivered),
+    itemUnitCost: parseNum(item.itemUnitCost),
+    orderNetTotal: parseNum(item.orderNetTotal),
+    orderDateObj: null,
+    expectedDateObj: null,
+  };
+}
+
+export function parseAllPurchaseOrders(items: PurchaseOrderRecord[]): ParsedPurchaseOrder[] {
+  const dateCache = new Map<string, Date | null>();
+  return items
+    .filter((item) => item.recordType === "po")
+    .map((item) => {
+      const parsed = parsePurchaseOrder(item);
+      parsed.orderDateObj = parseDateCached(dateCache, item.orderDate);
+      parsed.expectedDateObj = parseDateCached(dateCache, item.expectedDeliveryDate);
+      return parsed;
+    });
+}
+
+export function filterPurchaseOrdersByDateRange(
+  items: ParsedPurchaseOrder[],
+  startDate: Date | null,
+  endDate: Date | null,
+): ParsedPurchaseOrder[] {
+  if (!startDate && !endDate) return items;
+  return items.filter((item) => {
+    const date = item.orderDateObj;
+    if (!date) return false;
+    if (startDate && date < startDate) return false;
+    if (endDate && date > endDate) return false;
+    return true;
   });
 }
 
@@ -90,6 +141,10 @@ export function formatRupiahCompact(value: number): string {
 export function formatPercent(value: number): string {
   return `${value.toFixed(1)}%`;
 }
+
+export const round1 = (n: number): number => Math.round(n * 10) / 10;
+
+export const round2 = (n: number): number => Math.round(n * 100) / 100;
 
 export function formatDate(dateStr: string): string {
   if (!dateStr || dateStr === "") return "-";
