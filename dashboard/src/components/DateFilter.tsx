@@ -16,17 +16,27 @@ interface DateFilterProps {
 export default function DateFilter({ dateRange, onChange }: DateFilterProps) {
   const handleStartChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
+    if (!value) {
+      onChange({ ...dateRange, start: null });
+      return;
+    }
+    const start = new Date(value + "T00:00:00");
     onChange({
-      ...dateRange,
-      start: value ? new Date(value) : null,
+      start,
+      end: dateRange.end && dateRange.end < start ? start : dateRange.end,
     });
   };
 
   const handleEndChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
+    if (!value) {
+      onChange({ ...dateRange, end: null });
+      return;
+    }
+    const end = new Date(value + "T23:59:59");
     onChange({
-      ...dateRange,
-      end: value ? new Date(value + "T23:59:59") : null,
+      start: dateRange.start && dateRange.start > end ? end : dateRange.start,
+      end,
     });
   };
 

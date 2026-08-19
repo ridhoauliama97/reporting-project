@@ -45,7 +45,7 @@ const WAREHOUSES: Record<string, string> = {
 function getDefaultDateRange() {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
   return { start, end };
 }
 
@@ -78,8 +78,25 @@ function App() {
       })
       .then((data: (PurchaseItem | PurchaseOrderRecord)[]) => {
         if (!cancelled) {
-          setAllItems(parseAllItems(data as PurchaseItem[]));
+          const parsed = parseAllItems(data as PurchaseItem[]);
+          setAllItems(parsed);
           setAllPurchaseOrders(parseAllPurchaseOrders(data as PurchaseOrderRecord[]));
+          setDateRange((prev) => {
+            if (!prev.start || !prev.end) return prev;
+            const inRange = parsed.some(
+              (i) =>
+                i.purchaseDateObj &&
+                i.purchaseDateObj >= prev.start! &&
+                i.purchaseDateObj <= prev.end!,
+            );
+            if (inRange || parsed.length === 0) return prev;
+            const dates = parsed
+              .map((i) => i.purchaseDateObj)
+              .filter((d): d is Date => d !== null)
+              .sort((a, b) => a.getTime() - b.getTime());
+            if (dates.length === 0) return prev;
+            return { start: dates[0], end: dates[dates.length - 1] };
+          });
         }
       })
       .catch(() => {
