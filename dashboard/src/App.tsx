@@ -145,7 +145,7 @@ function App() {
             ) : allItems.length === 0 ? (
               <LoadingScreen />
             ) : (
-              <Layout dataCount={allItems.length}>
+              <Layout>
                 <Suspense
                   fallback={
                     <div className="flex min-h-[50vh] items-center justify-center">

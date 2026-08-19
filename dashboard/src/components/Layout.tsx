@@ -45,17 +45,16 @@ function getBreadcrumb(pathname: string): BreadcrumbEntry | null {
 
 interface LayoutProps {
   children: ReactNode;
-  dataCount?: number;
 }
 
-export default function Layout({ children, dataCount }: LayoutProps) {
+export default function Layout({ children }: LayoutProps) {
   const { pathname } = useLocation();
   const title = PAGE_TITLES[pathname] ?? "Statistics Overview";
   const breadcrumb = getBreadcrumb(pathname);
 
   return (
     <SidebarProvider>
-      <AppSidebar dataCount={dataCount} />
+      <AppSidebar />
       <SidebarInset>
         <SiteHeader title={title} breadcrumb={breadcrumb} />
         <main className="flex flex-1 flex-col">
