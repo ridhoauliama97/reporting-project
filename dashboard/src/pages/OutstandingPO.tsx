@@ -3,18 +3,41 @@ import type { ParsedPurchaseOrder } from "../types/purchase";
 import {
   formatNumber,
   formatRupiah,
+  formatRupiahCompact,
   formatPercent,
   formatDate,
+  round1,
+  warehouseLabel,
 } from "../utils/formatters";
 import PageLayout from "../components/PageLayout";
 import StatCard from "../components/StatCard";
 import DataTable from "../components/DataTable";
+import ChartCard from "../components/ChartCard";
 import InfoBanner from "../components/InfoBanner";
+import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  BarChart,
+  Bar,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 interface DateRange {
   start: Date | null;
   end: Date | null;
 }
+
+const CHART_COLORS = [
+  "var(--color-chart-1)",
+  "var(--color-chart-2)",
+  "var(--color-chart-3)",
+  "var(--color-chart-4)",
+  "var(--color-chart-5)",
+];
 
 interface OutstandingPOProps {
   poItems: ParsedPurchaseOrder[];
@@ -22,43 +45,102 @@ interface OutstandingPOProps {
   onDateRangeChange: (range: DateRange) => void;
 }
 
+interface OutstandingPOGroup {
+  orderNumber: string;
+  orderDate: string;
+  orderDateObj: Date | null;
+  supplierName: string;
+  targetWarehouse: string;
+  prNumber: string;
+  expectedDeliveryDate: string;
+  itemCount: number;
+  qtyOrdered: number;
+  qtyDelivered: number;
+  qtyOutstanding: number;
+  pctDelivered: number;
+  orderNetTotal: number;
+}
+
 export default function OutstandingPO({
   poItems,
   dateRange,
   onDateRangeChange,
 }: OutstandingPOProps) {
-  const outstanding = useMemo(
-    () =>
-      poItems
-        .filter((po) => po.qtyOutstanding > 0)
-        .sort(
-          (a, b) =>
-            b.qtyOutstanding - a.qtyOutstanding ||
-            a.orderNumber.localeCompare(b.orderNumber),
+  const isMobile = useIsMobile();
+
+  const outstandingGroups = useMemo(() => {
+    const grouped: Record<string, ParsedPurchaseOrder[]> = {};
+    poItems.forEach((po) => {
+      if (
+        po.qtyDelivered > 0 &&
+        po.qtyDelivered < po.qtyOrdered &&
+        po.qtyOrdered > 0
+      ) {
+        if (!grouped[po.orderNumber]) grouped[po.orderNumber] = [];
+        grouped[po.orderNumber].push(po);
+      }
+    });
+
+    return Object.values(grouped)
+      .map((lines) => ({
+        orderNumber: lines[0].orderNumber,
+        orderDate: lines[0].orderDate,
+        orderDateObj: lines[0].orderDateObj,
+        supplierName: lines[0].supplierName || "-",
+        targetWarehouse: warehouseLabel(lines[0].targetWarehouse),
+        prNumber: lines[0].prNumber || "-",
+        expectedDeliveryDate: lines[0].expectedDeliveryDate,
+        itemCount: lines.length,
+        qtyOrdered: round1(lines.reduce((sum, l) => sum + l.qtyOrdered, 0)),
+        qtyDelivered: round1(lines.reduce((sum, l) => sum + l.qtyDelivered, 0)),
+        qtyOutstanding: round1(
+          lines.reduce((sum, l) => sum + (l.qtyOrdered - l.qtyDelivered), 0),
         ),
-    [poItems],
-  );
+        pctDelivered: 0,
+        orderNetTotal: lines[0].orderNetTotal,
+      }))
+      .map((g) => ({
+        ...g,
+        pctDelivered:
+          g.qtyOrdered > 0 ? (g.qtyDelivered / g.qtyOrdered) * 100 : 0,
+      }))
+      .sort(
+        (a, b) =>
+          b.qtyOutstanding - a.qtyOutstanding ||
+          a.orderNumber.localeCompare(b.orderNumber),
+      );
+  }, [poItems]);
 
   const totalOutstandingQty = useMemo(
     () =>
-      outstanding.reduce(
-        (sum, po) => sum + po.qtyOutstanding * Math.max(po.itemUnitCost, 0),
-        0,
-      ),
-    [outstanding],
+      outstandingGroups.reduce((sum, g) => sum + g.qtyOutstanding, 0),
+    [outstandingGroups],
   );
-  const poCount = useMemo(
-    () => new Set(outstanding.map((po) => po.orderNumber)).size,
-    [outstanding],
+  const totalOrderValue = useMemo(
+    () => outstandingGroups.reduce((sum, g) => sum + g.orderNetTotal, 0),
+    [outstandingGroups],
   );
-  const topSupplier = useMemo(() => {
-    const counts: Record<string, number> = {};
-    outstanding.forEach((po) => {
-      const name = po.supplierName || "-";
-      counts[name] = (counts[name] || 0) + 1;
+  const totalItemLines = useMemo(
+    () => outstandingGroups.reduce((sum, g) => sum + g.itemCount, 0),
+    [outstandingGroups],
+  );
+
+  const chartData = useMemo(() => {
+    const bySupplier: Record<string, number> = {};
+    outstandingGroups.forEach((g) => {
+      bySupplier[g.supplierName] = (bySupplier[g.supplierName] || 0) + g.orderNetTotal;
     });
-    return Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
-  }, [outstanding]);
+    return Object.entries(bySupplier)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([name, total]) => ({
+        name:
+          name.length > (isMobile ? 13 : 20)
+            ? name.substring(0, isMobile ? 13 : 20) + "..."
+            : name,
+        total,
+      }));
+  }, [outstandingGroups, isMobile]);
 
   const columns = [
     { key: "orderNumber", label: "Nomor PO", sortable: true },
@@ -66,124 +148,137 @@ export default function OutstandingPO({
       key: "orderDate",
       label: "Tanggal PO",
       sortable: true,
-      render: (po: ParsedPurchaseOrder) => formatDate(po.orderDate),
-    },
-    {
-      key: "expectedDeliveryDate",
-      label: "Target Kirim",
-      sortable: true,
-      render: (po: ParsedPurchaseOrder) => formatDate(po.expectedDeliveryDate),
+      render: (g: OutstandingPOGroup) => formatDate(g.orderDate),
     },
     { key: "supplierName", label: "Supplier", sortable: true },
-    { key: "itemName", label: "Item", sortable: true },
-    { key: "itemCategory", label: "Kategori", sortable: true },
-    { key: "uom", label: "Satuan" },
-    {
-      key: "qtyOrdered",
-      label: "Qty Dipesan",
-      align: "right" as const,
-      sortable: true,
-      render: (po: ParsedPurchaseOrder) => formatNumber(po.qtyOrdered),
-    },
-    {
-      key: "qtyDelivered",
-      label: "Qty Diterima",
-      align: "right" as const,
-      sortable: true,
-      render: (po: ParsedPurchaseOrder) => formatNumber(po.qtyDelivered),
-    },
+    { key: "targetWarehouse", label: "Target Gudang" },
+    { key: "itemCount", label: "Jumlah Item", align: "right" as const },
     {
       key: "qtyOutstanding",
-      label: "Qty Outstanding",
+      label: "Qty Belum Diterima",
       align: "right" as const,
       sortable: true,
-      render: (po: ParsedPurchaseOrder) => formatNumber(po.qtyOutstanding),
+      render: (g: OutstandingPOGroup) => formatNumber(g.qtyOutstanding),
     },
     {
       key: "pctDelivered",
       label: "% Diterima",
       align: "right" as const,
       sortable: true,
-      render: (po: ParsedPurchaseOrder) => formatPercent(po.pctDelivered * 100),
-    },
-    {
-      key: "itemUnitCost",
-      label: "Harga Satuan",
-      align: "right" as const,
-      sortable: true,
-      render: (po: ParsedPurchaseOrder) => formatRupiah(po.itemUnitCost),
+      render: (g: OutstandingPOGroup) => formatPercent(g.pctDelivered),
     },
     {
       key: "orderNetTotal",
       label: "Nilai PO",
       align: "right" as const,
       sortable: true,
-      render: (po: ParsedPurchaseOrder) => formatRupiah(po.orderNetTotal),
+      render: (g: OutstandingPOGroup) => formatRupiah(g.orderNetTotal),
+    },
+    {
+      key: "expectedDeliveryDate",
+      label: "Expected Delivery",
+      render: (g: OutstandingPOGroup) => formatDate(g.expectedDeliveryDate),
     },
     { key: "prNumber", label: "Nomor PR" },
-    { key: "targetWarehouse", label: "Gudang Tujuan" },
   ];
 
   return (
     <PageLayout
       title="Outstanding PO"
-      subtitle="Laporan PO yang masih memiliki sisa kuantitas belum diterima."
+      subtitle="Laporan PO yang barangnya diterima sebagian dan masih memiliki sisa kuantitas belum diterima."
       dateRange={dateRange}
       onDateRangeChange={onDateRangeChange}
     >
       <InfoBanner>
-        Sumber data PO tidak menyimpan status open/closed, sehingga laporan ini
-        menurunkan status dari sisa kuantitas belum diterima (qty outstanding).
-        PO dianggap selesai saat seluruh kuantitas sudah diterima.
+        Status PO tidak tersimpan eksplisit di dataset — status "outstanding"
+        disimpulkan dari kesesuaian qty diterima vs qty dipesan (0 &lt; qty
+        diterima &lt; qty pesan). Filter tanggal berlaku pada tanggal PO.
       </InfoBanner>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Jumlah PO Outstanding"
-          value={formatNumber(poCount)}
-          subtitle={`${formatNumber(outstanding.length)} baris item`}
+          value={formatNumber(outstandingGroups.length)}
         />
         <StatCard
-          title="Total Qty Outstanding"
-          value={formatNumber(
-            outstanding.reduce((sum, po) => sum + po.qtyOutstanding, 0),
-          )}
-          subtitle="Seluruh sisa qty belum diterima"
+          title="Jumlah Baris Item"
+          value={formatNumber(totalItemLines)}
         />
         <StatCard
-          title="Nilai Outstanding"
-          value={formatRupiah(totalOutstandingQty)}
-          subtitle="Qty sisa × harga satuan PO"
+          title="Total Nilai PO"
+          value={formatRupiah(totalOrderValue)}
         />
         <StatCard
-          title="Supplier Terbanyak"
-          value={topSupplier?.[0] || "-"}
-          subtitle={
-            topSupplier ? `${formatNumber(topSupplier[1])} baris PO` : ""
-          }
+          title="Qty Belum Diterima"
+          value={formatNumber(totalOutstandingQty)}
           accent
         />
       </div>
 
+      <ChartCard
+        title="Nilai PO per Supplier (10 Terbesar)"
+        description="Supplier dengan nilai PO outstanding tertinggi"
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData} layout="vertical" margin={{ left: 0 }}>
+            <CartesianGrid
+              strokeDasharray="3 3"
+              className="stroke-border"
+              horizontal={false}
+            />
+            <XAxis
+              type="number"
+              tickFormatter={(v) => formatRupiahCompact(Number(v))}
+              className="text-xs text-muted-foreground"
+              tickLine={false}
+              axisLine={false}
+            />
+            <YAxis
+              type="category"
+              dataKey="name"
+              width={isMobile ? 120 : 180}
+              className="text-xs text-muted-foreground"
+              tickLine={false}
+              axisLine={false}
+            />
+            <Tooltip
+              formatter={(value) => [
+                formatRupiah(Number(value)),
+                "Nilai PO",
+              ]}
+              cursor={{ fill: "var(--color-muted)" }}
+              contentStyle={{ borderRadius: 8 }}
+            />
+            <Bar dataKey="total" radius={[0, 4, 4, 0]}>
+              {chartData.map((_, idx) => (
+                <Cell
+                  key={idx}
+                  fill={CHART_COLORS[idx % CHART_COLORS.length]}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </ChartCard>
+
       <DataTable
         columns={columns}
-        data={outstanding}
+        data={outstandingGroups}
         searchable
-        searchFields={["orderNumber", "supplierName", "itemName"]}
+        searchFields={["orderNumber", "supplierName", "targetWarehouse"]}
         showExport
         showColumnToggle
         defaultVisible={[
           "orderNumber",
           "orderDate",
           "supplierName",
-          "itemName",
-          "qtyOrdered",
+          "itemCount",
           "qtyOutstanding",
           "pctDelivered",
           "orderNetTotal",
         ]}
         title="outstanding-po"
-        totalColumns={["qtyOrdered", "qtyOutstanding", "orderNetTotal"]}
+        totalColumns={["qtyOutstanding", "orderNetTotal"]}
       />
     </PageLayout>
   );

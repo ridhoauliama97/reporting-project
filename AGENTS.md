@@ -18,7 +18,7 @@
 ```bash
 cd dashboard
 npm install
-npm run dev       # Vite dev server (host: true, port 5173)
+npm run dev       # Vite dev server (host: 0.0.0.0, port 5173) — reachable via LAN IP
 npm run lint      # oxlint (config: .oxlintrc.json)
 npm run build     # tsc -b (typecheck, noEmit) && vite build — this IS the typecheck step
 npm run preview   # Preview production build
@@ -40,7 +40,7 @@ npm run preview   # Preview production build
 
 ## Data Handling (Critical)
 
-- **Dataset is loaded at runtime, not bundled**: `src/data/purchase-data.json` is imported via `?url` in `App.tsx` and fetched with `JSON.parse`-style `res.json()` — keeps the 2.5 MB JSON (and its parse cost) out of the main bundle. `App` gates dashboard routes on `allItems.length` (loading spinner / error + retry); sidebar footer count flows via `Layout`'s `dataCount` prop. Don't re-import the JSON statically anywhere — it would re-inflate the index bundle.
+- **Dataset is loaded at runtime, not bundled**: `src/data/purchase-data.json` is imported via `?url` in `App.tsx` and fetched with `JSON.parse`-style `res.json()` — keeps the ~20 MB JSON (and its parse cost) out of the main bundle. `App` gates dashboard routes on `allItems.length` (loading spinner / error + retry). Don't re-import the JSON statically anywhere — it would re-inflate the index bundle.
 - **Numeric fields are strings** in the JSON: `quantity`, `unitCost`, `poUnitCost`, `netTotal`, `qtyOrdered`, `poPiDays`, `prPiDays`, `poPiOverdueDays`. Parse with `parseAllItems()` (`utils/formatters.ts`) before math.
 - **Gotcha**: `parsePurchaseItem()` converts empty string `""` to `0`, not `NaN`/`null`. Pages therefore guard with `> 0` filters (e.g. `poPiDays > 0`, `qtyOrdered > 0`) rather than null checks — follow this pattern. Empty values render as `-` in the UI.
 - Only invoiced transactions (types PI/PN/PURBB). No goods-receiving, QC, or reject data.
@@ -63,6 +63,7 @@ Page #4 (Supplier Quality) must stay empty-state via the `EmptyState` component 
 - All labels in Indonesian; currency as `Rp 1.234.567` (`formatRupiah`), percentages 1 decimal (`formatPercent`)
 - Date range filter (via `DateFilter`) drives every page's widgets/table/chart; filtering uses `filterByDateRange()` (defaults to `purchaseDate`, some pages pass `poDate`/`prDate`)
 - Page shell: stat widget cards (`StatCard`) → chart/table; `PageLayout` wraps pages, `ChartCard` wraps Recharts charts (CSS vars `--color-chart-1..5`, cartesian grid uses `stroke-border`)
+- **All DataTable report pages** use `showExport` + `showColumnToggle` + `title` (export filename); `totalColumns` only for summable numeric columns (skip averages/percentages/scores/durations: lead-time, price-alert, scorecard have no total row)
 - Proxy-metric pages carry an `InfoBanner` note explaining the data limitation (e.g. Supplier Delivery, Supplier Scorecard)
 - Dark mode: `ThemeToggle` toggles `.dark` on `<html>`, persists via `localStorage` key `theme` (no next-themes in app code)
 - Responsive rules from `polish.md`: no page-level horizontal scroll; tables use horizontal-scroll container with sticky columns; fluid type scale, min 12px text
@@ -127,7 +128,7 @@ dashboard/src/
 - #8 Material Cost Trend: all 5 `itemCategory` values; checkbox filter (all checked by default); chart/table follow checked categories; monthly `netTotal` by month
 - #9 Price Increase Alert: per-item sequential `unitCost` increase ≥ threshold (default 10%), severity-highlighted rows
 - #10 Purchase Lead Time: histogram buckets 0-3/4-7/8-14/15+ hari; only `prPiDays`/`poPiDays` exist — don't invent PR→PO figures
-- #11 Outstanding PO: rows where `qtyOutstanding > 0` from `poItems`; StatCards = PO count (distinct orderNumber), total outstanding qty, outstanding value (qty × unitCost), top supplier; date filter applies to `orderDate`
-- #12 Open PO: rows where `purchaseInvoice === ""`; StatCards = PO count, total order value, supplier count, oldest PO
-- #13 Closed PO: rows where `purchaseInvoice !== ""`; StatCards = PO count, total order value, supplier count, avg `poPiDays`; all three PO pages show an InfoBanner explaining the derived status (no open/closed field in source)
+- #11 Outstanding PO: rows where `0 < qtyDelivered < qtyOrdered` (received partially) from `poItems`, grouped per PO number (one row per PO: item count, aggregated qty, % delivered, PO value); StatCards = PO count, item-line count, total PO value, qty not yet received; bar chart = PO value per supplier (top 10); date filter applies to `orderDate`
+- #12 Open PO: rows where `qtyDelivered === 0` (no delivery yet) from `poItems`, grouped per PO number (same layout as #11); StatCards = PO count, item-line count, total order value, qty not yet received; bar chart = PO value per supplier (top 10)
+- #13 Closed PO: rows where every line of a PO has `qtyDelivered >= qtyOrdered` (fully received), grouped per PO number (same layout as #11/#12); StatCards = PO count, item-line count, total order value, qty not yet received (always 0); bar chart = PO value per supplier (top 10); all three PO pages show an InfoBanner explaining the derived status (no open/closed field in source)
 - #14 Supplier Scorecard: score = avg(price score, timeliness score), both 0-100; rating badge Excellent ≥80 / Good 60-79 / Perlu Perhatian <60

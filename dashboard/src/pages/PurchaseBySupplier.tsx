@@ -120,7 +120,14 @@ export default function PurchaseBySupplier({
           accent
         />
       </div>
-      <DataTable columns={columns} data={supplierData} />
+      <DataTable
+        columns={columns}
+        data={supplierData}
+        showExport
+        showColumnToggle
+        title="by-supplier"
+        totalColumns={["transactionCount", "totalQuantity", "totalPurchase"]}
+      />
     </PageLayout>
   );
 }

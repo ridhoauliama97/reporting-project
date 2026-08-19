@@ -253,7 +253,14 @@ export default function PurchasePriceHistory({
             </ResponsiveContainer>
           </ChartCard>
 
-          <DataTable columns={columns} data={filteredByItem} />
+          <DataTable
+              columns={columns}
+              data={filteredByItem}
+              showExport
+              showColumnToggle
+              title="price-history"
+              totalColumns={["quantity", "netTotal"]}
+            />
         </>
       ) : (
         <EmptyState

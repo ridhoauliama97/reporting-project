@@ -181,7 +181,13 @@ export default function PriceIncreaseAlert({
         </CardContent>
       </Card>
 
-      <DataTable columns={columns} data={flaggedItems} />
+      <DataTable
+        columns={columns}
+        data={flaggedItems}
+        showExport
+        showColumnToggle
+        title="price-increase-alert"
+      />
     </PageLayout>
   );
 }

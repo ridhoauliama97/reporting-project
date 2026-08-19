@@ -1,17 +1,25 @@
 # Open PO
 
 ## Deskripsi
-Daftar Purchase Order yang **belum ter-invoice** — statusnya masih aktif/berjalan karena belum ada invoice terkait.
+Daftar Purchase Order yang **statusnya masih aktif/berjalan dan belum menerima pengiriman sama sekali** (qty diterima = 0).
 
 ## Kegunaan
 Monitoring komitmen pembelian yang masih berjalan — berapa banyak PO aktif dan total nilainya, agar tim bisa memproyeksikan cash flow/kebutuhan gudang ke depan.
 
+## Formula
+```
+Open         : qty diterima = 0            (belum ada pengiriman)
+Outstanding  : 0 < qty diterima < qty pesan (diterima sebagian)
+Closed       : qty diterima >= qty pesan    (diterima penuh)
+```
+
 ## Sumber Data
-File PO (`purchase-order-by-item`) — **bukan** dari dataset invoice. Dataset PO tidak menyimpan field status `open`/`closed`, sehingga status diturunkan dari ada-tidaknya nomor invoice pada baris PO (`purchaseInvoice`): baris dengan invoice kosong dianggap **open**.
+Dataset `purchase-order-by-item` — dihitung dari Qty. Delivered per baris item, lalu **dikelompokkan per nomor PO** (tabel menampilkan satu baris per PO: jumlah item, qty agregat, % diterima, nilai PO). Filter tanggal berlaku pada tanggal PO.
 
-## Filter
-- Filter tanggal (sidebar atas) berlaku pada **Tanggal PO** (`orderDate`).
-- Kartu "PO Tertua" menampilkan nomor PO dengan tanggal order paling awal.
+## Statistik & Visualisasi
+- 4 kartu KPI: jumlah PO, jumlah baris item, total nilai PO, qty belum diterima
+- Grafik batang nilai PO per supplier (10 terbesar)
+- Tabel detail: nomor PO, tanggal, supplier, target gudang, jumlah item, qty belum diterima, % diterima, nilai PO, expected delivery, nomor PR
 
-## Catatan
-Terdapat 48 baris PO tanpa invoice (belum ter-invoice). PO yang sudah ter-invoice namun masih ada sisa kuantitas tetap tercatat di laporan **Outstanding PO**.
+## Batasan
+PO dengan status "Active" di dataset tidak selalu berarti belum diterima — penilaian status berdasarkan qty penerimaan aktual.

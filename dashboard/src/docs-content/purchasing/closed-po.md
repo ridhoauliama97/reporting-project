@@ -1,18 +1,28 @@
 # Closed PO
 
 ## Deskripsi
-Daftar Purchase Order yang **sudah ter-invoice** — proses pembelian sudah berjalan sampai ke penagihan.
+Daftar Purchase Order yang **seluruh item-nya sudah diterima penuh** (qty diterima ≥ qty pesan) — proses pengiriman sudah tuntas.
 
 ## Kegunaan
-- Rekam historis PO yang sudah ter-invoice
-- Dasar audit atau verifikasi bahwa suatu proses pembelian sudah tertutup dengan benar
+- Rekam historis PO yang sudah beres
+- Dasar audit atau verifikasi bahwa suatu proses pembelian sudah closed dengan benar
+
+## Formula
+```
+Closed : qty diterima >= qty pesan (diterima penuh)
+```
+Status PO (diturunkan dari kesesuaian qty, bukan field tersimpan):
+- **CLOSED**: seluruh baris item diterima penuh
+- **OUTSTANDING**: 0 < qty diterima < qty pesan (diterima sebagian)
+- **OPEN**: qty diterima = 0 (belum menerima pengiriman)
 
 ## Sumber Data
-File PO (`purchase-order-by-item`) — **bukan** dari dataset invoice. Dataset PO tidak menyimpan field status `open`/`closed`, sehingga status diturunkan dari ada-tidaknya nomor invoice pada baris PO (`purchaseInvoice`): baris dengan invoice terisi dianggap **closed**.
+Dataset `purchase-order-by-item` — dihitung dari Qty. Ordered vs Qty. Delivered per baris item, lalu **dikelompokkan per nomor PO** (tabel menampilkan satu baris per PO: jumlah item, % diterima, nilai PO). Filter tanggal berlaku pada tanggal PO.
 
-## Filter
-- Filter tanggal (sidebar atas) berlaku pada **Tanggal PO** (`orderDate`).
-- Kolom `Hari PO→Invoice` (`poPiDays`) menampilkan selisih hari antara tanggal PO dan tanggal invoice.
+## Statistik & Visualisasi
+- 4 kartu KPI: jumlah PO, jumlah baris item, total nilai PO, qty belum diterima (0 untuk PO closed)
+- Grafik batang nilai PO per supplier (10 terbesar)
+- Tabel detail: nomor PO, tanggal, supplier, target gudang, jumlah item, % diterima, nilai PO, expected delivery, nomor PR
 
-## Catatan
-Sebagian besar baris PO (2.948 dari 2.996) sudah memiliki invoice. `% Diterima` disimpan sebagai fraksi (1.0000 = 100%) di sumber data — ditampilkan sebagai persen di laporan ini.
+## Batasan
+Status "closed" disimpulkan dari kesesuaian qty diterima vs dipesan, bukan dari status sistem.

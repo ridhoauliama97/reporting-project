@@ -1,24 +1,28 @@
 # Outstanding PO
 
 ## Deskripsi
-Daftar baris Purchase Order yang masih memiliki **sisa kuantitas belum diterima** (`Qty Outstanding > 0`) — sisa kewajiban pengiriman dari supplier.
+Daftar Purchase Order yang barangnya **sudah diterima sebagian namun masih memiliki sisa kuantitas yang belum diterima** (0 < qty diterima < qty pesan).
 
 ## Kegunaan
-- Follow-up ke supplier untuk barang yang belum datang
+- Follow-up ke supplier untuk sisa kiriman yang belum tuntas
 - Acuan komitmen pembelian yang masih outstanding (belum terealisasi penuh)
 
 ## Formula
 ```
-Qty Outstanding = Qty Dipesan - Qty Diterima
+Outstanding Qty = Qty Dipesan - Qty Diterima
 ```
-Baris ditampilkan jika hasilnya > 0. Nilai outstanding dihitung dari `Qty Outstanding × Harga Satuan PO` (karena sumber data tidak menyimpan nilai per baris yang belum diterima).
+Status PO (diturunkan dari kesesuaian qty, bukan field tersimpan):
+- **CLOSED**: qty diterima ≥ qty pesan (diterima penuh)
+- **OUTSTANDING**: 0 < qty diterima < qty pesan (diterima sebagian)
+- **OPEN**: qty diterima = 0 (belum menerima pengiriman)
 
 ## Sumber Data
-File PO (`purchase-order-by-item`) — **bukan** dari dataset invoice. Dataset PO tidak menyimpan status `open`/`closed`, sehingga status diturunkan dari sisa kuantitas: PO dianggap outstanding selama masih ada sisa belum diterima.
+Dataset `purchase-order-by-item` — dihitung dari Qty. Ordered vs Qty. Delivered per baris item, lalu **dikelompokkan per nomor PO** (tabel menampilkan satu baris per PO: jumlah item, qty agregat, % diterima, nilai PO). Filter tanggal berlaku pada tanggal PO.
 
-## Filter
-- Filter tanggal (sidebar atas) berlaku pada **Tanggal PO** (`orderDate`).
-- Filter "Qty Outstanding" menampilkan seluruh baris, diurutkan dari sisa terbesar.
+## Statistik & Visualisasi
+- 4 kartu KPI: jumlah PO, jumlah baris item, total nilai PO, qty belum diterima
+- Grafik batang nilai PO per supplier (10 terbesar)
+- Tabel detail: nomor PO, tanggal, supplier, target gudang, jumlah item, qty belum diterima, % diterima, nilai PO, expected delivery, nomor PR
 
-## Catatan
-Terdapat 50 baris PO dengan sisa kuantitas (35 nomor PO). Kolom `% Diterima` disimpan sebagai fraksi (1.0000 = 100%) di sumber data — ditampilkan sebagai persen di laporan ini.
+## Batasan
+Status "closed" di dataset tidak eksplisit — disimpulkan dari kesesuaian qty diterima vs dipesan. Baris dengan qty diterima nol tidak ditampilkan di laporan ini (masuk kategori OPEN).

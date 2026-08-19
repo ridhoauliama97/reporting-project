@@ -198,7 +198,13 @@ export default function SupplierScorecard({
         />
       </div>
 
-      <DataTable columns={columns} data={supplierScores} />
+      <DataTable
+        columns={columns}
+        data={supplierScores}
+        showExport
+        showColumnToggle
+        title="scorecard"
+      />
     </PageLayout>
   );
 }

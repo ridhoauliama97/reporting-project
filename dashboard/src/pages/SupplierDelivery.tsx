@@ -158,7 +158,14 @@ export default function SupplierDelivery({
         />
       </div>
 
-      <DataTable columns={columns} data={supplierData} />
+      <DataTable
+        columns={columns}
+        data={supplierData}
+        showExport
+        showColumnToggle
+        title="supplier-delivery"
+        totalColumns={["lateCount", "totalCount"]}
+      />
     </PageLayout>
   );
 }

@@ -199,7 +199,14 @@ export default function SupplierRanking({
         </ResponsiveContainer>
       </ChartCard>
 
-      <DataTable columns={columns} data={supplierRanks} />
+      <DataTable
+        columns={columns}
+        data={supplierRanks}
+        showExport
+        showColumnToggle
+        title="ranking"
+        totalColumns={["totalPurchase", "transactionCount"]}
+      />
     </PageLayout>
   );
 }

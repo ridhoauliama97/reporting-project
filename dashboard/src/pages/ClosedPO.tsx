@@ -3,18 +3,41 @@ import type { ParsedPurchaseOrder } from "../types/purchase";
 import {
   formatNumber,
   formatRupiah,
+  formatRupiahCompact,
   formatPercent,
   formatDate,
+  round1,
+  warehouseLabel,
 } from "../utils/formatters";
 import PageLayout from "../components/PageLayout";
 import StatCard from "../components/StatCard";
 import DataTable from "../components/DataTable";
+import ChartCard from "../components/ChartCard";
 import InfoBanner from "../components/InfoBanner";
+import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  BarChart,
+  Bar,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 interface DateRange {
   start: Date | null;
   end: Date | null;
 }
+
+const CHART_COLORS = [
+  "var(--color-chart-1)",
+  "var(--color-chart-2)",
+  "var(--color-chart-3)",
+  "var(--color-chart-4)",
+  "var(--color-chart-5)",
+];
 
 interface ClosedPOProps {
   poItems: ParsedPurchaseOrder[];
@@ -22,154 +45,226 @@ interface ClosedPOProps {
   onDateRangeChange: (range: DateRange) => void;
 }
 
+interface ClosedPOGroup {
+  orderNumber: string;
+  orderDate: string;
+  orderDateObj: Date | null;
+  supplierName: string;
+  targetWarehouse: string;
+  prNumber: string;
+  expectedDeliveryDate: string;
+  itemCount: number;
+  qtyOrdered: number;
+  qtyDelivered: number;
+  qtyOutstanding: number;
+  pctDelivered: number;
+  orderNetTotal: number;
+}
+
 export default function ClosedPO({
   poItems,
   dateRange,
   onDateRangeChange,
 }: ClosedPOProps) {
-  const closedPOs = useMemo(
-    () =>
-      poItems
-        .filter((po) => po.purchaseInvoice !== "")
-        .sort((a, b) => a.orderNumber.localeCompare(b.orderNumber)),
-    [poItems],
-  );
+  const isMobile = useIsMobile();
 
-  const poCount = useMemo(
-    () => new Set(closedPOs.map((po) => po.orderNumber)).size,
-    [closedPOs],
+  const closedGroups = useMemo(() => {
+    const grouped: Record<string, ParsedPurchaseOrder[]> = {};
+    poItems.forEach((po) => {
+      if (!grouped[po.orderNumber]) grouped[po.orderNumber] = [];
+      grouped[po.orderNumber].push(po);
+    });
+
+    return Object.values(grouped)
+      .filter((lines) =>
+        lines.every((l) => l.qtyDelivered >= l.qtyOrdered),
+      )
+      .map((lines) => {
+        const qtyOrdered = round1(
+          lines.reduce((sum, l) => sum + l.qtyOrdered, 0),
+        );
+        const qtyDelivered = round1(
+          lines.reduce((sum, l) => sum + l.qtyDelivered, 0),
+        );
+        return {
+          orderNumber: lines[0].orderNumber,
+          orderDate: lines[0].orderDate,
+          orderDateObj: lines[0].orderDateObj,
+          supplierName: lines[0].supplierName || "-",
+          targetWarehouse: warehouseLabel(lines[0].targetWarehouse),
+          prNumber: lines[0].prNumber || "-",
+          expectedDeliveryDate: lines[0].expectedDeliveryDate,
+          itemCount: lines.length,
+          qtyOrdered,
+          qtyDelivered,
+          qtyOutstanding: 0,
+          pctDelivered:
+            qtyOrdered > 0
+              ? Math.min(100, (qtyDelivered / qtyOrdered) * 100)
+              : 100,
+          orderNetTotal: lines[0].orderNetTotal,
+        };
+      })
+      .sort(
+        (a, b) =>
+          (a.orderDateObj?.getTime() ?? 0) -
+            (b.orderDateObj?.getTime() ?? 0) ||
+          a.orderNumber.localeCompare(b.orderNumber),
+      );
+  }, [poItems]);
+
+  const totalItemLines = useMemo(
+    () => closedGroups.reduce((sum, g) => sum + g.itemCount, 0),
+    [closedGroups],
   );
   const totalOrderValue = useMemo(
-    () => closedPOs.reduce((sum, po) => sum + po.orderNetTotal, 0),
-    [closedPOs],
+    () => closedGroups.reduce((sum, g) => sum + g.orderNetTotal, 0),
+    [closedGroups],
   );
-  const supplierCount = useMemo(
-    () => new Set(closedPOs.map((po) => po.supplierName)).size,
-    [closedPOs],
-  );
-  const avgPoPiDays = useMemo(() => {
-    const valid = closedPOs.filter((po) => po.poPiDays > 0);
-    return valid.length > 0
-      ? valid.reduce((sum, po) => sum + po.poPiDays, 0) / valid.length
-      : 0;
-  }, [closedPOs]);
+
+  const chartData = useMemo(() => {
+    const bySupplier: Record<string, number> = {};
+    closedGroups.forEach((g) => {
+      bySupplier[g.supplierName] =
+        (bySupplier[g.supplierName] || 0) + g.orderNetTotal;
+    });
+    return Object.entries(bySupplier)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([name, total]) => ({
+        name:
+          name.length > (isMobile ? 13 : 20)
+            ? name.substring(0, isMobile ? 13 : 20) + "..."
+            : name,
+        total,
+      }));
+  }, [closedGroups, isMobile]);
 
   const columns = [
     { key: "orderNumber", label: "Nomor PO", sortable: true },
-    { key: "purchaseInvoice", label: "Nomor Invoice", sortable: true },
     {
       key: "orderDate",
       label: "Tanggal PO",
       sortable: true,
-      render: (po: ParsedPurchaseOrder) => formatDate(po.orderDate),
+      render: (g: ClosedPOGroup) => formatDate(g.orderDate),
     },
     { key: "supplierName", label: "Supplier", sortable: true },
-    { key: "itemName", label: "Item", sortable: true },
-    { key: "itemCategory", label: "Kategori", sortable: true },
-    { key: "uom", label: "Satuan" },
-    {
-      key: "qtyOrdered",
-      label: "Qty Dipesan",
-      align: "right" as const,
-      sortable: true,
-      render: (po: ParsedPurchaseOrder) => formatNumber(po.qtyOrdered),
-    },
-    {
-      key: "qtyDelivered",
-      label: "Qty Diterima",
-      align: "right" as const,
-      sortable: true,
-      render: (po: ParsedPurchaseOrder) => formatNumber(po.qtyDelivered),
-    },
+    { key: "targetWarehouse", label: "Target Gudang" },
+    { key: "itemCount", label: "Jumlah Item", align: "right" as const },
     {
       key: "pctDelivered",
       label: "% Diterima",
       align: "right" as const,
       sortable: true,
-      render: (po: ParsedPurchaseOrder) => formatPercent(po.pctDelivered * 100),
-    },
-    {
-      key: "itemUnitCost",
-      label: "Harga Satuan",
-      align: "right" as const,
-      sortable: true,
-      render: (po: ParsedPurchaseOrder) => formatRupiah(po.itemUnitCost),
+      render: (g: ClosedPOGroup) => formatPercent(g.pctDelivered),
     },
     {
       key: "orderNetTotal",
       label: "Nilai PO",
       align: "right" as const,
       sortable: true,
-      render: (po: ParsedPurchaseOrder) => formatRupiah(po.orderNetTotal),
+      render: (g: ClosedPOGroup) => formatRupiah(g.orderNetTotal),
     },
     {
-      key: "poPiDays",
-      label: "Hari PO→Invoice",
-      align: "right" as const,
-      sortable: true,
-      render: (po: ParsedPurchaseOrder) =>
-        po.poPiDays > 0 ? po.poPiDays.toFixed(1) : "-",
+      key: "expectedDeliveryDate",
+      label: "Expected Delivery",
+      render: (g: ClosedPOGroup) => formatDate(g.expectedDeliveryDate),
     },
     { key: "prNumber", label: "Nomor PR" },
-    { key: "targetWarehouse", label: "Gudang Tujuan" },
   ];
 
   return (
     <PageLayout
       title="Closed PO"
-      subtitle="Laporan Purchase Order (PO) yang sudah ter-invoice."
+      subtitle="Laporan PO yang seluruh item-nya sudah diterima penuh."
       dateRange={dateRange}
       onDateRangeChange={onDateRangeChange}
     >
       <InfoBanner>
-        Sumber data PO tidak menyimpan status open/closed. Laporan ini
-        menurunkan status dari ada-tidaknya nomor invoice pada baris PO: PO
-        dianggap tertutup (closed) saat sudah memiliki invoice terkait.
+        Status "closed" tidak tersimpan eksplisit di dataset — disimpulkan
+        dari kesesuaian qty diterima vs qty dipesan (seluruh baris item
+        diterima penuh), bukan dari status sistem. Filter tanggal berlaku pada
+        tanggal PO.
       </InfoBanner>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          title="Jumlah PO Ter-invoice"
-          value={formatNumber(poCount)}
-          subtitle={`${formatNumber(closedPOs.length)} baris item`}
+          title="Jumlah PO Closed"
+          value={formatNumber(closedGroups.length)}
         />
         <StatCard
-          title="Total Nilai PO"
-          value={formatRupiah(totalOrderValue)}
-          subtitle="Nilai pesanan sudah ter-invoice"
+          title="Jumlah Baris Item"
+          value={formatNumber(totalItemLines)}
         />
+        <StatCard title="Total Nilai PO" value={formatRupiah(totalOrderValue)} />
         <StatCard
-          title="Jumlah Supplier"
-          value={formatNumber(supplierCount)}
-          subtitle="Supplier dengan PO tertutup"
-        />
-        <StatCard
-          title="Rata-rata PO→Invoice"
-          value={avgPoPiDays > 0 ? avgPoPiDays.toFixed(1) : "-"}
-          subtitle="Hari dari PO ke invoice"
+          title="Qty Belum Diterima"
+          value={formatNumber(0)}
+          subtitle="Seluruh qty sudah diterima"
           accent
         />
       </div>
 
+      <ChartCard
+        title="Nilai PO per Supplier (10 Terbesar)"
+        description="Supplier dengan nilai PO closed tertinggi"
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData} layout="vertical" margin={{ left: 0 }}>
+            <CartesianGrid
+              strokeDasharray="3 3"
+              className="stroke-border"
+              horizontal={false}
+            />
+            <XAxis
+              type="number"
+              tickFormatter={(v) => formatRupiahCompact(Number(v))}
+              className="text-xs text-muted-foreground"
+              tickLine={false}
+              axisLine={false}
+            />
+            <YAxis
+              type="category"
+              dataKey="name"
+              width={isMobile ? 120 : 180}
+              className="text-xs text-muted-foreground"
+              tickLine={false}
+              axisLine={false}
+            />
+            <Tooltip
+              formatter={(value) => [formatRupiah(Number(value)), "Nilai PO"]}
+              cursor={{ fill: "var(--color-muted)" }}
+              contentStyle={{ borderRadius: 8 }}
+            />
+            <Bar dataKey="total" radius={[0, 4, 4, 0]}>
+              {chartData.map((_, idx) => (
+                <Cell
+                  key={idx}
+                  fill={CHART_COLORS[idx % CHART_COLORS.length]}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </ChartCard>
+
       <DataTable
         columns={columns}
-        data={closedPOs}
+        data={closedGroups}
         searchable
-        searchFields={["orderNumber", "purchaseInvoice", "supplierName", "itemName"]}
+        searchFields={["orderNumber", "supplierName", "targetWarehouse"]}
         showExport
         showColumnToggle
         defaultVisible={[
           "orderNumber",
-          "purchaseInvoice",
           "orderDate",
           "supplierName",
-          "itemName",
-          "qtyOrdered",
+          "itemCount",
+          "pctDelivered",
           "orderNetTotal",
-          "poPiDays",
         ]}
         title="closed-po"
-        totalColumns={["qtyOrdered", "orderNetTotal"]}
+        totalColumns={["orderNetTotal"]}
       />
     </PageLayout>
   );

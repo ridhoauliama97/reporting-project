@@ -289,69 +289,115 @@ export function generateReportSummary(
       if (poItems.length === 0) {
         return `Tidak ada data PO pada rentang tanggal aktif, sehingga ringkasan Outstanding PO tidak dapat dibuat.`;
       }
-      const outstanding = poItems.filter((po) => po.qtyOutstanding > 0);
-      if (outstanding.length === 0) {
-        return `Periode ${period}: tidak ada PO dengan sisa kuantitas belum diterima (semua qty sudah terealisasi).`;
+      const grouped: Record<string, ParsedPurchaseOrder[]> = {};
+      poItems.forEach((po) => {
+        if (
+          po.qtyDelivered > 0 &&
+          po.qtyDelivered < po.qtyOrdered &&
+          po.qtyOrdered > 0
+        ) {
+          if (!grouped[po.orderNumber]) grouped[po.orderNumber] = [];
+          grouped[po.orderNumber].push(po);
+        }
+      });
+      const groups = Object.values(grouped);
+      if (groups.length === 0) {
+        return `Periode ${period}: tidak ada PO berstatus outstanding (penerimaan sebagian) — seluruh PO sudah diterima penuh atau belum menerima pengiriman.`;
       }
-      const poNumbers = new Set(outstanding.map((po) => po.orderNumber)).size;
-      const totalQty = outstanding.reduce(
-        (sum, po) => sum + po.qtyOutstanding,
+      const totalLines = groups.reduce((sum, l) => sum + l.length, 0);
+      const totalQty = groups.reduce(
+        (sum, lines) =>
+          sum +
+          lines.reduce(
+            (s, l) => s + (l.qtyOrdered - l.qtyDelivered),
+            0,
+          ),
         0,
       );
-      const outstandingValue = outstanding.reduce(
-        (sum, po) => sum + po.qtyOutstanding * Math.max(po.itemUnitCost, 0),
+      const totalValue = groups.reduce(
+        (sum, lines) => sum + lines[0].orderNetTotal,
         0,
       );
       const supplierCounts: Record<string, number> = {};
-      outstanding.forEach((po) => {
-        supplierCounts[po.supplierName || "-"] =
-          (supplierCounts[po.supplierName || "-"] || 0) + 1;
+      groups.forEach((lines) => {
+        const name = lines[0].supplierName || "-";
+        supplierCounts[name] = (supplierCounts[name] || 0) + 1;
       });
       const topSupplier = Object.entries(supplierCounts).sort(
         (a, b) => b[1] - a[1],
       )[0];
-      return `Periode ${period}: ${formatNumber(outstanding.length)} baris PO outstanding dari ${formatNumber(poNumbers)} nomor PO, dengan sisa kuantitas ${formatNumber(round2(totalQty))} unit senilai ${formatRupiahCompact(outstandingValue)}. Supplier paling banyak outstanding: ${topSupplier?.[0] || "-"} (${formatNumber(topSupplier?.[1] ?? 0)} baris).`;
+      return `Periode ${period}: ${formatNumber(groups.length)} PO berstatus outstanding (penerimaan sebagian) dari ${formatNumber(totalLines)} baris item, dengan total nilai PO ${formatRupiahCompact(totalValue)} dan sisa kuantitas belum diterima ${formatNumber(round2(totalQty))} unit. Supplier terbanyak: ${topSupplier?.[0] || "-"} (${formatNumber(topSupplier?.[1] ?? 0)} PO).`;
     }
     case "open-po": {
       if (poItems.length === 0) {
         return `Tidak ada data PO pada rentang tanggal aktif, sehingga ringkasan Open PO tidak dapat dibuat.`;
       }
-      const openPOs = poItems.filter((po) => po.purchaseInvoice === "");
-      if (openPOs.length === 0) {
-        return `Periode ${period}: seluruh PO pada rentang ini sudah ter-invoice — tidak ada PO terbuka.`;
+      const grouped: Record<string, ParsedPurchaseOrder[]> = {};
+      poItems.forEach((po) => {
+        if (po.qtyDelivered === 0 && po.qtyOrdered > 0) {
+          if (!grouped[po.orderNumber]) grouped[po.orderNumber] = [];
+          grouped[po.orderNumber].push(po);
+        }
+      });
+      const groups = Object.values(grouped);
+      if (groups.length === 0) {
+        return `Periode ${period}: tidak ada PO dengan qty diterima nol — seluruh PO pada rentang ini sudah menerima pengiriman.`;
       }
-      const poNumbers = new Set(openPOs.map((po) => po.orderNumber)).size;
-      const totalValue = openPOs.reduce((sum, po) => sum + po.orderNetTotal, 0);
-      const oldest = openPOs.reduce<{ number: string; date: Date | null } | null>(
-        (oldest, po) => {
-          if (
-            po.orderDateObj &&
-            (!oldest || po.orderDateObj < (oldest.date ?? Infinity))
-          ) {
-            return { number: po.orderNumber, date: po.orderDateObj };
-          }
-          return oldest;
-        },
-        null,
+      const totalLines = groups.reduce((sum, l) => sum + l.length, 0);
+      const totalQty = groups.reduce(
+        (sum, lines) =>
+          sum +
+          lines.reduce((s, l) => s + (l.qtyOrdered - l.qtyDelivered), 0),
+        0,
       );
-      return `Periode ${period}: ${formatNumber(openPOs.length)} baris PO belum ter-invoice (${formatNumber(poNumbers)} nomor PO) senilai ${formatRupiahCompact(totalValue)}. PO terbuka tertua: ${oldest?.number || "-"} (${oldest?.date ? formatDate(oldest.date.toISOString()) : "-"}).`;
+      const totalValue = groups.reduce(
+        (sum, lines) => sum + lines[0].orderNetTotal,
+        0,
+      );
+      const oldest = groups
+        .flat()
+        .reduce<{ number: string; date: Date | null } | null>(
+          (oldest, po) => {
+            if (
+              po.orderDateObj &&
+              (!oldest || po.orderDateObj < (oldest.date ?? Infinity))
+            ) {
+              return { number: po.orderNumber, date: po.orderDateObj };
+            }
+            return oldest;
+          },
+          null,
+        );
+      return `Periode ${period}: ${formatNumber(groups.length)} PO terbuka (belum menerima pengiriman) dari ${formatNumber(totalLines)} baris item, dengan total nilai PO ${formatRupiahCompact(totalValue)} dan qty belum diterima ${formatNumber(round2(totalQty))} unit. PO terbuka tertua: ${oldest?.number || "-"} (${oldest?.date ? formatDate(oldest.date.toISOString()) : "-"}).`;
     }
     case "closed-po": {
       if (poItems.length === 0) {
         return `Tidak ada data PO pada rentang tanggal aktif, sehingga ringkasan Closed PO tidak dapat dibuat.`;
       }
-      const closedPOs = poItems.filter((po) => po.purchaseInvoice !== "");
-      if (closedPOs.length === 0) {
-        return `Periode ${period}: tidak ada PO yang sudah ter-invoice pada rentang ini.`;
+      const grouped: Record<string, ParsedPurchaseOrder[]> = {};
+      poItems.forEach((po) => {
+        if (!grouped[po.orderNumber]) grouped[po.orderNumber] = [];
+        grouped[po.orderNumber].push(po);
+      });
+      const groups = Object.values(grouped).filter((lines) =>
+        lines.every((l) => l.qtyDelivered >= l.qtyOrdered),
+      );
+      if (groups.length === 0) {
+        return `Periode ${period}: tidak ada PO yang seluruh item-nya diterima penuh pada rentang ini.`;
       }
-      const poNumbers = new Set(closedPOs.map((po) => po.orderNumber)).size;
-      const totalValue = closedPOs.reduce((sum, po) => sum + po.orderNetTotal, 0);
-      const validPi = closedPOs.filter((po) => po.poPiDays > 0);
+      const totalLines = groups.reduce((sum, l) => sum + l.length, 0);
+      const totalValue = groups.reduce(
+        (sum, lines) => sum + lines[0].orderNetTotal,
+        0,
+      );
+      const validPi = groups
+        .flat()
+        .filter((po) => po.poPiDays > 0);
       const avgPoPi =
         validPi.length > 0
           ? validPi.reduce((sum, po) => sum + po.poPiDays, 0) / validPi.length
           : 0;
-      return `Periode ${period}: ${formatNumber(closedPOs.length)} baris PO sudah ter-invoice (${formatNumber(poNumbers)} nomor PO) senilai ${formatRupiahCompact(totalValue)}. Rata-rata waktu PO→invoice ${avgPoPi > 0 ? round1(avgPoPi) : "-"} hari.`;
+      return `Periode ${period}: ${formatNumber(groups.length)} PO closed (seluruh item diterima penuh) dari ${formatNumber(totalLines)} baris item, dengan total nilai PO ${formatRupiahCompact(totalValue)}. Rata-rata waktu PO→invoice ${avgPoPi > 0 ? round1(avgPoPi) : "-"} hari.`;
     }
     default:
       return `Ringkasan untuk laporan ini belum tersedia.`;

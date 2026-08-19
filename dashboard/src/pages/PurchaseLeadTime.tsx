@@ -184,7 +184,13 @@ export default function PurchaseLeadTime({
         </ResponsiveContainer>
       </ChartCard>
 
-      <DataTable columns={columns} data={leadTimeData} />
+      <DataTable
+        columns={columns}
+        data={leadTimeData}
+        showExport
+        showColumnToggle
+        title="lead-time"
+      />
     </PageLayout>
   );
 }

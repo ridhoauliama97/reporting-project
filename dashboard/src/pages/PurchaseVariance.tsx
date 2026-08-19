@@ -127,7 +127,14 @@ export default function PurchaseVariance({
         />
       </div>
 
-      <DataTable columns={columns} data={varianceData} />
+      <DataTable
+        columns={columns}
+        data={varianceData}
+        showExport
+        showColumnToggle
+        title="variance"
+        totalColumns={["qtyOrdered", "quantity", "variance"]}
+      />
     </PageLayout>
   );
 }

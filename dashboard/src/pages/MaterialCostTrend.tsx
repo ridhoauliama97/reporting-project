@@ -268,7 +268,17 @@ export default function MaterialCostTrend({
         )}
       </ChartCard>
 
-      <DataTable columns={columns} data={tableData} />
+      <DataTable
+        columns={columns}
+        data={tableData}
+        showExport
+        showColumnToggle
+        title="material-cost-trend"
+        totalColumns={[
+          ...selectedCategories.map((c) => CATEGORY_LABELS[c]),
+          "total",
+        ]}
+      />
     </PageLayout>
   );
 }

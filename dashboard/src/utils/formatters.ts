@@ -146,6 +146,21 @@ export const round1 = (n: number): number => Math.round(n * 10) / 10;
 
 export const round2 = (n: number): number => Math.round(n * 100) / 100;
 
+const WAREHOUSE_LABELS: Record<string, string> = {
+  "01": "01: GUDANG BAHAN BAKU",
+  "04": "04: GUDANG BARANG JADI",
+  "07": "07: GUDANG SPAREPART",
+  "09": "09: CBD SPAREPART",
+  "51": "51: GUDANG WIP",
+  "54": "54: GUDANG PEKANBARU",
+  "24": "24: KANTOR SALES",
+};
+
+export function warehouseLabel(code: string): string {
+  if (!code || code === "") return "-";
+  return WAREHOUSE_LABELS[code] ?? code;
+}
+
 export function formatDate(dateStr: string): string {
   if (!dateStr || dateStr === "") return "-";
   try {
