@@ -40,7 +40,7 @@ npm run preview   # Preview production build
 
 ## Data Handling (Critical)
 
-- **Dataset is loaded at runtime, not bundled**: `src/data/purchase-data.json` is imported via `?url` in `App.tsx` and fetched with `JSON.parse`-style `res.json()` — keeps the ~20 MB JSON (and its parse cost) out of the main bundle. `App` gates dashboard routes on `allItems.length` (loading spinner / error + retry). Don't re-import the JSON statically anywhere — it would re-inflate the index bundle. **Single source of truth is `dashboard/src/data/purchase-data.json` only** — no copies at repo root.
+- **Dataset is loaded at runtime, not bundled**: `src/data/purchase-data.json` is imported via `?url` in `App.tsx` and fetched + parsed inside a **Web Worker** (`src/data-loader.worker.ts`, falls back to main-thread fetch on worker error) — keeps the ~20 MB JSON (and its parse cost) off the main thread. `App` gates dashboard routes on `allItems.length` (loading spinner / error + retry). Don't re-import the JSON statically anywhere — it would re-inflate the index bundle. **Single source of truth is `dashboard/src/data/purchase-data.json` only** — no copies at repo root.
 - **Numeric fields are strings** in the JSON: `quantity`, `unitCost`, `poUnitCost`, `netTotal`, `qtyOrdered`, `poPiDays`, `prPiDays`, `poPiOverdueDays`. Parse with `parseAllItems()` (`utils/formatters.ts`) before math.
 - **Gotcha**: `parsePurchaseItem()` converts empty string `""` to `0`, not `NaN`/`null`. Pages therefore guard with `> 0` filters (e.g. `poPiDays > 0`, `qtyOrdered > 0`) rather than null checks — follow this pattern. Empty values render as `-` in the UI.
 - Only invoiced transactions (types PI/PN/PURBB). No goods-receiving, QC, or reject data.
@@ -63,7 +63,7 @@ Page #4 (Supplier Quality) must stay empty-state via the `EmptyState` component 
 ## UI Conventions
 
 - All labels in Indonesian; currency as `Rp 1.234.567` (`formatRupiah`), percentages 1 decimal (`formatPercent`)
-- Date range filter (via `DateFilter`) drives every page's widgets/table/chart; filtering uses `filterByDateRange()` (defaults to `purchaseDate`, some pages pass `poDate`/`prDate`)
+- Date range filter (via `DateFilter`) drives every page's widgets/table/chart; filtering uses `filterByDateRange()` (defaults to `purchaseDate`, some pages pass `poDate`/`prDate`). `DateFilter` keeps its own input state and debounces the commit (400 ms, flushed on blur) — `onChange` only fires with the clamped range, not per keystroke
 - Page shell: stat widget cards (`StatCard`) → chart/table; `PageLayout` wraps pages, `ChartCard` wraps Recharts charts (CSS vars `--color-chart-1..5`, cartesian grid uses `stroke-border`)
 - **All DataTable report pages** use `showExport` + `showColumnToggle` + `title` (export filename); `totalColumns` only for summable numeric columns (skip averages/percentages/scores/durations: lead-time, price-alert, scorecard have no total row)
 - Proxy-metric pages carry an `InfoBanner` note explaining the data limitation (e.g. Supplier Delivery, Supplier Scorecard)

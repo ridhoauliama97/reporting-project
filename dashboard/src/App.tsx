@@ -30,6 +30,10 @@ import type {
   UsageRecord,
   ParsedUsage,
 } from "./types/purchase";
+import type {
+  LoaderResponse,
+  RawRecord,
+} from "./data-loader.worker";
 import purchaseDataUrl from "./data/purchase-data.json?url";
 import Layout from "./components/Layout";
 import { Button } from "./components/ui/button";
@@ -103,44 +107,76 @@ function App() {
 
   useEffect(() => {
     let cancelled = false;
+    let worker: Worker | null = null;
     setLoadError(false);
-    fetch(purchaseDataUrl)
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((data: (PurchaseItem | PurchaseOrderRecord | StockRecord | TransferRecord | AdjustmentRecord | UsageRecord)[]) => {
-        if (!cancelled) {
-          const parsed = parseAllItems(data as PurchaseItem[]);
-          setAllItems(parsed);
-          setAllPurchaseOrders(parseAllPurchaseOrders(data as PurchaseOrderRecord[]));
-          setAllStock(parseAllStock(data as StockRecord[]));
-          setAllTransfers(parseAllTransfers(data as TransferRecord[]));
-          setAllAdjustments(parseAllAdjustments(data as AdjustmentRecord[]));
-          setAllUsages(parseAllUsages(data as UsageRecord[]));
-          setDateRange((prev) => {
-            if (!prev.start || !prev.end) return prev;
-            const inRange = parsed.some(
-              (i) =>
-                i.purchaseDateObj &&
-                i.purchaseDateObj >= prev.start! &&
-                i.purchaseDateObj <= prev.end!,
-            );
-            if (inRange || parsed.length === 0) return prev;
-            const dates = parsed
-              .map((i) => i.purchaseDateObj)
-              .filter((d): d is Date => d !== null)
-              .sort((a, b) => a.getTime() - b.getTime());
-            if (dates.length === 0) return prev;
-            return { start: dates[0], end: dates[dates.length - 1] };
-          });
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setLoadError(true);
+
+    const applyData = (data: RawRecord[]) => {
+      if (cancelled) return;
+      const parsed = parseAllItems(data as PurchaseItem[]);
+      setAllItems(parsed);
+      setAllPurchaseOrders(
+        parseAllPurchaseOrders(data as PurchaseOrderRecord[]),
+      );
+      setAllStock(parseAllStock(data as StockRecord[]));
+      setAllTransfers(parseAllTransfers(data as TransferRecord[]));
+      setAllAdjustments(parseAllAdjustments(data as AdjustmentRecord[]));
+      setAllUsages(parseAllUsages(data as UsageRecord[]));
+      setDateRange((prev) => {
+        if (!prev.start || !prev.end) return prev;
+        const inRange = parsed.some(
+          (i) =>
+            i.purchaseDateObj &&
+            i.purchaseDateObj >= prev.start! &&
+            i.purchaseDateObj <= prev.end!,
+        );
+        if (inRange || parsed.length === 0) return prev;
+        const dates = parsed
+          .map((i) => i.purchaseDateObj)
+          .filter((d): d is Date => d !== null)
+          .sort((a, b) => a.getTime() - b.getTime());
+        if (dates.length === 0) return prev;
+        return { start: dates[0], end: dates[dates.length - 1] };
       });
+    };
+
+    const loadOnMainThread = () => {
+      fetch(purchaseDataUrl)
+        .then((res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json();
+        })
+        .then((data: RawRecord[]) => {
+          applyData(data);
+        })
+        .catch(() => {
+          if (!cancelled) setLoadError(true);
+        });
+    };
+
+    try {
+      worker = new Worker(
+        new URL("./data-loader.worker.ts", import.meta.url),
+        { type: "module" },
+      );
+      worker.onmessage = (event: MessageEvent<LoaderResponse>) => {
+        if (cancelled) return;
+        if (event.data.ok && event.data.data) {
+          applyData(event.data.data);
+        } else {
+          loadOnMainThread();
+        }
+      };
+      worker.onerror = () => {
+        if (!cancelled) loadOnMainThread();
+      };
+      worker.postMessage(purchaseDataUrl);
+    } catch {
+      loadOnMainThread();
+    }
+
     return () => {
       cancelled = true;
+      worker?.terminate();
     };
   }, [loadKey]);
 
