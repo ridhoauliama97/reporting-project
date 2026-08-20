@@ -18,6 +18,23 @@ import {
   FolderCheckIcon,
   FileOutputIcon,
   BrainCircuitIcon,
+  WarehouseIcon,
+  CoinsIcon,
+  ArrowLeftRightIcon,
+  PackageXIcon,
+  GaugeIcon,
+  ZapIcon,
+  CalendarClockIcon,
+  ListChecksIcon,
+  SlidersHorizontalIcon,
+  WorkflowIcon,
+  PieChartIcon,
+  Grid3x3Icon,
+  MoveRightIcon,
+  PackageCheckIcon,
+  PercentIcon,
+  TargetIcon,
+  PackageIcon,
 } from "lucide-react";
 
 export interface DocsSubmenu {
@@ -145,6 +162,98 @@ export const DOCS_MENUS: DocsMenu[] = [
         title: "Analytics & AI Insights",
         slug: "analytics-insights",
         icon: <BrainCircuitIcon />,
+      },
+    ],
+  },
+  {
+    title: "Warehouse",
+    slug: "warehouse",
+    icon: <WarehouseIcon />,
+    submenus: [
+      {
+        title: "Inventory Value",
+        slug: "inventory-value",
+        icon: <CoinsIcon />,
+      },
+      {
+        title: "Stock Movement",
+        slug: "stock-movement",
+        icon: <ArrowLeftRightIcon />,
+      },
+      {
+        title: "Dead Stock",
+        slug: "dead-stock",
+        icon: <PackageXIcon />,
+      },
+      {
+        title: "Slow Moving",
+        slug: "slow-moving",
+        icon: <GaugeIcon />,
+      },
+      {
+        title: "Fast Moving",
+        slug: "fast-moving",
+        icon: <ZapIcon />,
+      },
+      {
+        title: "Inventory Aging",
+        slug: "inventory-aging",
+        icon: <CalendarClockIcon />,
+      },
+      {
+        title: "Cycle Count Accuracy",
+        slug: "cycle-count-accuracy",
+        icon: <ListChecksIcon />,
+      },
+      {
+        title: "Stock Adjustment",
+        slug: "stock-adjustment",
+        icon: <SlidersHorizontalIcon />,
+      },
+      {
+        title: "Warehouse Productivity",
+        slug: "warehouse-productivity",
+        icon: <WorkflowIcon />,
+      },
+      {
+        title: "Warehouse Utilization",
+        slug: "warehouse-utilization",
+        icon: <PieChartIcon />,
+      },
+      {
+        title: "Location Occupancy",
+        slug: "location-occupancy",
+        icon: <Grid3x3Icon />,
+      },
+      {
+        title: "Transfer History",
+        slug: "transfer-history",
+        icon: <MoveRightIcon />,
+      },
+      {
+        title: "Stock Availability",
+        slug: "stock-availability",
+        icon: <PackageCheckIcon />,
+      },
+      {
+        title: "Fill Rate",
+        slug: "fill-rate",
+        icon: <PercentIcon />,
+      },
+      {
+        title: "Picking Accuracy",
+        slug: "picking-accuracy",
+        icon: <TargetIcon />,
+      },
+      {
+        title: "Packing Accuracy",
+        slug: "packing-accuracy",
+        icon: <PackageIcon />,
+      },
+      {
+        title: "Delivery Performance",
+        slug: "delivery-performance",
+        icon: <TruckIcon />,
       },
     ],
   },

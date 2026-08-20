@@ -2,13 +2,13 @@
 
 ## Project Overview
 
-**Purchasing dashboard** — frontend-only Vite + React 19 + TypeScript + Tailwind CSS v4 + shadcn/ui app. Real dataset (`purchase-data.json`, ~3,010 invoice line items); never use mock data. Sidebar has a standalone **Dashboard** menu at the top (landing `/dashboard` — 4 KPI cards with trend, overall AI summary, 6 report previews), then one active group (**Purchasing**, 16 items: 14 reports + Reports & Exports + Analytics & AI Insights; **Warehouse** group is disabled "Coming Soon") and a footer **Documentation** link that opens `/docs` in a new tab. Purchase Summary keeps only the full line-item table.
+**Purchasing dashboard** — frontend-only Vite + React 19 + TypeScript + Tailwind CSS v4 + shadcn/ui app. Real dataset (`dashboard/src/data/purchase-data.json`, merged: ±25.917 records — purchase invoice 3.010 + PO 2.996 + PR 2.650 + stock 2.861 + transfer 7.174 + adjustment 706 + usage 6.520); never use mock data. Sidebar has a standalone **Dashboard** menu at the top (landing `/dashboard` — 4 KPI cards with trend, overall AI summary, 6 report previews), then two active groups (**Purchasing**, 16 items: 14 reports + Reports & Exports + Analytics & AI Insights; **Warehouse**, 17 items: 12 real-data reports + 5 placeholder empty-state pages) and a footer **Documentation** link that opens `/docs` in a new tab. Purchase Summary keeps only the full line-item table.
 
 ## Key Files
 
 - `prompt.md` — Complete page-by-page spec (14 pages, widget/table definitions, data rules). Trust it unless the user overrides.
 - `polish.md` — Responsive polish spec (fluid type scale, mobile table strategies, breakpoints 375/640/1024). Respect these patterns in new UI work.
-- `purchase-data.json` — Dataset (repo root, imported into `dashboard/src/data/`)
+- `dashboard/src/data/purchase-data.json` — **Dataset gabungan (single source of truth, ±25.917 records, 7 tipe record)**; dimuat runtime oleh aplikasi. Jangan pernah membuat salinan di repo root — root tidak lagi memegang data (pernah ada versi lama purchase-only yang menyesatkan, sudah dihapus)
 - `dashboard/` — The app; all work happens here
 - `dashboard/vercel.json` — SPA rewrite (`/(.*)` → `/index.html`); client routes 404 without it
 - `dashboard/scripts/version.mjs` — Computes app version from git commit messages; see CI/CD below
@@ -40,17 +40,19 @@ npm run preview   # Preview production build
 
 ## Data Handling (Critical)
 
-- **Dataset is loaded at runtime, not bundled**: `src/data/purchase-data.json` is imported via `?url` in `App.tsx` and fetched with `JSON.parse`-style `res.json()` — keeps the ~20 MB JSON (and its parse cost) out of the main bundle. `App` gates dashboard routes on `allItems.length` (loading spinner / error + retry). Don't re-import the JSON statically anywhere — it would re-inflate the index bundle.
+- **Dataset is loaded at runtime, not bundled**: `src/data/purchase-data.json` is imported via `?url` in `App.tsx` and fetched with `JSON.parse`-style `res.json()` — keeps the ~20 MB JSON (and its parse cost) out of the main bundle. `App` gates dashboard routes on `allItems.length` (loading spinner / error + retry). Don't re-import the JSON statically anywhere — it would re-inflate the index bundle. **Single source of truth is `dashboard/src/data/purchase-data.json` only** — no copies at repo root.
 - **Numeric fields are strings** in the JSON: `quantity`, `unitCost`, `poUnitCost`, `netTotal`, `qtyOrdered`, `poPiDays`, `prPiDays`, `poPiOverdueDays`. Parse with `parseAllItems()` (`utils/formatters.ts`) before math.
 - **Gotcha**: `parsePurchaseItem()` converts empty string `""` to `0`, not `NaN`/`null`. Pages therefore guard with `> 0` filters (e.g. `poPiDays > 0`, `qtyOrdered > 0`) rather than null checks — follow this pattern. Empty values render as `-` in the UI.
 - Only invoiced transactions (types PI/PN/PURBB). No goods-receiving, QC, or reject data.
 - **PO/PR records exist too**: the merged JSON carries `recordType: "po"` (2,996 lines) and `"pr"` (2,650, deduped). Parse with `parseAllPurchaseOrders()` (`formatters.ts`); filter by `orderDateObj` via `filterPurchaseOrdersByDateRange()`. App passes `poItems` (date-filtered) to the three PO pages.
 - PO status is derived, not stored: **Open** = `purchaseInvoice === ""`, **Closed** = `purchaseInvoice` filled, **Outstanding** = `qtyOutstanding > 0`. `pctDelivered` is a fraction (1.0000 = 100%), not a percent — multiply by 100 for display.
+- **Warehouse datasets** (also in the merged JSON): `stock` (2,861 — **snapshot** saldo per item+gudang, satu tanggal `date`), `transfer` (7,174), `adjustment` (706, semua approved), `usage` (6,520). Parse via `parseAllStock/parseAllTransfers/parseAllAdjustments/parseAllUsages` (`formatters.ts`); filter temporal records with generic `filterByDateAccessor(items, start, end, getDate)`. App passes `filteredTransfers/filteredAdjustments/filteredUsages` (date-filtered) plus unfiltered `allStock` to warehouse pages.
+- **Stock is a snapshot**: the 7 stock-based pages (Inventory Value, Dead/Slow/Fast Moving, Inventory Aging, Location Occupancy, Stock Availability) have **no DateFilter** (they don't take `dateRange` props) and show an InfoBanner noting the snapshot date. Warehouse display names use `warehouseFull(code, name)` (data has both code and name, names sometimes already prefixed with code).
 - `itemCategory` has exactly 5 values: `BAHAN BAKU`, `BAHAN PENDUKUNG`, `SPAREPART`, `WORK IN PROGRESS`, `BARANG DAGANG`.
 
 ## Placeholder Pages (Never Fabricate Data)
 
-Page #4 (Supplier Quality) must stay empty-state via the `EmptyState` component with the existing message. No invented numbers, ever. Its docs page explains why (data not in dataset) — keep that explanation in sync.
+Page #4 (Supplier Quality) must stay empty-state via the `EmptyState` component with the existing message. Same for the 5 warehouse placeholders (Cycle Count Accuracy, Warehouse Productivity, Warehouse Utilization, Picking Accuracy, Packing Accuracy) — no invented numbers, ever. Their docs pages explain why (data not in dataset) — keep those explanations in sync.
 
 ## TypeScript Gotchas
 
@@ -79,7 +81,7 @@ Page #4 (Supplier Quality) must stay empty-state via the `EmptyState` component 
 
 - Route `/docs` renders **outside** the dashboard `Layout` shell (`App.tsx` has `<Route path="/docs">` as a sibling of the `path="*"` Layout wrapper); it has its own shell (header + `ThemeToggle` + back link).
 - Content lives in `dashboard/src/docs-content/{menu}/{slug}.md` (markdown), registered in `docs-content/index.tsx` (`DOCS_MENUS`, `getDocContent`, `resolveDoc`). **Adding a menu = new folder + one config entry** — no component changes.
-- `DOCS_MENUS` mirrors the dashboard sidebar: menus & submenus use the **same lucide icons as `nav-config.tsx`**, titles match sidebar 1:1 (Statistics Overview → Dashboard; Purchasing → 16 submenus; Overview → Tentang Aplikasi/Istilah). DocsSubmenu has an `icon` field rendered by `DocsPage`.
+- `DOCS_MENUS` mirrors the dashboard sidebar: menus & submenus use the **same lucide icons as `nav-config.tsx`**, titles match sidebar 1:1 (Statistics Overview → Dashboard; Purchasing → 16 submenus; Warehouse → 17 submenus; Overview → Tentang Aplikasi/Istilah). DocsSubmenu has an `icon` field rendered by `DocsPage`.
 - `DocsPage.tsx` renders markdown with `react-markdown` **+ `remark-gfm`** (tables must not regress to raw `|` text); styling is plain CSS under `.docs-content` in `index.css` (not a Tailwind typography plugin).
 - Every page has a matching `.md` doc; update both when a page's behavior changes (spec: `prompt.md` per-page notes live in "Per-Page Notes" below).
 
@@ -108,9 +110,9 @@ dashboard/src/
 │   ├── EmptyState.tsx # Placeholder pages
 │   ├── InfoBanner.tsx # Data-limitation notes
 │   └── ThemeToggle.tsx
-├── pages/            # Dashboard + 14 reports + ReportsExports, AnalyticsInsights, DocsPage, WarehousePlaceholder
+├── pages/            # Dashboard + 14 reports + ReportsExports, AnalyticsInsights, DocsPage, 17 warehouse pages
 ├── docs-content/     # {menu}/{slug}.md + index.tsx config (see Documentation Hub)
-├── utils/formatters.ts # parseAllItems, formatRupiah, formatRupiahCompact, formatPercent, filterByDateRange, round1, round2
+├── utils/formatters.ts # parseAllItems/PO/Stock/Transfers/Adjustments/Usages, formatRupiah, formatRupiahCompact, formatPercent, filterByDateRange, filterByDateAccessor, warehouseFull, round1, round2
 ├── utils/analytics.ts  # rule-based insight engine (no LLM)
 ├── utils/exporter.ts   # CSV/Excel/PDF export (used by DataTable + ReportsExports)
 ├── utils/reports.ts    # REPORTS catalog (ReportDefinition/ReportExport): defines every report's export shape; imported by ReportsExports + analytics
@@ -132,3 +134,17 @@ dashboard/src/
 - #12 Open PO: rows where `qtyDelivered === 0` (no delivery yet) from `poItems`, grouped per PO number (same layout as #11); StatCards = PO count, item-line count, total order value, qty not yet received; bar chart = PO value per supplier (top 10)
 - #13 Closed PO: rows where every line of a PO has `qtyDelivered >= qtyOrdered` (fully received), grouped per PO number (same layout as #11/#12); StatCards = PO count, item-line count, total order value, qty not yet received (always 0); bar chart = PO value per supplier (top 10); all three PO pages show an InfoBanner explaining the derived status (no open/closed field in source)
 - #14 Supplier Scorecard: score = avg(price score, timeliness score), both 0-100; rating badge Excellent ≥80 / Good 60-79 / Perlu Perhatian <60
+
+## Warehouse Pages (12 real + 5 placeholder)
+
+- **Inventory Value** (stock snapshot): value = `onHand × lastPurchaseCost`, grouped per warehouse; InfoBanner snapshot note
+- **Stock Movement** (temporal): combines 3 sources — transfer (origin=OUT `quantity`/transferDate, destination=IN `receivedQuantity`/receivedDate), adjustment (CR=IN, DB=OUT), usage (OUT); monthly in/out chart + table per warehouse
+- **Dead/Slow/Fast Moving** (stock snapshot): thresholds `daysSinceLastUsage` ≥180 / 90–179 / <30, always with `onHand > 0`
+- **Inventory Aging** (stock snapshot): buckets by `age` field — 0-30/31-60/61-90/91-180/180+ hari
+- **Stock Adjustment** (temporal): CR/DB qty + adjustedValue per warehouse, monthly CR vs DB chart, filter on `adjustmentDate`
+- **Location Occupancy** (stock snapshot): group by warehouse + `shelfCode` (empty → "Tanpa Lokasi")
+- **Transfer History** (temporal): line-level table (memo, origin→destination, qty, received, lineTotal), filter on `transferDate`
+- **Stock Availability** (stock snapshot): available = `onHand − qtyBlocked`; shortage vs `qtyMinimumOrder` (red highlight when > 0)
+- **Fill Rate** (temporal): per destination warehouse, `receivedQuantity/quantity` from transfers (not PO!)
+- **Delivery Performance** (temporal): proxy from transfers — `receivedDate − transferDate` days (Received only), pending excluded from avg
+- **Placeholders**: Cycle Count Accuracy, Warehouse Productivity, Warehouse Utilization, Picking Accuracy, Packing Accuracy — `EmptyState` only, docs explain missing data

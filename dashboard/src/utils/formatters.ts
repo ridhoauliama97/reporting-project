@@ -1,14 +1,14 @@
-import type { PurchaseItem, ParsedPurchaseItem, PurchaseOrderRecord, ParsedPurchaseOrder } from "../types/purchase";
+import type { PurchaseItem, ParsedPurchaseItem, PurchaseOrderRecord, ParsedPurchaseOrder, StockRecord, ParsedStockRecord, TransferRecord, ParsedTransfer, AdjustmentRecord, ParsedAdjustment, UsageRecord, ParsedUsage } from "../types/purchase";
 import { format, parseISO, isValid } from "date-fns";
 import { id } from "date-fns/locale";
 
-export function parsePurchaseItem(item: PurchaseItem): ParsedPurchaseItem {
-  const parseNum = (val: string): number => {
-    if (val === "" || val === null || val === undefined) return 0;
-    const num = parseFloat(val);
-    return isNaN(num) ? 0 : num;
-  };
+const parseNum = (val: string | undefined | null): number => {
+  if (val === "" || val === null || val === undefined) return 0;
+  const num = parseFloat(val);
+  return isNaN(num) ? 0 : num;
+};
 
+export function parsePurchaseItem(item: PurchaseItem): ParsedPurchaseItem {
   return {
     ...item,
     qtyOrdered: parseNum(item.qtyOrdered),
@@ -55,12 +55,6 @@ export function parseAllItems(items: PurchaseItem[]): ParsedPurchaseItem[] {
 }
 
 export function parsePurchaseOrder(item: PurchaseOrderRecord): ParsedPurchaseOrder {
-  const parseNum = (val: string): number => {
-    if (val === "" || val === null || val === undefined) return 0;
-    const num = parseFloat(val);
-    return isNaN(num) ? 0 : num;
-  };
-
   return {
     ...item,
     deliveryDays: parseNum(item.deliveryDays),
@@ -234,9 +228,134 @@ export function monthKeyOf(date: Date | null | undefined): string {
   return format(date, "yyyy-MM");
 }
 
+export function monthLabelOf(date: Date | null | undefined): string {
+  if (!date || !isValid(date)) return "";
+  return format(date, "MMM yyyy", { locale: id });
+}
+
 export function byPurchaseDateAsc(
   a: { purchaseDateObj: Date | null },
   b: { purchaseDateObj: Date | null },
 ): number {
   return (a.purchaseDateObj?.getTime() ?? 0) - (b.purchaseDateObj?.getTime() ?? 0);
+}
+
+export function parseStockItem(item: StockRecord): ParsedStockRecord {
+  return {
+    ...item,
+    onHand: parseNum(item.onHand),
+    outstandingPO: parseNum(item.outstandingPO),
+    outstandingSO: parseNum(item.outstandingSO),
+    qtyInTransit: parseNum(item.qtyInTransit),
+    qtyBlocked: parseNum(item.qtyBlocked),
+    qtyMinimumOrder: parseNum(item.qtyMinimumOrder),
+    lastPurchaseCost: parseNum(item.lastPurchaseCost),
+    lastPurchaseQuantity: parseNum(item.lastPurchaseQuantity),
+    daysSinceLastUsage: parseNum(item.daysSinceLastUsage),
+    age: parseNum(item.age),
+    dateObj: null,
+  };
+}
+
+export function parseAllStock(items: StockRecord[]): ParsedStockRecord[] {
+  const dateCache = new Map<string, Date | null>();
+  return items
+    .filter((item) => item.recordType === "stock")
+    .map((item) => {
+      const parsed = parseStockItem(item);
+      parsed.dateObj = parseDateCached(dateCache, item.date);
+      return parsed;
+    });
+}
+
+export function parseTransferItem(item: TransferRecord): ParsedTransfer {
+  return {
+    ...item,
+    quantity: parseNum(item.quantity),
+    receivedQuantity: parseNum(item.receivedQuantity),
+    unitPrice: parseNum(item.unitPrice),
+    lineTotal: parseNum(item.lineTotal),
+    transferDateObj: null,
+    receivedDateObj: null,
+  };
+}
+
+export function parseAllTransfers(items: TransferRecord[]): ParsedTransfer[] {
+  const dateCache = new Map<string, Date | null>();
+  return items
+    .filter((item) => item.recordType === "transfer")
+    .map((item) => {
+      const parsed = parseTransferItem(item);
+      parsed.transferDateObj = parseDateCached(dateCache, item.transferDate);
+      parsed.receivedDateObj = parseDateCached(dateCache, item.receivedDate);
+      return parsed;
+    });
+}
+
+export function parseAdjustmentItem(item: AdjustmentRecord): ParsedAdjustment {
+  return {
+    ...item,
+    quantity: parseNum(item.quantity),
+    quantityCR: parseNum(item.quantityCR),
+    quantityDB: parseNum(item.quantityDB),
+    adjustedValue: parseNum(item.adjustedValue),
+    adjustedValuePerUnit: parseNum(item.adjustedValuePerUnit),
+    adjustmentDateObj: null,
+  };
+}
+
+export function parseAllAdjustments(items: AdjustmentRecord[]): ParsedAdjustment[] {
+  const dateCache = new Map<string, Date | null>();
+  return items
+    .filter((item) => item.recordType === "adjustment")
+    .map((item) => {
+      const parsed = parseAdjustmentItem(item);
+      parsed.adjustmentDateObj = parseDateCached(dateCache, item.adjustmentDate);
+      return parsed;
+    });
+}
+
+export function parseUsageItem(item: UsageRecord): ParsedUsage {
+  return {
+    ...item,
+    quantity: parseNum(item.quantity),
+    quantityReturned: parseNum(item.quantityReturned),
+    qtyReturned: parseNum(item.qtyReturned),
+    totalCost: parseNum(item.totalCost),
+    cost: parseNum(item.cost),
+    usageDateObj: null,
+  };
+}
+
+export function parseAllUsages(items: UsageRecord[]): ParsedUsage[] {
+  const dateCache = new Map<string, Date | null>();
+  return items
+    .filter((item) => item.recordType === "usage")
+    .map((item) => {
+      const parsed = parseUsageItem(item);
+      parsed.usageDateObj = parseDateCached(dateCache, item.usageDate);
+      return parsed;
+    });
+}
+
+export function filterByDateAccessor<T>(
+  items: T[],
+  startDate: Date | null,
+  endDate: Date | null,
+  getDate: (item: T) => Date | null,
+): T[] {
+  if (!startDate && !endDate) return items;
+  return items.filter((item) => {
+    const date = getDate(item);
+    if (!date) return false;
+    if (startDate && date < startDate) return false;
+    if (endDate && date > endDate) return false;
+    return true;
+  });
+}
+
+export function warehouseFull(code: string, name: string): string {
+  const n = name?.trim();
+  if (!n) return warehouseLabel(code);
+  return /^[0-9]+:/.test(n) ? n : `${code}: ${n}`;
 }
