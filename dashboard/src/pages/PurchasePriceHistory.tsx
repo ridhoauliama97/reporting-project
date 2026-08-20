@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import type { ParsedPurchaseItem } from "../types/purchase";
+import type { DateRange } from "../types/ui";
 import { formatRupiah, formatRupiahCompact, formatNumber, formatDate, byPurchaseDateAsc } from "../utils/formatters";
 import PageLayout from "../components/PageLayout";
 import StatCard from "../components/StatCard";
@@ -31,11 +32,6 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-
-interface DateRange {
-  start: Date | null;
-  end: Date | null;
-}
 
 interface PurchasePriceHistoryProps {
   items: ParsedPurchaseItem[];

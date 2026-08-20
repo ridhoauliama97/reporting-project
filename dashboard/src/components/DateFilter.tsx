@@ -1,12 +1,8 @@
-import { format } from "date-fns";
+
+import type { DateRange } from "../types/ui";import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
-
-interface DateRange {
-  start: Date | null;
-  end: Date | null;
-}
 
 interface DateFilterProps {
   dateRange: DateRange;

@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import type { ParsedPurchaseItem } from "../types/purchase";
+import type { DateRange } from "../types/ui";
 import { formatDate } from "../utils/formatters";
 import PageLayout from "../components/PageLayout";
 import StatCard from "../components/StatCard";
@@ -14,11 +15,6 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-
-interface DateRange {
-  start: Date | null;
-  end: Date | null;
-}
 
 interface PurchaseLeadTimeProps {
   items: ParsedPurchaseItem[];

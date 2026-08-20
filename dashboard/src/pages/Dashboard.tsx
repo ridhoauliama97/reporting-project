@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+
+import type { DateRange } from "../types/ui";import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import type { ParsedPurchaseItem } from "@/types/purchase";
 import { ITEM_CATEGORIES, CATEGORY_LABELS } from "@/types/purchase";
@@ -23,11 +24,6 @@ import {
   TrendingUpIcon,
   TruckIcon,
 } from "lucide-react";
-
-interface DateRange {
-  start: Date | null;
-  end: Date | null;
-}
 
 interface DashboardProps {
   items: ParsedPurchaseItem[];

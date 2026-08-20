@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import type { ParsedPurchaseItem } from "../types/purchase";
+import type { DateRange } from "../types/ui";
 import { formatRupiah, formatPercent, formatDate, byPurchaseDateAsc } from "../utils/formatters";
 import PageLayout from "../components/PageLayout";
 import StatCard from "../components/StatCard";
@@ -7,11 +8,6 @@ import DataTable from "../components/DataTable";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-
-interface DateRange {
-  start: Date | null;
-  end: Date | null;
-}
 
 interface PriceIncreaseAlertProps {
   items: ParsedPurchaseItem[];

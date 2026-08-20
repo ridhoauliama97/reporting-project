@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import type { ParsedPurchaseItem, ParsedPurchaseOrder } from "../types/purchase";
+import type { DateRange } from "../types/ui";
 import PageLayout from "../components/PageLayout";
 import EmptyState from "../components/EmptyState";
 import {
@@ -47,11 +48,6 @@ import {
   UserIcon,
   WalletIcon,
 } from "lucide-react";
-
-interface DateRange {
-  start: Date | null;
-  end: Date | null;
-}
 
 interface AnalyticsInsightsProps {
   items: ParsedPurchaseItem[];

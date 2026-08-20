@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { AlertTriangleIcon, DownloadIcon } from "lucide-react";
 import type { ParsedPurchaseItem, ParsedPurchaseOrder } from "../types/purchase";
+import type { DateRange } from "../types/ui";
 import PageLayout from "../components/PageLayout";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,11 +14,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { REPORTS } from "../utils/reports";
 import { exportData, type ExportFormat } from "../utils/exporter";
-
-interface DateRange {
-  start: Date | null;
-  end: Date | null;
-}
 
 interface ReportsExportsProps {
   items: ParsedPurchaseItem[];
