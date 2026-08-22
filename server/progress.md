@@ -30,3 +30,8 @@
 - Konteks dipulihkan; rencana lama diarsipkan sebagai COMPLETED
 - Kandidat milestone: M1 integrasi dashboard (rekomendasi), M2 email/reset-password, M3 social login, M4 README
 - Menunggu keputusan user M1-M4; Next Step: update plan sesuai pilihan
+
+## 2026-08-23 — Session 3: M1 dashboard auth integration COMPLETE
+- Guest->register->logged header->logout->login ulang: Playwright 6/6 PASS
+- Gotcha client better-auth {data,error} (no throw) — login navigate fix; UserMenu refresh-on-open
+- AGENTS.md + task_plan updated; commit lokal berikut (tanpa push)

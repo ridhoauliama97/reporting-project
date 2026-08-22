@@ -10,36 +10,37 @@
 - P5 Cross-origin — `cors` middleware (origin=BETTER_AUTH_TRUSTED_ORIGINS, credentials) + docs/AGENTS + commits lokal a0af383/0e5a1bc/269f9c7 (belum dipush)
 
 ## Current Phase Summary
-- **Status:** Milestone M1 (dashboard integration) — belum mulai, menunggu pilihan user
+- **Status:** M1 COMPLETE (semua 4 sub-phase) — worktree bersih, commit lokal berikut
 - Next milestones kandidat: **M1** integrasi login dashboard (rekomendasi), M2 email verification + reset-password (SMTP), M3 login sosial, M4 README endpoint + skrip dev
 
 ## Milestone M1 — Dashboard Auth Integration (kandidat utama)
 **Goal:** Dashboard (Vite :5173) bisa register/login, header menampilkan user, halaman sensitif bisa cek sesi — tanpa mengganggu fitur existing.
 
-### M1.1: Client auth helper di dashboard
-**Status:** pending
-- [ ] `npm i` better-auth client? ATAU fetch manual — keputusan: pakai `createAuthClient` dari `better-auth/react` (baseURL http://localhost:4000) + vite dev proxy `/api` → :4000 (hindari CORS di prod dev; atau tetap cross-origin + credentials:true — sudah terbukti jalan)
-- [ ] Helper `src/lib/auth-client.ts` (vc login/register/signOut/useSession) di bawah `utils/`? — selaras struktur dashboard
-- [ ] Cek: `npm run build` dashboard masih lolos (TS strict, noUnusedLocals)
+### M1.1: Client auth helper di dashboard (complete)
+**Status:** complete
+- [x] better-auth `createAuthClient` (baseURL VITE_AUTH_URL ?? http://localhost:4000) — cross-origin langsung, tanpa proxy
+- [x] `src/lib/auth-client.ts` — lazy dynamic import (client TIDAK masuk index bundle)
+- [x] `npm run build` dashboard lolos
 
-### M1.2: UI login/register
-**Status:** pending
-- [ ] Rute `/login` di luar Layout (seperti `/docs`) + halaman SimpleLogin (email/password + register switch)
-- [ ] Redirect `/` → `/login` saat belum login? ATAU hanya tombol login di site-header (tanpa gating halaman) — keputusan UX dengan user
-- [ ] Session-aware header: kartu user di SiteHeader (nama + logout), icon sementara
+### M1.2: UI login/register (complete)
+**Status:** complete
+- [x] Rute `/login` di luar Layout + halaman Login (email/password + toggle Daftar)
+- [x] Tanpa gating halaman (default): halaman laporan tetap terbuka, header session-aware (UserMenu: nama+email+Keluar; guest: Masuk)
+- [x] UserMenu refresh sesi setiap dropdown dibuka (cookie register bisa telat)
+- [x] FIX GOTCHA: client better-auth tidak throw — resolve {data,error}; cek res.error sebelum navigate
 
-### M1.3: Guard opsional
-**Status:** pending
-- [ ] Elemen terproteksi minimal: `/login` ada, tombol "Masuk" berubah jadi profil + logout; halaman laporan tetap terbuka (default)
-- [ ] (opsional) ProtectedRoute middleware di App.tsx — hanya bila user mau gating penuh
+### M1.3: Guard opsional (complete — default NO gating)
+**Status:** complete
+- [x] /login + tombol Masuk → profil + logout; halaman laporan tetap terbuka
+- [x] ProtectedRoute tetap opsional (belum diaktifkan)
 
-### M1.4: Verify + docs
-**Status:** pending
-- [ ] Playwright: login → header berubah → logout; dev server server:4000 jalan berdampingan dengan vite
-- [ ] AGENTS.md: catat pola integration (proxy vs cross-origin, baseURL, env vars)
+### M1.4: Verify + docs (complete)
+**Status:** complete
+- [x] Playwright 6/6 PASS: guest, daftar, header logged, logout, login ulang, no errors
+- [x] AGENTS.md section Dashboard Auth Integration (baseURL env, dynamic import, res.error gotcha, kedua server harus jalan)
 
 ## Next Step
-Pilih milestot (rekomendasi M1) → update di atas + jalankan M1.1.
+Commit lokal M1 (tanpa push). Kandidat berikutnya: M2 email verification/reset-password, atau update profile pengguna di dashboard (Pengaturan).
 
 ## Decisions Made
 | Date | Decision | Note |

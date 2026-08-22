@@ -136,6 +136,14 @@ dashboard/src/
 - **Schema source of truth**: `src/db/schema.ts` generated via `npx auth@latest generate` (run with `--output` + `-y`). Do NOT regenerate with `@better-auth/cli` — it's deprecated and emits a v1.4-era schema (missing `account.issuer` → runtime `BadAuthError`). Migrations live in `server/drizzle/` and are committed. Kill dev server by port (`fuser -k 4000/tcp`) — `pkill -f tsx` also matches the invoking shell.
 - Frontend remains self-contained: no dashboard code calls this API yet.
 
+## Dashboard Auth Integration (M1)
+
+- **Login page**: route `/login` renders **outside** the Layout shell (sibling of `/docs` in `App.tsx`); centered Card with Masuk/Daftar toggle; on success `navigate("/dashboard")`.
+- **`src/lib/auth-client.ts`**: lazily imports `better-auth/react` (`createAuthClient`, baseURL = `VITE_AUTH_URL` env, default `http://localhost:4000`) — dynamic import keeps the client out of the index bundle. `getAuthClient()` caches a singleton promise.
+- **Header session**: `components/dashboard/user-menu.tsx` replaces the static profile menu; it refreshes `getSession()` when the dropdown opens (cookie may not be ready right after register, so mount-only fetch showed guest).
+- **Gotcha (client)**: better-auth client methods **do not throw** — they resolve `{ data, error }`; check `res.error` before navigating (the login page did navigate on a failed duplicate sign-up until this was fixed).
+- Dev requires BOTH servers: vite `:5173` (dashboard) + api `:4000` (server/) running side by side; auth requests go cross-origin (CORS + credentials already verified).
+
 ## Per-Page Notes (from prompt.md)
 
 - #1 Purchase Summary: full line-item table with grouped "Kolom" column picker (default columns: purchaseNumber, purchaseDate, supplierName, itemName, warehouse, quantity, uom, netTotal); totals row via `totalColumns` prop

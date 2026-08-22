@@ -1,25 +1,9 @@
-import {
-  SearchIcon,
-  BellIcon,
-  CircleUserRoundIcon,
-  SettingsIcon,
-  CircleHelpIcon,
-  LogOutIcon,
-  PackageSearchIcon,
-} from "lucide-react";
+import { SearchIcon, BellIcon } from "lucide-react";
+import { UserMenu } from "./user-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -86,48 +70,7 @@ export function SiteHeader({ title, breadcrumb }: SiteHeaderProps) {
             <BellIcon />
             <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-destructive ring-2 ring-background" />
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="rounded-full"
-                aria-label="Profil"
-              >
-                <CircleUserRoundIcon className="size-6" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-sm font-medium">Admin Purchasing</span>
-                  <span className="text-xs text-muted-foreground">
-                    admin@purchasing.app
-                  </span>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                <DropdownMenuItem>
-                  <PackageSearchIcon />
-                  Data Pembelian
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <SettingsIcon />
-                  Pengaturan
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <CircleHelpIcon />
-                  Bantuan
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive focus:text-destructive">
-                <LogOutIcon />
-                Keluar
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <UserMenu />
         </div>
       </div>
     </header>
