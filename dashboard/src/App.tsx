@@ -17,6 +17,7 @@ import { filterByDateRange, parseBundle } from "./utils/formatters";
 import type { PurchaseBundle } from "./types/purchase";
 import reportDataUrl from "./data/purchasing-report-data.json?url";
 import Layout from "./components/Layout";
+import RequireAuth from "./components/RequireAuth";
 import { Button } from "./components/ui/button";
 import { Analytics } from '@vercel/analytics/react';
 
@@ -205,7 +206,8 @@ function App() {
             ) : allItems.length === 0 ? (
               <LoadingScreen />
             ) : (
-              <Layout>
+              <RequireAuth>
+                <Layout>
                 <Suspense
                   fallback={
                     <div className="flex min-h-[50vh] items-center justify-center">
@@ -405,6 +407,7 @@ function App() {
                    </Routes>
                 </Suspense>
               </Layout>
+              </RequireAuth>
             )
           }
         />
