@@ -46,7 +46,12 @@
 - [ ] README server singkat (opsional, sesuai keinginan owner)
 
 ## Next Step
-Phase 5: commit server/ + drizzle/ migrations (belum — tunggu konfirmasi user), README server opsional.
+Selesai (semua 5 fase) + post-CORS. Belum push (user: implement only).
+
+## Post-script (CORS/auth complete)
+- better-auth 1.7 TIDAK menyediakan CORS (trustedOrigins = CSRF whitelist saja) → middleware `cors` di index.ts (origin=BETTER_AUTH_TRUSTED_ORIGINS, credentials: true)
+- Preflight OPTIONS 204 + ACAO/Allow-Credentials verified; sign-up/sign-in/update-user/change-password + /api/me semua 200 lintas origin (Origin: 5173)
+- ERROR LOG: rewrite index.ts sempat membuang /api/health + /api/me + app.listen (proses exit 0 hening) — difix, build + curl OK
 
 ## Decisions Made
 | Date | Decision | Note |

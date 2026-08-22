@@ -19,3 +19,9 @@
 - Phase 4: GET /api/me — 401 без cookie, 200 with cookie
 - Phase 5 (in progress): tsc build OK, AGENTS.md updated. NOT committed; cleaning test users optional
 - ERRORS LOGGED: issuer-missing (fixed by new CLI), path-to-regexp wildcard (fixed by *splat), pkill matching own shell (use fuser -k 4000/tcp)
+
+## 2026-08-23 — Session 1c (auth complete, cross-origin)
+- CORS: trustedOrigins hanya CSRF di v1.7 → `cors` middleware ditambahkan; preflight 204 + ACAO verified
+- smoke penuh (Origin 5173): sign-in → update-user → change-password → re-login → /api/me semua 200
+- .env(.example) + auth.ts trustedOrigins + minPasswordLength 8; DB test users truncated
+- Commit lokal: 0e5a1bc (feat: cross-origin auth) — TIDAK di-push
