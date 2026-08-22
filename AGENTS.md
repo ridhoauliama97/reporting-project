@@ -143,6 +143,8 @@ dashboard/src/
 - **Header session**: `components/dashboard/user-menu.tsx` replaces the static profile menu; it refreshes `getSession()` when the dropdown opens (cookie may not be ready right after register, so mount-only fetch showed guest).
 - **Gotcha (client)**: better-auth client methods **do not throw** — they resolve `{ data, error }`; check `res.error` before navigating (the login page did navigate on a failed duplicate sign-up until this was fixed).
 - Dev requires BOTH servers: vite `:5173` (dashboard) + api `:4000` (server/) running side by side; auth requests go cross-origin (CORS + credentials already verified).
+- **Email flows (M2)**: `src/mailer.ts` uses SMTP env (`SMTP_HOST/PORT/USER/PASS/SECURE`, `EMAIL_FROM`); without `SMTP_HOST` it's a **dev transport** that prints mails (+ links) to the server console — full local E2E without SMTP. `auth.ts`: `emailVerification.sendOnSignUp: true` (email sent on sign-up; login stays open), reset/verify links built to `BETTER_AUTH_REDIRECT_URL` (dashboard); reset token lives in the URL PATH (`/reset-password/:token`) but the dashboard page receives it via `?token=` (auth.ts builds the link; POST reset-password uses the token body).
+- **Dashboard flows**: `/reset-password` page (outside Layout) — email form, or token form (when `?token=` present); Login page has "Lupa password?" link; after register, `navigate("/dashboard", { state: { registered: true } })` shows an `InfoBanner`. In E2E scripts the mailing links are read straight from the server log (grep `[mailer DEV] LINK:`).
 
 ## Per-Page Notes (from prompt.md)
 

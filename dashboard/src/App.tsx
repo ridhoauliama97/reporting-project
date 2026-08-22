@@ -40,6 +40,7 @@ const AnalyticsInsights = lazy(() => import("./pages/AnalyticsInsights"));
 const WarehousePlaceholder = lazy(() => import("./pages/WarehouseReport"));
 const DocsPage = lazy(() => import("./pages/DocsPage"));
 const LoginPage = lazy(() => import("./pages/Login"));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPassword"));
 
 const WAREHOUSES: Record<string, string> = {
   "gudang-bahan-baku": "01: GUDANG BAHAN BAKU",
@@ -168,6 +169,20 @@ function App() {
               }
             >
               <LoginPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/reset-password"
+          element={
+            <Suspense
+              fallback={
+                <div className="flex min-h-[50vh] items-center justify-center">
+                  <div className="size-8 animate-spin rounded-full border-2 border-border border-t-foreground" />
+                </div>
+              }
+            >
+              <ResetPasswordPage />
             </Suspense>
           }
         />

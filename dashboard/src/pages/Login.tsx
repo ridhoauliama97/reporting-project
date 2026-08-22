@@ -41,7 +41,7 @@ export default function Login() {
         const res = await client.signIn.email({ email, password });
         if (res.error) throw new Error(res.error.message ?? "Gagal masuk");
       }
-      navigate("/dashboard");
+      navigate("/dashboard", { state: { registered: true } });
     } catch (err) {
       const msg =
         err instanceof Error && err.message
@@ -104,6 +104,16 @@ export default function Login() {
                   mode === "login" ? "current-password" : "new-password"
                 }
               />
+              {mode === "login" && (
+                <div className="text-right">
+                  <Link
+                    to="/reset-password"
+                    className="text-xs text-muted-foreground underline-offset-4 hover:underline"
+                  >
+                    Lupa password?
+                  </Link>
+                </div>
+              )}
             </div>
             {error && (
               <p className="text-sm text-destructive">{error}</p>

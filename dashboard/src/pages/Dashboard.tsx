@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import InfoBanner from "../components/InfoBanner";
 import type { ParsedPurchaseItem } from "@/types/purchase";
 import { ITEM_CATEGORIES, CATEGORY_LABELS } from "@/types/purchase";
 import { formatRupiah, formatNumber, formatPercent } from "@/utils/formatters";
@@ -254,6 +255,9 @@ export default function Dashboard({
     };
   }, [items]);
 
+  const location = useLocation();
+  const justRegistered = (location.state as { registered?: boolean } | null)?.registered === true;
+
   return (
     <PageLayout
       title={`${getGreeting()}, User. 👋`}
@@ -261,6 +265,11 @@ export default function Dashboard({
       dateRange={dateRange}
       onDateRangeChange={onDateRangeChange}
     >
+      {justRegistered && (
+        <InfoBanner>
+          Akun berhasil dibuat. Email verifikasi telah dikirim ke alamat email Anda — periksa kotak masuk Anda.
+        </InfoBanner>
+      )}
       <SectionCards items={items} prevItems={prevItems} />
 
       <Card className="border-teal-500/30 bg-linear-to-t from-teal-500/5 to-card">

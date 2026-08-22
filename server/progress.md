@@ -35,3 +35,9 @@
 - Guest->register->logged header->logout->login ulang: Playwright 6/6 PASS
 - Gotcha client better-auth {data,error} (no throw) — login navigate fix; UserMenu refresh-on-open
 - AGENTS.md + task_plan updated; commit lokal berikut (tanpa push)
+
+## 2026-08-23 — Session 4: M2 COMPLETE (email + reset password)
+- mailer.ts (SMTP env / dev-console transport), auth.ts sendOnSignUp + redirect URL, ResetPassword page + Lupa link + register banner
+- E2E 5/5 PASS: register banner, verify-link flip, reset flow, login password baru, no errors
+- Flake: submit button tak responsive sesaat setelah SPA nav (jeda 900ms menstabilkan) — dicatat, bukan bug produk
+- AGENTS.md + task_plan updated; commit lokal berikut (tanpa push)

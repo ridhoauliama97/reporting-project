@@ -10,8 +10,9 @@
 - P5 Cross-origin — `cors` middleware (origin=BETTER_AUTH_TRUSTED_ORIGINS, credentials) + docs/AGENTS + commits lokal a0af383/0e5a1bc/269f9c7 (belum dipush)
 
 ## Current Phase Summary
-- **Status:** M1 COMPLETE (semua 4 sub-phase) — worktree bersih, commit lokal berikut
-- Next milestones kandidat: **M1** integrasi login dashboard (rekomendasi), M2 email verification + reset-password (SMTP), M3 login sosial, M4 README endpoint + skrip dev
+- **Status:** M2 COMPLETE; berikutnya M3 Pengaturan profil
+- Kandidat lain (belum dipilih): M3 login sosial, M4 README endpoint"
+- **RINGKASAN STATUS**: M1 telah di-push & live (production v1.18.0); auth dasar berjalan penuh
 
 ## Milestone M1 — Dashboard Auth Integration (kandidat utama)
 **Goal:** Dashboard (Vite :5173) bisa register/login, header menampilkan user, halaman sensitif bisa cek sesi — tanpa mengganggu fitur existing.
@@ -40,7 +41,48 @@
 - [x] AGENTS.md section Dashboard Auth Integration (baseURL env, dynamic import, res.error gotcha, kedua server harus jalan)
 
 ## Next Step
-Commit lokal M1 (tanpa push). Kandidat berikutnya: M2 email verification/reset-password, atau update profile pengguna di dashboard (Pengaturan).
+M3.1: route /settings di dashboard (form nama/email/password/hapus akun).
+
+## Milestone M2 — Email Verification + Reset Password (in_progress)
+**Goal:** Daftar mengirim email verifikasi; lupa-password mengirim email reset dengan token; alur diverifikasi penuh secara lokal (tanpa SMTP asli — transport dev mencatat link ke konsol).
+
+### M2.1: Mailer abstraction (complete)
+**Status:** complete
+- [ ] npm i nodemailer (+ @types) di server/
+- [ ] src/mailer.ts: transport dari env SMTP_HOST/PORT/USER/PASS/SECURE; bila env kosong → dev transport (log email JSON + tombol/link langsung, TIDAK mengirim ke internet)
+- [ ] src/auth.ts: emailAndPassword.sendResetPassword + emailVerification.sendVerificationEmail memakai mailer (template text ID)
+- [ ] .env(.example): tambah SMTP_* + (opsional) EMAIL_FROM; BETTER_AUTH_REDIRECT_URL=http://localhost:5173
+
+### M2.2: Flow verifikasi + reset di server
+**Status:** pending
+- [ ] emailVerification.enabled; requireEmailVerification=false (login tetap terbuka via dashboard sendiri)
+- [ ] Konfirmasi route `/api/auth/verify-email`, `/request-password-reset`, `/reset-password/:token` (sudah milik better-auth)
+- [ ] Verifikasi curl: email log berisi link token; reset memakai token → password baru tersimpan (re-login sukses)
+
+### M2.3: Alur di dashboard
+**Status:** pending
+- [ ] Login.tsx: pesan "email verifikasi dikirim" setelah daftar + link "Lupa password?" → halaman reset
+- [ ] Halaman /reset-password (di luar Layout): form 1 (email → kirim link) & form 2 (token+password baru, dari query)
+- [ ] redirect verify-email → /dashboard (BETTER_AUTH_REDIRECT_URL) + state sukses/expired
+- [ ] Playwright E2E: daftar → ambil link dari log server → verifikasi → reset password → login baru
+
+### M2.4: Verify + docs
+**Status:** pending
+- [ ] lint+build server & dashboard; commit lokal; AGENTS.md catat konfigurasi email (SMTP env, dev transport)
+
+## Milestone M3 — Pengaturan Profil (setelah M2)
+**Goal:** Halaman /settings di dashboard — ubah nama, email (via verifikasi email M2), password, hapus akun.
+
+### M3.1: UI Pengaturan
+**Status:** pending
+- [ ] Route /settings (di dalam Layout); link dari user-menu item "Pengaturan"
+- [ ] Form: nama (update-user), email (change-email → kirim verifikasi M2), password (change-password), hapus akun (delete-user + konfirmasi)
+- [ ] Setelah aksi: refresh sesi (pola refresh-on-open M1)
+
+### M3.2: Verify + docs
+**Status:** pending
+- [ ] Playwright: ganti nama → header update; ganti password → re-login; delete → session hilang
+- [ ] AGENTS.md + commit lokal
 
 ## Decisions Made
 | Date | Decision | Note |
