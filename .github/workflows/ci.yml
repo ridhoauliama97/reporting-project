@@ -53,3 +53,31 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: npx vercel@latest deploy --prod --yes --build-env APP_VERSION=${{ steps.version.outputs.version }}
+
+  deploy-api:
+    name: Deploy Auth API to Vercel
+    runs-on: ubuntu-latest
+    needs: lint-and-build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.API_DATABASE_URL != ''
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Deploy production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_API_PROJECT_ID }}
+        run: npx vercel@latest deploy --prod --yes --cwd server \
+          --env DATABASE_URL=${{ secrets.API_DATABASE_URL }} \
+          --env BETTER_AUTH_SECRET=${{ secrets.API_BETTER_AUTH_SECRET }} \
+          --env BETTER_AUTH_URL=https://reporting-api.vercel.app \
+          --env BETTER_AUTH_TRUSTED_ORIGINS=https://database-report-gsu.vercel.app \
+          --env BETTER_AUTH_REDIRECT_URL=https://database-report-gsu.vercel.app
