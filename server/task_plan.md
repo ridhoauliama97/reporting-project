@@ -1,68 +1,59 @@
-# Task Plan — Auth Backend (`/server`)
+# Task Plan — Auth Backend (`/server`) + Next Milestones
 
-**Goal:** Auth service berbasis Express 5 + better-auth + PostgreSQL di `server/` — register/login/session berfungsi, terhubung ke `postgres://postgres:password@localhost:5432/db_reporting`.
+**Goal (achieved):** Auth service Express 5 + better-auth + PostgreSQL di `server/` — register/login/session/protected endpoint berfungsi, CORS lintas-origin siap (dipanggil dari http://localhost:5173).
 
-## Stack (decided)
-- Express 5, better-auth (email/password + session), drizzle-orm + pg, TypeScript, tsx (dev), tsc (build)
-- Runtime: Node v24.18.0; PostgreSQL sudah running di localhost:5432 (psql tersedia, tanpa docker)
+## COMPLETED (archive, v1)
+- P1 Scaffold — package.json (Express 5.2.1, better-auth 1.7.1, drizzle-orm 0.45.2, pg, tsx, tsc) + tsconfig NodeNext + .env(.example) + DB `db_reporting` created (`postgres://postgres:password@localhost:5432/db_reporting`) + GET /api/health 200
+- P2 DB layer — schema via `npx auth@latest generate` (canonical v1.7: `account.issuer NOT NULL`, FK indexes, unique email/token); migration 0000+0001 applied; 4 tables
+- P3 Auth service — `src/auth.ts` betterAuth (emailAndPassword + trustedOrigins env) + `toNodeHandler` mount `/api/auth/*splat`
+- P4 Guard — `GET /api/me` (auth.api.getSession), 401/200 verified
+- P5 Cross-origin — `cors` middleware (origin=BETTER_AUTH_TRUSTED_ORIGINS, credentials) + docs/AGENTS + commits lokal a0af383/0e5a1bc/269f9c7 (belum dipush)
 
 ## Current Phase Summary
-- **Status:** Phase 5 in_progress
-- **Phases:** 5 total, 4 complete
+- **Status:** Milestone M1 (dashboard integration) — belum mulai, menunggu pilihan user
+- Next milestones kandidat: **M1** integrasi login dashboard (rekomendasi), M2 email verification + reset-password (SMTP), M3 login sosial, M4 README endpoint + skrip dev
 
-## Phases
-### Phase 1: Scaffold (complete)
-**Status:** complete
-- [x] server/package.json: express@5, better-auth, drizzle-orm, pg, dotenv, typescript, tsx, @types/express@5, @types/node, @types/pg, drizzle-kit
-- [x] tsconfig.json (NodeNext, strict, outDir dist)
-- [x] .env + .env.example (DATABASE_URL) — .env* sudah di-gitignore root
-- [x] src/index.ts skeleton (Express + GET /api/health)
-- [x] Buat database `db_reporting` (psql, user postgres/password=password)
-- [x] Verifikasi: `npm run dev` jalan, /api/health 200
+## Milestone M1 — Dashboard Auth Integration (kandidat utama)
+**Goal:** Dashboard (Vite :5173) bisa register/login, header menampilkan user, halaman sensitif bisa cek sesi — tanpa mengganggu fitur existing.
 
-### Phase 2: Database layer (complete)
-**Status:** complete
-- [x] Load skill supabase-postgres-best-practices SEBELUM menulis schema
-- [x] drizzle.config.ts (driver postgres, source src/db/schema.ts, out drizzle/)
-- [x] src/db/schema.ts — tabel auth better-auth: user, session, account, verification (PARAMETER: pakai output kanonik `@better-auth/cli generate` — bukan tulisan tangan; index FK + unique token/email sudah ter-generate)
-- [x] `drizzle-kit generate` (drizzle/0000_regular_namor.sql) + `drizzle-kit migrate` → tabel terbuat
-- [x] Verifikasi: `\dt` di psql menampilkan 4 tabel + index FK
+### M1.1: Client auth helper di dashboard
+**Status:** pending
+- [ ] `npm i` better-auth client? ATAU fetch manual — keputusan: pakai `createAuthClient` dari `better-auth/react` (baseURL http://localhost:4000) + vite dev proxy `/api` → :4000 (hindari CORS di prod dev; atau tetap cross-origin + credentials:true — sudah terbukti jalan)
+- [ ] Helper `src/lib/auth-client.ts` (vc login/register/signOut/useSession) di bawah `utils/`? — selaras struktur dashboard
+- [ ] Cek: `npm run build` dashboard masih lolos (TS strict, noUnusedLocals)
 
-### Phase 3: Auth service (complete)
-**Status:** complete
-- [x] src/auth.ts — betterAuth({ emailAndPassword: { enabled: true }, database: drizzleAdapter(...) })
-- [x] Mount auth handler di `/api/auth/*splat` (v1.7: `toNodeHandler` dari `better-auth/node` — `better-auth/express` TIDAK ADA)
-- [x] Verifikasi: curl sign-up → token+user, sign-in → cookie HttpOnly, get-session → session (semua 200)
-### Phase 4: Session guard + endpoint sample (complete)
-**Status:** complete
-- [x] GET /api/me via auth.api.getSession({ headers: fromNodeHeaders(req.headers) })
-- [x] Contoh protected endpoint GET /api/me ditolak tanpa session
-- [x] Verifikasi curl: tanpa cookie 401, dengan cookie 200
+### M1.2: UI login/register
+**Status:** pending
+- [ ] Rute `/login` di luar Layout (seperti `/docs`) + halaman SimpleLogin (email/password + register switch)
+- [ ] Redirect `/` → `/login` saat belum login? ATAU hanya tombol login di site-header (tanpa gating halaman) — keputusan UX dengan user
+- [ ] Session-aware header: kartu user di SiteHeader (nama + logout), icon sementara
 
-### Phase 5: Perapian + docs (in_progress)
-**Status:** in_progress
-- [x] `npm run build` (tsc) lolos; dist/ sudah di-gitignore root
-- [x] Update AGENTS.md bagian Backend: deskripsi aktual (stack, endpoint, gotchas schema/mount)
-- [ ] README server singkat (opsional, sesuai keinginan owner)
+### M1.3: Guard opsional
+**Status:** pending
+- [ ] Elemen terproteksi minimal: `/login` ada, tombol "Masuk" berubah jadi profil + logout; halaman laporan tetap terbuka (default)
+- [ ] (opsional) ProtectedRoute middleware di App.tsx — hanya bila user mau gating penuh
+
+### M1.4: Verify + docs
+**Status:** pending
+- [ ] Playwright: login → header berubah → logout; dev server server:4000 jalan berdampingan dengan vite
+- [ ] AGENTS.md: catat pola integration (proxy vs cross-origin, baseURL, env vars)
 
 ## Next Step
-Selesai (semua 5 fase) + post-CORS. Belum push (user: implement only).
-
-## Post-script (CORS/auth complete)
-- better-auth 1.7 TIDAK menyediakan CORS (trustedOrigins = CSRF whitelist saja) → middleware `cors` di index.ts (origin=BETTER_AUTH_TRUSTED_ORIGINS, credentials: true)
-- Preflight OPTIONS 204 + ACAO/Allow-Credentials verified; sign-up/sign-in/update-user/change-password + /api/me semua 200 lintas origin (Origin: 5173)
-- ERROR LOG: rewrite index.ts sempat membuang /api/health + /api/me + app.listen (proses exit 0 hening) — difix, build + curl OK
+Pilih milestot (rekomendasi M1) → update di atas + jalankan M1.1.
 
 ## Decisions Made
 | Date | Decision | Note |
 |------|----------|------|
-| 2026-08-23 | Framework: Express 5 (bukan Fastify/Hono) | Permintaan user "gunakan express saja" |
-| 2026-08-23 | Auth: better-auth (bukan hand-rolled JWT / express-session) | Pilihan user via sesi planning; skill terinstal |
-| 2026-08-23 | ORM: drizzle-orm + pg adapter (bukan Prisma) | better-auth butuh adapter DB; drizzle + drizzle-kit lighter, schema file di-repo, skill Prisma tidak dipakai |
-| 2026-08-23 | Planning files di `server/` | Work terkonsentrasi di folder server |
+| 2026-08-23 | Express 5 + better-auth + drizzle/pg | User; skill terinstal |
+| 2026-08-23 | better-auth 1.7: `better-auth/node` toNodeHandler *(bukan `*/express`)*, Express 5 `*splat` | Hard-earned, di AGENTS.md |
+| 2026-08-23 | CORS manual (better-auth tidak menyediakan) | trustedOrigins = CSRF only |
+| 2026-08-23 | Tidak push ke main sampai integrasi dirasa siap | Perintah user "implement only" |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
 |-------|---------|------------|
-| @better-auth/cli generate: "Couldn't read your auth config in ./drizzle.config.ts" | 1 | CLI generate harus diberi config AUTH instance (`--config ./src/auth.ts`), bukan drizzle.config.ts — pindah ke src/auth.ts yang berisi betterAuth() |
-| @better-auth/cli generate meminta interaktif "Do you want to generate schema...?" | 2 | Tambah `--output` + `-y` untuk mode non-interaktif |
+| @better-auth/cli generate (v1.4 deprecated) → `account.issuer` missing | 1 | `npx auth@latest generate` (samakan runtime 1.7.1) |
+| Express 5 wildcard `*` → PathError | 1 | `*splat` |
+| `better-auth/express` subpath tidak diexport | 1 | `better-auth/node` |
+| tsx process exit 0 hening (index.ts rewrite drop listen blocks) | 2 | tulis ulang file utuh; `npm run build` sebagai gate |
+| `pkill -f tsx` membunuh shell sendiri | 2 | `fuser -k 4000/tcp` |

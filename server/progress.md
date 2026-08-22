@@ -25,3 +25,8 @@
 - smoke penuh (Origin 5173): sign-in → update-user → change-password → re-login → /api/me semua 200
 - .env(.example) + auth.ts trustedOrigins + minPasswordLength 8; DB test users truncated
 - Commit lokal: 0e5a1bc (feat: cross-origin auth) — TIDAK di-push
+
+## 2026-08-23 — Session 2: planning ulang (restructure)
+- Konteks dipulihkan; rencana lama diarsipkan sebagai COMPLETED
+- Kandidat milestone: M1 integrasi dashboard (rekomendasi), M2 email/reset-password, M3 social login, M4 README
+- Menunggu keputusan user M1-M4; Next Step: update plan sesuai pilihan
