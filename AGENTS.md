@@ -18,7 +18,7 @@
 ```bash
 cd dashboard
 npm install
-npm run dev       # Vite dev server (host: true, port 5173)
+npm run dev       # Vite dev server (host: 0.0.0.0, port 5173) — reachable via LAN IP
 npm run lint      # oxlint (config: .oxlintrc.json)
 npm run build     # tsc -b (typecheck, noEmit) && vite build — this IS the typecheck step
 npm run preview   # Preview production build
@@ -26,6 +26,12 @@ npm run preview   # Preview production build
 
 - There is **no separate typecheck script** — `npm run build` runs `tsc -b` first.
 - Verify with `npm run lint` then `npm run build` before finishing.
+- **Client routes are short slugs that differ from page titles**: `/summary`, `/by-supplier`, `/ranking`, `/quality`, `/delivery`, `/scorecard`, `/price-history`, `/variance`, `/material-cost`, `/price-alert`, `/lead-time`, `/outstanding-po`, `/open-po`, `/closed-po`, `/reports-exports`, `/analytics-insights`. Check `App.tsx` before deep-linking (e.g. Price Increase Alert lives at `/price-alert`).
+
+### Browser verification (Playwright)
+
+- Chromium executable: `/home/hex/.cache/ms-playwright/chromium-1234/chrome-linux64/chrome`; launch requires `LD_LIBRARY_PATH=/tmp/opencode/libs/usr/lib/x86_64-linux-gnu` (`playwright-core`, no test framework installed).
+- Pattern: start `npm run dev` in the background, `sleep 4`, run the script, then `pkill -f vite`. Assert on text/DOM state, not screenshots.
 
 ## CI/CD & Dynamic Version (Critical)
 
@@ -57,7 +63,7 @@ Only page #4 (Supplier Quality) stays empty-state via the `EmptyState` component
 - `verbatimModuleSyntax: true` — type-only imports must use `import type`.
 - `noUnusedLocals`/`noUnusedParameters` are errors — build fails on unused vars.
 - `erasableSyntaxOnly: true` — no TS `enum`, `namespace`, or constructor parameter properties (build errors); use const objects / discriminated unions instead.
-- Path alias `@/` → `./src/` (in `vite.config.ts` + `tsconfig.app.json`); shadcn CLI reads it, so `npx shadcn@latest add <component> -o` works non-interactively (needs network to ui.shadcn.com).
+- Path alias `@/` → `./src/` (in `vite.config.ts` + `tsconfig.app.json`). shadcn CLI reads it, but `npx shadcn@latest add <component> -o` **mis-resolves the alias here**: generated files land in a literal `@/` folder at the CWD — move them into `src/components/ui/`, delete `@/`, and review `git status` before committing (the CLI once also retitled an unrelated page, SupplierQuality).
 
 ## UI Conventions
 
@@ -68,6 +74,8 @@ Only page #4 (Supplier Quality) stays empty-state via the `EmptyState` component
 - Proxy-metric pages carry an `InfoBanner` note explaining the data limitation (e.g. Supplier Delivery, Supplier Scorecard)
 - Dark mode: `ThemeToggle` toggles `.dark` on `<html>`, persists via `localStorage` key `theme` (no next-themes in app code)
 - Responsive rules from `polish.md`: no page-level horizontal scroll; tables use horizontal-scroll container with sticky columns; fluid type scale, min 12px text
+
+- **cmdk + Tailwind v4 gotcha (`ui/command.tsx`)**: cmdk renders `data-selected="true"|"false"` on **every** item, and presence-based variants (`data-selected:bg-muted`) match both values — every item gets highlighted. Use the value-based form `data-[selected=true]:...` (command.tsx is already fixed; don't regress). Also: `<Command>`'s `onValueChange` fires only when its `value` prop is controlled.
 
 ## DataTable Gotchas (hard-earned)
 
@@ -87,6 +95,11 @@ Only page #4 (Supplier Quality) stays empty-state via the `EmptyState` component
 ## Analytics & AI Insights
 
 `utils/analytics.ts` is a **deterministic rule-based engine** (no LLM, no backend, no API calls — the app is frontend-only). Threshold constants live at the top of the file. `AnalyticsInsights.tsx` renders summaries, recommendations (Info/Perhatian/Urgent), anomaly detection, spend analysis, and a chat sheet ("Tanya Data") with source links via `REPORT_PATHS` (defined in `AnalyticsInsights.tsx`, not in the engine). Don't add LLM integration without an explicit ask.
+
+## Shared Utils Conventions
+
+- **`round1`/`round2` live only in `utils/formatters.ts`** (single source of truth, imported by both `analytics.ts` and `reports.ts`). Never redefine them locally in another module.
+- **Date helpers too**: items carry pre-parsed `purchaseDateObj`/`poDateObj`/`prDateObj`; sort/filter with those via `byPurchaseDateAsc`, `monthKeyOf`, `monthLabelOf` (`utils/formatters.ts`) instead of re-parsing date strings with `new Date(...)` in comparators (O(n log n) parses — a real perf bug when it regresses).
 
 ## Project Structure
 
@@ -115,11 +128,19 @@ dashboard/src/
 └── lib/              # cn() helper
 ```
 
+## Backend (/server) — Auth Service
+
+- Auth service: **Express 5 + better-auth** (email/password + session) **+ drizzle-orm (pg)**; TypeScript ESM (NodeNext), `tsx` for dev, `tsc` build. Postgres `db_reporting` (owner-provided local-dev defaults: `postgres://postgres:password@localhost:5432/db_reporting` — don't invent others).
+- Commands (run in `server/`): `npm run dev` (tsx watch), `npm run build` (tsc → dist), `npm start`, `db:generate`/`db:migrate` (drizzle-kit). Routes: `GET /api/health`, auth endpoints under `/api/auth/*`, sample protected `GET /api/me`.
+- **Auth wiring gotchas (better-auth 1.7.x)**: import `toNodeHandler`/`fromNodeHeaders` from `better-auth/node` — `better-auth/express` does NOT exist in 1.7. Express 5 wildcard needs named form: `/api/auth/*splat`. Session check: `auth.api.getSession({ headers: fromNodeHeaders(req.headers) })`.
+- **Schema source of truth**: `src/db/schema.ts` generated via `npx auth@latest generate` (run with `--output` + `-y`). Do NOT regenerate with `@better-auth/cli` — it's deprecated and emits a v1.4-era schema (missing `account.issuer` → runtime `BadAuthError`). Migrations live in `server/drizzle/` and are committed. Kill dev server by port (`fuser -k 4000/tcp`) — `pkill -f tsx` also matches the invoking shell.
+- Frontend remains self-contained: no dashboard code calls this API yet.
+
 ## Per-Page Notes (from prompt.md)
 
 - #1 Purchase Summary: full line-item table with grouped "Kolom" column picker (default columns: purchaseNumber, purchaseDate, supplierName, itemName, warehouse, quantity, uom, netTotal); totals row via `totalColumns` prop
 - #5 Supplier Delivery: measured from `poPiDays`/`poPiOverdueDays` (PO→Invoice, not goods receipt) — InfoBanner explains
-- #6 Purchase Price History: item dropdown (`itemName`) required alongside date filter; prompt state if none selected
+- #6 Purchase Price History: item picker is a searchable combobox (Popover + Command); item required alongside date filter; prompt state if none selected
 - #7 Purchase Variance: `variance = quantity - qtyOrdered` only where `qtyOrdered > 0`; rows with variance ≠ 0
 - #8 Material Cost Trend: all 5 `itemCategory` values; checkbox filter (all checked by default); chart/table follow checked categories; monthly `netTotal` by month
 - #9 Price Increase Alert: per-item sequential `unitCost` increase ≥ threshold (default 10%), severity-highlighted rows
