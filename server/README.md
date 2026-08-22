@@ -17,6 +17,7 @@ npm run build       # tsc → dist/
 npm start           # node dist/index.js
 npm run db:generate # buat migration baru setelah ubah src/db/schema.ts
 npm run db:migrate  # apply migration ke database
+npm run smoke       # uji end-to-end health → signup → session → login → me → ganti password
 ```
 
 Uji cepat: `curl http://localhost:4000/api/health` → `{"status":"ok","service":"reporting-auth"}`.
