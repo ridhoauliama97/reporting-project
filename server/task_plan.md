@@ -41,7 +41,10 @@
 - [x] AGENTS.md section Dashboard Auth Integration (baseURL env, dynamic import, res.error gotcha, kedua server harus jalan)
 
 ## Next Step
-M3.1: route /settings di dashboard (form nama/email/password/hapus akun).
+M4 COMPLETE (server/README.md). Kandidat lanjutan: deploy API (hosting), gating penuh dashboard, atau fitur report (role/permission).
+
+### M4: README endpoint (complete)
+**Status:** complete
 
 ## Milestone M2 — Email Verification + Reset Password (in_progress)
 **Goal:** Daftar mengirim email verifikasi; lupa-password mengirim email reset dengan token; alur diverifikasi penuh secara lokal (tanpa SMTP asli — transport dev mencatat link ke konsol).

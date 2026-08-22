@@ -47,3 +47,7 @@
 - GOTCHA: user.deleteUser.enabled wajib true (else 404); delete butuh password saat sesi tidak fresh
 - E2E 5/5 PASS: daftar→settings→ganti nama (header update), ganti password→logout→login baru, hapus akun→login invalid
 - Docs+plan updated; commit lokal berikut (tanpa push)
+
+## 2026-08-23 — Session 6: M4 COMPLETE
+- Push M2+M3 (production v1.20.0 di CI)
+- server/README.md: prasyarat, commands, tabel endpoint lengkap, SMTP/dev transport, integrasi dashboard
