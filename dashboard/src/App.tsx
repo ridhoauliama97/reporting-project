@@ -37,6 +37,7 @@ const ClosedPO = lazy(() => import("./pages/ClosedPO"));
 const SupplierScorecard = lazy(() => import("./pages/SupplierScorecard"));
 const ReportsExports = lazy(() => import("./pages/ReportsExports"));
 const AnalyticsInsights = lazy(() => import("./pages/AnalyticsInsights"));
+const SettingsPage = lazy(() => import("./pages/Settings"));
 const WarehousePlaceholder = lazy(() => import("./pages/WarehouseReport"));
 const DocsPage = lazy(() => import("./pages/DocsPage"));
 const LoginPage = lazy(() => import("./pages/Login"));
@@ -388,19 +389,20 @@ function App() {
                       }
                     />
                     <Route
-                      path="/analytics-insights"
-                      element={
-                        <AnalyticsInsights
-                          items={filteredItems}
-                          allItems={allItems}
-                          purchaseOrders={bundle?.purchaseOrders ?? []}
-                          stockBalances={bundle?.stockBalances ?? []}
-                          dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
-                        />
-                      }
-                    />
-                  </Routes>
+                       path="/analytics-insights"
+                       element={
+                         <AnalyticsInsights
+                           items={filteredItems}
+                           allItems={allItems}
+                           purchaseOrders={bundle?.purchaseOrders ?? []}
+                           stockBalances={bundle?.stockBalances ?? []}
+                           dateRange={dateRange}
+                           onDateRangeChange={setDateRange}
+                         />
+                       }
+                     />
+                     <Route path="/settings" element={<SettingsPage />} />
+                   </Routes>
                 </Suspense>
               </Layout>
             )

@@ -14,6 +14,11 @@ const redirectURL = process.env.BETTER_AUTH_REDIRECT_URL ?? "http://localhost:51
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "pg", schema }),
+  user: {
+    deleteUser: {
+      enabled: true,
+    },
+  },
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 8,

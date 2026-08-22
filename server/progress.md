@@ -41,3 +41,9 @@
 - E2E 5/5 PASS: register banner, verify-link flip, reset flow, login password baru, no errors
 - Flake: submit button tak responsive sesaat setelah SPA nav (jeda 900ms menstabilkan) — dicatat, bukan bug produk
 - AGENTS.md + task_plan updated; commit lokal berikut (tanpa push)
+
+## 2026-08-23 — Session 5: M3 COMPLETE (account settings)
+- /settings page (Profil: nama+email, Password, Zona Berbahaya w/ delete password)
+- GOTCHA: user.deleteUser.enabled wajib true (else 404); delete butuh password saat sesi tidak fresh
+- E2E 5/5 PASS: daftar→settings→ganti nama (header update), ganti password→logout→login baru, hapus akun→login invalid
+- Docs+plan updated; commit lokal berikut (tanpa push)

@@ -96,9 +96,11 @@ export function UserMenu() {
                 <PackageSearchIcon />
                 Data Pembelian
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <SettingsIcon />
-                Pengaturan
+              <DropdownMenuItem asChild>
+                <Link to="/settings">
+                  <SettingsIcon />
+                  Pengaturan
+                </Link>
               </DropdownMenuItem>
             </>
           ) : (

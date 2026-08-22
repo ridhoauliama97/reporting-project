@@ -10,7 +10,7 @@
 - P5 Cross-origin — `cors` middleware (origin=BETTER_AUTH_TRUSTED_ORIGINS, credentials) + docs/AGENTS + commits lokal a0af383/0e5a1bc/269f9c7 (belum dipush)
 
 ## Current Phase Summary
-- **Status:** M2 COMPLETE; berikutnya M3 Pengaturan profil
+- **Status:** M2 + M3 COMPLETE; M4 README (opsional) atau deploy API
 - Kandidat lain (belum dipilih): M3 login sosial, M4 README endpoint"
 - **RINGKASAN STATUS**: M1 telah di-push & live (production v1.18.0); auth dasar berjalan penuh
 
