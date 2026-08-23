@@ -82,18 +82,20 @@ jobs:
 
       - name: Link project
         if: env.API_DATABASE_URL != ''
+        working-directory: server
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-        run: npx vercel@latest link --yes --project reporting-api --cwd server --scope "$VERCEL_ORG_ID" --token "$VERCEL_TOKEN" || true
+        run: npx vercel@latest link --yes --project reporting-api --scope "$VERCEL_ORG_ID" --token "$VERCEL_TOKEN" || true
 
       - name: Deploy production
         if: env.API_DATABASE_URL != ''
+        working-directory: server
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           API_BETTER_AUTH_SECRET: ${{ secrets.API_BETTER_AUTH_SECRET }}
-        run: npx vercel@latest deploy --prod --yes --cwd server --scope "$VERCEL_ORG_ID" --token "$VERCEL_TOKEN" \
+        run: npx vercel@latest deploy --prod --yes --scope "$VERCEL_ORG_ID" --token "$VERCEL_TOKEN" \
           --env DATABASE_URL=${{ secrets.API_DATABASE_URL }} \
           --env BETTER_AUTH_SECRET=${API_BETTER_AUTH_SECRET:-dev-secret-change-before-prod} \
           --env BETTER_AUTH_URL=https://reporting-api.vercel.app \
