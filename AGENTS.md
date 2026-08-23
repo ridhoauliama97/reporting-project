@@ -135,6 +135,7 @@ dashboard/src/
 - **Auth wiring gotchas (better-auth 1.7.x)**: import `toNodeHandler`/`fromNodeHeaders` from `better-auth/node` — `better-auth/express` does NOT exist in 1.7. Express 5 wildcard needs named form: `/api/auth/*splat`. Session check: `auth.api.getSession({ headers: fromNodeHeaders(req.headers) })`.
 - **Schema source of truth**: `src/db/schema.ts` generated via `npx auth@latest generate` (run with `--output` + `-y`). Do NOT regenerate with `@better-auth/cli` — it's deprecated and emits a v1.4-era schema (missing `account.issuer` → runtime `BadAuthError`). Migrations live in `server/drizzle/` and are committed. Kill dev server by port (`fuser -k 4000/tcp`) — `pkill -f tsx` also matches the invoking shell.
 - Frontend remains self-contained: no dashboard code calls this API yet.
+- **Cloud DB (Supabase)**: production database = Supabase project `akbmckowpczplxdsyebl` (ap-southeast-1). Direct host is **IPv6-only** — use the **transaction pooler** `aws-0-ap-southeast-1.pooler.supabase.com` (IPv4; pooler user = `postgres.<ref>`). `drizzle-kit migrate` hangs against the pooler (TLS/verify-full) — apply migration SQL via `node`/`pg` directly (files in `server/drizzle/`), no bookkeeping table needed. `src/db/pool.ts` enables `ssl: { rejectUnauthorized: false }` for `supabase.co` URLs (chain quirk). The DB password lives ONLY in GitHub secret `API_DATABASE_URL` + user's dashboard — never commit it.
 
 ## Dashboard Auth Integration (M1)
 
