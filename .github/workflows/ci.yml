@@ -72,6 +72,11 @@ jobs:
           cache: npm
           cache-dependency-path: server/package-lock.json
 
+      - name: Install dependencies
+        if: env.API_DATABASE_URL != ''
+        working-directory: server
+        run: npm ci
+
       - name: Create project (idempotent)
         if: env.API_DATABASE_URL != ''
         env:
@@ -99,7 +104,7 @@ jobs:
         run: |
           echo "$$API_DATABASE_URL" | npx vercel@latest env add DATABASE_URL production --force --scope "$VERCEL_ORG_ID" --token "$VERCEL_TOKEN" || true
           echo "${API_BETTER_AUTH_SECRET:-dev-secret-change-before-prod}" | npx vercel@latest env add BETTER_AUTH_SECRET production --force --scope "$VERCEL_ORG_ID" --token "$VERCEL_TOKEN" || true
-          echo "https://reporting-api.vercel.app" | npx vercel@latest env add BETTER_AUTH_URL production --force --scope "$VERCEL_ORG_ID" --token "$VERCEL_TOKEN" || true
+          echo "https://reporting-api-beryl.vercel.app" | npx vercel@latest env add BETTER_AUTH_URL production --force --scope "$VERCEL_ORG_ID" --token "$VERCEL_TOKEN" || true
           echo "https://database-report-gsu.vercel.app" | npx vercel@latest env add BETTER_AUTH_TRUSTED_ORIGINS production --force --scope "$VERCEL_ORG_ID" --token "$VERCEL_TOKEN" || true
           echo "https://database-report-gsu.vercel.app" | npx vercel@latest env add BETTER_AUTH_REDIRECT_URL production --force --scope "$VERCEL_ORG_ID" --token "$VERCEL_TOKEN" || true
 
