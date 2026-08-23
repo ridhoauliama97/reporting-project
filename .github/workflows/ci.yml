@@ -88,16 +88,25 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
         run: npx vercel@latest link --yes --project reporting-api --scope "$VERCEL_ORG_ID" --token "$VERCEL_TOKEN" || true
 
-      - name: Deploy production
+      - name: Set environment variables
         if: env.API_DATABASE_URL != ''
         working-directory: server
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           API_BETTER_AUTH_SECRET: ${{ secrets.API_BETTER_AUTH_SECRET }}
-        run: npx vercel@latest deploy --prod --yes --scope "$VERCEL_ORG_ID" --token "$VERCEL_TOKEN" \
-          --env DATABASE_URL=${{ secrets.API_DATABASE_URL }} \
-          --env BETTER_AUTH_SECRET=${API_BETTER_AUTH_SECRET:-dev-secret-change-before-prod} \
-          --env BETTER_AUTH_URL=https://reporting-api.vercel.app \
-          --env BETTER_AUTH_TRUSTED_ORIGINS=https://database-report-gsu.vercel.app \
-          --env BETTER_AUTH_REDIRECT_URL=https://database-report-gsu.vercel.app
+          API_DATABASE_URL: ${{ secrets.API_DATABASE_URL }}
+        run: |
+          echo "$$API_DATABASE_URL" | npx vercel@latest env add DATABASE_URL production --force --scope "$VERCEL_ORG_ID" --token "$VERCEL_TOKEN" || true
+          echo "${API_BETTER_AUTH_SECRET:-dev-secret-change-before-prod}" | npx vercel@latest env add BETTER_AUTH_SECRET production --force --scope "$VERCEL_ORG_ID" --token "$VERCEL_TOKEN" || true
+          echo "https://reporting-api.vercel.app" | npx vercel@latest env add BETTER_AUTH_URL production --force --scope "$VERCEL_ORG_ID" --token "$VERCEL_TOKEN" || true
+          echo "https://database-report-gsu.vercel.app" | npx vercel@latest env add BETTER_AUTH_TRUSTED_ORIGINS production --force --scope "$VERCEL_ORG_ID" --token "$VERCEL_TOKEN" || true
+          echo "https://database-report-gsu.vercel.app" | npx vercel@latest env add BETTER_AUTH_REDIRECT_URL production --force --scope "$VERCEL_ORG_ID" --token "$VERCEL_TOKEN" || true
+
+      - name: Deploy production
+        if: env.API_DATABASE_URL != ''
+        working-directory: server
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        run: npx vercel@latest deploy --prod --yes --scope "$VERCEL_ORG_ID" --token "$VERCEL_TOKEN"
