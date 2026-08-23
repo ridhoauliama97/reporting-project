@@ -108,5 +108,4 @@ jobs:
         working-directory: server
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-        run: npx vercel@latest deploy --prod --yes --scope "$VERCEL_ORG_ID" --token "$VERCEL_TOKEN"
+        run: npx vercel@latest deploy --prod --yes --token "$VERCEL_TOKEN"
