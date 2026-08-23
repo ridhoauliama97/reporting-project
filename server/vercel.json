@@ -4,5 +4,5 @@
       "maxDuration": 10
     }
   },
-  "buildCommand": null
+  "outputDirectory": "dist"
 }
