@@ -2,8 +2,7 @@ export type AuthClient = ReturnType<
   typeof import("better-auth/react")["createAuthClient"]
 >;
 
-const getBaseURL = () =>
-  import.meta.env.VITE_AUTH_URL ?? "http://localhost:4000";
+const getBaseURL = () => import.meta.env.VITE_AUTH_URL || undefined;
 
 let clientPromise: Promise<AuthClient> | null = null;
 
