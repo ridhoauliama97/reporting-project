@@ -9,6 +9,7 @@
     "start": "node dist/src/index.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:seed": "tsx scripts/seed.ts",
     "smoke": "tsx scripts/smoke.ts"
   },
   "dependencies": {
