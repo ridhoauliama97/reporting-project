@@ -73,7 +73,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: npx vercel@latest deploy --prod --yes --build-env APP_VERSION=${{ steps.version.outputs.version }}
+        run: npx vercel@latest deploy --prod --yes --build-env APP_VERSION=${{ steps.version.outputs.version }} --build-env VITE_AUTH_URL=https://reporting-api-beryl.vercel.app
 
   deploy-api:
     name: Deploy Auth API to Vercel
