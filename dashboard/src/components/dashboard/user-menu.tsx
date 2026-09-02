@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   CircleUserRoundIcon,
   LogInIcon,
@@ -30,6 +30,7 @@ export function UserMenu() {
   const [ready, setReady] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
 
   const refreshSession = useCallback(async (): Promise<void> => {
     try {
@@ -56,6 +57,8 @@ export function UserMenu() {
       const client = await getAuthClient();
       await client.signOut();
       setUser(null);
+      setOpen(false);
+      navigate("/login");
     } finally {
       setSigningOut(false);
     }
