@@ -2,9 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import type { DateRange } from "../types/ui";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
-import { CalendarIcon, RotateCcwIcon } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 
 interface DateFilterProps {
   dateRange: DateRange;
@@ -75,13 +74,6 @@ export default function DateFilter({ dateRange, onChange }: DateFilterProps) {
     commit(latest.current.start, value);
   };
 
-  const handleReset = () => {
-    setStartInput("");
-    setEndInput("");
-    latest.current = { start: "", end: "" };
-    onChange({ start: null, end: null });
-  };
-
   const reversed =
     dateRange.start !== null &&
     dateRange.end !== null &&
@@ -98,42 +90,28 @@ export default function DateFilter({ dateRange, onChange }: DateFilterProps) {
         : "Semua Data";
 
   return (
-    <div className="flex w-full flex-col gap-2">
-      <div className="flex w-full flex-row flex-wrap items-center gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <CalendarIcon className="size-4 shrink-0" />
-          <span className="truncate font-medium text-foreground">{label}</span>
-        </div>
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:flex">
-          <Input
-            type="date"
-            value={startInput}
-            onChange={handleStartChange}
-            className="h-11 min-w-0 w-full sm:h-9 sm:w-fit"
-          />
-          <span className="text-muted-foreground">–</span>
-          <Input
-            type="date"
-            value={endInput}
-            onChange={handleEndChange}
-            className="h-11 min-w-0 w-full sm:h-9 sm:w-fit"
-          />
-        </div>
-        {(startInput || endInput) && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleReset}
-            className="h-9 gap-1 text-xs"
-          >
-            <RotateCcwIcon className="size-3.5" />
-            Reset
-          </Button>
-        )}
+    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <CalendarIcon className="size-4 shrink-0" />
+        <span className="truncate font-medium text-foreground">{label}</span>
+      </div>
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:flex">
+        <Input
+          type="date"
+          value={startInput}
+          onChange={handleStartChange}
+          className="h-11 min-w-0 w-full sm:h-9 sm:w-fit"
+        />
+        <span className="text-muted-foreground">–</span>
+        <Input
+          type="date"
+          value={endInput}
+          onChange={handleEndChange}
+          className="h-11 min-w-0 w-full sm:h-9 sm:w-fit"
+        />
       </div>
       {reversed && (
-        <p className="text-xs text-destructive">
+        <p className="w-full text-xs text-destructive sm:w-auto">
           Tanggal mulai tidak boleh melewati tanggal selesai.
         </p>
       )}
