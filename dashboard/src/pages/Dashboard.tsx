@@ -116,8 +116,7 @@ function PreviewCard({
   );
 }
 
-function getGreeting(): string {
-  const hour = new Date().getHours();
+function getGreeting(hour: number): string {
   if (hour < 12) return "Selamat pagi";
   if (hour < 15) return "Selamat siang";
   if (hour < 18) return "Selamat sore";
@@ -131,6 +130,12 @@ export default function Dashboard({
   onDateRangeChange,
 }: DashboardProps) {
   const [userName, setUserName] = useState<string | null>(null);
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -268,7 +273,7 @@ export default function Dashboard({
 
   return (
     <PageLayout
-      title={userName ? `${getGreeting()}, ${userName}. 👋` : `${getGreeting()}. 👋`}
+      title={userName ? `${getGreeting(now.getHours())}, ${userName}. 👋` : `${getGreeting(now.getHours())}. 👋`}
       subtitle="Here's a quick overview of your purchasing data."
       dateRange={dateRange}
       onDateRangeChange={onDateRangeChange}
