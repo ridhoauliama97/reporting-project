@@ -3,11 +3,13 @@ import {
   Routes,
   Route,
   Navigate,
+  useLocation,
 } from "react-router-dom";
 import {
   Component,
   useEffect,
   useMemo,
+  useCallback,
   useState,
   Suspense,
   lazy,
@@ -97,13 +99,6 @@ const LoginPage = lazy(() => import("./pages/Login"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPassword"));
 const SettingsPage = lazy(() => import("./pages/Settings"));
 
-function getDefaultDateRange() {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-  return { start, end };
-}
-
 function LoadingScreen() {
   return (
     <div className="flex min-h-[50vh] items-center justify-center">
@@ -172,37 +167,25 @@ function App() {
     const applyData = (data: RawRecord[]) => {
       if (cancelled) return;
       const parsed = parseAllItems(data as PurchaseItem[]);
+      const pOrders = parseAllPurchaseOrders(data as PurchaseOrderRecord[]);
+      const stock = parseAllStock(data as StockRecord[]);
+      const transfers = parseAllTransfers(data as TransferRecord[]);
+      const adjustments = parseAllAdjustments(data as AdjustmentRecord[]);
+      const usages = parseAllUsages(data as UsageRecord[]);
+      const productions = parseAllProductions(data as ProductionRecord[]);
       setAllItems(parsed);
-      setAllPurchaseOrders(
-        parseAllPurchaseOrders(data as PurchaseOrderRecord[]),
-      );
-      setAllStock(parseAllStock(data as StockRecord[]));
-      setAllTransfers(parseAllTransfers(data as TransferRecord[]));
-      setAllAdjustments(parseAllAdjustments(data as AdjustmentRecord[]));
-      setAllUsages(parseAllUsages(data as UsageRecord[]));
-      setAllProductions(parseAllProductions(data as ProductionRecord[]));
+      setAllPurchaseOrders(pOrders);
+      setAllStock(stock);
+      setAllTransfers(transfers);
+      setAllAdjustments(adjustments);
+      setAllUsages(usages);
+      setAllProductions(productions);
       setAllProductionMaterials(
         parseAllProductionMaterials(data as ProductionMaterialRecord[]),
       );
       setAllProductionOutputs(
         parseAllProductionOutputs(data as ProductionOutputRecord[]),
       );
-      setDateRange((prev) => {
-        if (!prev.start || !prev.end) return prev;
-        const inRange = parsed.some(
-          (i) =>
-            i.purchaseDateObj &&
-            i.purchaseDateObj >= prev.start! &&
-            i.purchaseDateObj <= prev.end!,
-        );
-        if (inRange || parsed.length === 0) return prev;
-        const dates = parsed
-          .map((i) => i.purchaseDateObj)
-          .filter((d): d is Date => d !== null)
-          .sort((a, b) => a.getTime() - b.getTime());
-        if (dates.length === 0) return prev;
-        return { start: dates[0], end: dates[dates.length - 1] };
-      });
     };
 
     const loadOnMainThread = () => {
@@ -249,10 +232,122 @@ function App() {
     };
   }, [loadKey]);
 
-  const [dateRange, setDateRange] = useState<{
-    start: Date | null;
-    end: Date | null;
-  }>(getDefaultDateRange());
+  return (
+    <Router>
+      <ErrorBoundary>
+        <Routes>
+        <Route
+          path="/docs"
+          element={
+            <Suspense
+              fallback={
+                <div className="flex min-h-[50vh] items-center justify-center">
+                  <div className="size-8 animate-spin rounded-full border-2 border-border border-t-foreground" />
+                </div>
+              }
+            >
+              <DocsPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/login"
+          element={
+            <Suspense
+              fallback={
+                <div className="flex min-h-[50vh] items-center justify-center">
+                  <div className="size-8 animate-spin rounded-full border-2 border-border border-t-foreground" />
+                </div>
+              }
+            >
+              <LoginPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/reset-password"
+          element={
+            <Suspense
+              fallback={
+                <div className="flex min-h-[50vh] items-center justify-center">
+                  <div className="size-8 animate-spin rounded-full border-2 border-border border-t-foreground" />
+                </div>
+              }
+            >
+              <ResetPasswordPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="*"
+          element={
+            <AppRoutes
+              allItems={allItems}
+              allPurchaseOrders={allPurchaseOrders}
+              allStock={allStock}
+              allTransfers={allTransfers}
+              allAdjustments={allAdjustments}
+              allUsages={allUsages}
+              allProductions={allProductions}
+              allProductionMaterials={allProductionMaterials}
+              allProductionOutputs={allProductionOutputs}
+              loadError={loadError}
+              onRetry={() => setLoadKey((k) => k + 1)}
+            />
+          }
+        />
+      </Routes>
+      </ErrorBoundary>
+      <Analytics />
+    </Router>
+  );
+}
+
+type DateRangeState = { start: Date | null; end: Date | null };
+
+const NULL_RANGE: DateRangeState = { start: null, end: null };
+
+interface AppRoutesProps {
+  allItems: ParsedPurchaseItem[];
+  allPurchaseOrders: ParsedPurchaseOrder[];
+  allStock: ParsedStockRecord[];
+  allTransfers: ParsedTransfer[];
+  allAdjustments: ParsedAdjustment[];
+  allUsages: ParsedUsage[];
+  allProductions: ParsedProduction[];
+  allProductionMaterials: ParsedProductionMaterial[];
+  allProductionOutputs: ParsedProductionOutput[];
+  loadError: boolean;
+  onRetry: () => void;
+}
+
+function AppRoutes(props: AppRoutesProps) {
+  const {
+    allItems,
+    allPurchaseOrders,
+    allStock,
+    allTransfers,
+    allAdjustments,
+    allUsages,
+    allProductions,
+    allProductionMaterials,
+    allProductionOutputs,
+  } = props;
+
+  const location = useLocation();
+  const [rangesByPath, setRangesByPath] = useState<
+    Record<string, DateRangeState>
+  >({});
+const dateRange = useMemo<DateRangeState>(
+    () => rangesByPath[location.pathname] ?? NULL_RANGE,
+    [rangesByPath, location.pathname],
+  );
+  const handleDateRangeChange = useCallback(
+    (range: DateRangeState) => {
+      setRangesByPath((prev) => ({ ...prev, [location.pathname]: range }));
+    },
+    [location.pathname],
+  );
 
   const filteredItems = useMemo(
     () => filterByDateRange(allItems, dateRange.start, dateRange.end),
@@ -335,377 +430,313 @@ function App() {
     [allProductionOutputs, dateRange],
   );
 
+  if (props.loadError) {
+    return (
+      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3">
+        <p className="text-sm text-muted-foreground">
+          Gagal memuat data. Periksa koneksi lalu coba lagi.
+        </p>
+        <Button variant="outline" onClick={props.onRetry}>
+          Coba Lagi
+        </Button>
+      </div>
+    );
+  }
+
+  if (allItems.length === 0) {
+    return <LoadingScreen />;
+  }
+
   return (
-    <Router>
-      <ErrorBoundary>
-        <Routes>
-        <Route
-          path="/docs"
-          element={
-            <Suspense
-              fallback={
-                <div className="flex min-h-[50vh] items-center justify-center">
-                  <div className="size-8 animate-spin rounded-full border-2 border-border border-t-foreground" />
-                </div>
+    <RequireAuth>
+      <Layout>
+        <Suspense
+          fallback={
+            <div className="flex min-h-[50vh] items-center justify-center">
+              <div className="size-8 animate-spin rounded-full border-2 border-border border-t-foreground" />
+            </div>
+          }
+        >
+          <Routes>
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route
+              path="/dashboard"
+              element={
+                <Dashboard
+                  items={filteredItems}
+                  allItems={allItems}
+                  dateRange={dateRange}
+                  onDateRangeChange={handleDateRangeChange}
+                />
               }
-            >
-              <DocsPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/login"
-          element={
-            <Suspense
-              fallback={
-                <div className="flex min-h-[50vh] items-center justify-center">
-                  <div className="size-8 animate-spin rounded-full border-2 border-border border-t-foreground" />
-                </div>
+            />
+            <Route
+              path="/summary"
+              element={
+                <PurchaseSummary
+                  items={filteredItems}
+                  dateRange={dateRange}
+                  onDateRangeChange={handleDateRangeChange}
+                />
               }
-            >
-              <LoginPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/reset-password"
-          element={
-            <Suspense
-              fallback={
-                <div className="flex min-h-[50vh] items-center justify-center">
-                  <div className="size-8 animate-spin rounded-full border-2 border-border border-t-foreground" />
-                </div>
+            />
+            <Route
+              path="/by-supplier"
+              element={
+                <PurchaseBySupplier
+                  items={filteredItems}
+                  dateRange={dateRange}
+                  onDateRangeChange={handleDateRangeChange}
+                />
               }
-            >
-              <ResetPasswordPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path="*"
-          element={
-            loadError ? (
-              <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3">
-                <p className="text-sm text-muted-foreground">
-                  Gagal memuat data. Periksa koneksi lalu coba lagi.
-                </p>
-                <Button
-                  variant="outline"
-                  onClick={() => setLoadKey((k) => k + 1)}
-                >
-                  Coba Lagi
-                </Button>
-              </div>
-            ) : allItems.length === 0 ? (
-              <LoadingScreen />
-            ) : (
-              <RequireAuth>
-              <Layout>
-                <Suspense
-                  fallback={
-                    <div className="flex min-h-[50vh] items-center justify-center">
-                      <div className="size-8 animate-spin rounded-full border-2 border-border border-t-foreground" />
-                    </div>
-                  }
-                >
-                  <Routes>
-                    <Route
-                      path="/settings"
-                      element={<SettingsPage />}
-                    />
-                    <Route
-                      path="/"
-                      element={<Navigate to="/login" replace />}
-                    />
-                    <Route
-                      path="/dashboard"
-                      element={
-                        <Dashboard
-                          items={filteredItems}
-                          allItems={allItems}
-                          dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/summary"
-                      element={
-                        <PurchaseSummary
-                          items={filteredItems}
-                          dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/by-supplier"
-                      element={
-                        <PurchaseBySupplier
-                          items={filteredItems}
-                          dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/ranking"
-                      element={
-                        <SupplierRanking
-                          items={filteredItems}
-                          dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
-                        />
-                      }
-                    />
-                    <Route path="/quality" element={<SupplierQuality />} />
-                    <Route
-                      path="/delivery"
-                      element={
-                        <SupplierDelivery
-                          items={filteredItems}
-                          dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/price-history"
-                      element={
-                        <PurchasePriceHistory
-                          items={filteredItems}
-                          dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/variance"
-                      element={
-                        <PurchaseVariance
-                          items={filteredItems}
-                          dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/material-cost"
-                      element={
-                        <MaterialCostTrend
-                          items={filteredItems}
-                          dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/price-alert"
-                      element={
-                        <PriceIncreaseAlert
-                          items={filteredItems}
-                          dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/lead-time"
-                      element={
-                        <PurchaseLeadTime
-                          items={filteredItems}
-                          dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/outstanding-po"
-                      element={
-                        <OutstandingPO
-                          poItems={filteredPurchaseOrders}
-                          dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/open-po"
-                      element={
-                        <OpenPO
-                          poItems={filteredPurchaseOrders}
-                          dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/closed-po"
-                      element={
-                        <ClosedPO
-                          poItems={filteredPurchaseOrders}
-                          dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/warehouse/inventory-value"
-                      element={
-                        <InventoryValue
-                          stock={allStock}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/warehouse/stock-movement"
-                      element={
-                        <StockMovement
-                          transfers={filteredTransfers}
-                          adjustments={filteredAdjustments}
-                          usages={filteredUsages}
-                          dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/warehouse/dead-stock"
-                      element={
-                        <DeadStock
-                          stock={allStock}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/warehouse/slow-moving"
-                      element={
-                        <SlowMoving
-                          stock={allStock}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/warehouse/fast-moving"
-                      element={
-                        <FastMoving
-                          stock={allStock}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/warehouse/inventory-aging"
-                      element={
-                        <InventoryAging
-                          stock={allStock}
-                        />
-                      }
-                    />
-                    <Route path="/warehouse/cycle-count-accuracy" element={<CycleCountAccuracy />} />
-                    <Route
-                      path="/warehouse/stock-adjustment"
-                      element={
-                        <StockAdjustment
-                          adjustments={filteredAdjustments}
-                          dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
-                        />
-                      }
-                    />
-                    <Route path="/warehouse/warehouse-productivity" element={<WarehouseProductivity productions={filteredProductions} productionMaterials={filteredProductionMaterials} productionOutputs={filteredProductionOutputs} dateRange={dateRange} onDateRangeChange={setDateRange} />} />
-                    <Route path="/warehouse/warehouse-utilization" element={<WarehouseUtilization stock={allStock} />} />
-                    <Route
-                      path="/warehouse/location-occupancy"
-                      element={
-                        <LocationOccupancy
-                          stock={allStock}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/warehouse/transfer-history"
-                      element={
-                        <TransferHistory
-                          transfers={filteredTransfers}
-                          dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/warehouse/stock-availability"
-                      element={
-                        <StockAvailability
-                          stock={allStock}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/warehouse/fill-rate"
-                      element={
-                        <FillRate
-                          transfers={filteredTransfers}
-                          dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
-                        />
-                      }
-                    />
-                    <Route path="/warehouse/picking-accuracy" element={<PickingAccuracy />} />
-                    <Route path="/warehouse/packing-accuracy" element={<PackingAccuracy />} />
-                    <Route
-                      path="/warehouse/delivery-performance"
-                      element={
-                        <DeliveryPerformance
-                          transfers={filteredTransfers}
-                          dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/scorecard"
-                      element={
-                        <SupplierScorecard
-                          items={filteredItems}
-                          dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/reports-exports"
-                      element={
-                        <ReportsExports
-                          items={filteredItems}
-                          poItems={filteredPurchaseOrders}
-                          dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/analytics-insights"
-                      element={
-                        <AnalyticsInsights
-                          items={filteredItems}
-                          allItems={allItems}
-                          poItems={filteredPurchaseOrders}
-                          dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
-                        />
-                      }
-                    />
-                  </Routes>
-                </Suspense>
-              </Layout>
-              </RequireAuth>
-            )
-          }
-        />
-      </Routes>
-      </ErrorBoundary>
-      <Analytics />
-    </Router>
+            />
+            <Route
+              path="/ranking"
+              element={
+                <SupplierRanking
+                  items={filteredItems}
+                  dateRange={dateRange}
+                  onDateRangeChange={handleDateRangeChange}
+                />
+              }
+            />
+            <Route path="/quality" element={<SupplierQuality />} />
+            <Route
+              path="/delivery"
+              element={
+                <SupplierDelivery
+                  items={filteredItems}
+                  dateRange={dateRange}
+                  onDateRangeChange={handleDateRangeChange}
+                />
+              }
+            />
+            <Route
+              path="/price-history"
+              element={
+                <PurchasePriceHistory
+                  items={filteredItems}
+                  dateRange={dateRange}
+                  onDateRangeChange={handleDateRangeChange}
+                />
+              }
+            />
+            <Route
+              path="/variance"
+              element={
+                <PurchaseVariance
+                  items={filteredItems}
+                  dateRange={dateRange}
+                  onDateRangeChange={handleDateRangeChange}
+                />
+              }
+            />
+            <Route
+              path="/material-cost"
+              element={
+                <MaterialCostTrend
+                  items={filteredItems}
+                  dateRange={dateRange}
+                  onDateRangeChange={handleDateRangeChange}
+                />
+              }
+            />
+            <Route
+              path="/price-alert"
+              element={
+                <PriceIncreaseAlert
+                  items={filteredItems}
+                  dateRange={dateRange}
+                  onDateRangeChange={handleDateRangeChange}
+                />
+              }
+            />
+            <Route
+              path="/lead-time"
+              element={
+                <PurchaseLeadTime
+                  items={filteredItems}
+                  dateRange={dateRange}
+                  onDateRangeChange={handleDateRangeChange}
+                />
+              }
+            />
+            <Route
+              path="/outstanding-po"
+              element={
+                <OutstandingPO
+                  poItems={filteredPurchaseOrders}
+                  dateRange={dateRange}
+                  onDateRangeChange={handleDateRangeChange}
+                />
+              }
+            />
+            <Route
+              path="/open-po"
+              element={
+                <OpenPO
+                  poItems={filteredPurchaseOrders}
+                  dateRange={dateRange}
+                  onDateRangeChange={handleDateRangeChange}
+                />
+              }
+            />
+            <Route
+              path="/closed-po"
+              element={
+                <ClosedPO
+                  poItems={filteredPurchaseOrders}
+                  dateRange={dateRange}
+                  onDateRangeChange={handleDateRangeChange}
+                />
+              }
+            />
+            <Route
+              path="/warehouse/inventory-value"
+              element={<InventoryValue stock={allStock} />}
+            />
+            <Route
+              path="/warehouse/stock-movement"
+              element={
+                <StockMovement
+                  transfers={filteredTransfers}
+                  adjustments={filteredAdjustments}
+                  usages={filteredUsages}
+                  dateRange={dateRange}
+                  onDateRangeChange={handleDateRangeChange}
+                />
+              }
+            />
+            <Route
+              path="/warehouse/dead-stock"
+              element={<DeadStock stock={allStock} />}
+            />
+            <Route
+              path="/warehouse/slow-moving"
+              element={<SlowMoving stock={allStock} />}
+            />
+            <Route
+              path="/warehouse/fast-moving"
+              element={<FastMoving stock={allStock} />}
+            />
+            <Route
+              path="/warehouse/inventory-aging"
+              element={<InventoryAging stock={allStock} />}
+            />
+            <Route
+              path="/warehouse/cycle-count-accuracy"
+              element={<CycleCountAccuracy />}
+            />
+            <Route
+              path="/warehouse/stock-adjustment"
+              element={
+                <StockAdjustment
+                  adjustments={filteredAdjustments}
+                  dateRange={dateRange}
+                  onDateRangeChange={handleDateRangeChange}
+                />
+              }
+            />
+            <Route
+              path="/warehouse/warehouse-productivity"
+              element={
+                <WarehouseProductivity
+                  productions={filteredProductions}
+                  productionMaterials={filteredProductionMaterials}
+                  productionOutputs={filteredProductionOutputs}
+                  dateRange={dateRange}
+                  onDateRangeChange={handleDateRangeChange}
+                />
+              }
+            />
+            <Route
+              path="/warehouse/warehouse-utilization"
+              element={<WarehouseUtilization stock={allStock} />}
+            />
+            <Route
+              path="/warehouse/location-occupancy"
+              element={<LocationOccupancy stock={allStock} />}
+            />
+            <Route
+              path="/warehouse/transfer-history"
+              element={
+                <TransferHistory
+                  transfers={filteredTransfers}
+                  dateRange={dateRange}
+                  onDateRangeChange={handleDateRangeChange}
+                />
+              }
+            />
+            <Route
+              path="/warehouse/stock-availability"
+              element={<StockAvailability stock={allStock} />}
+            />
+            <Route
+              path="/warehouse/fill-rate"
+              element={
+                <FillRate
+                  transfers={filteredTransfers}
+                  dateRange={dateRange}
+                  onDateRangeChange={handleDateRangeChange}
+                />
+              }
+            />
+            <Route
+              path="/warehouse/picking-accuracy"
+              element={<PickingAccuracy />}
+            />
+            <Route
+              path="/warehouse/packing-accuracy"
+              element={<PackingAccuracy />}
+            />
+            <Route
+              path="/warehouse/delivery-performance"
+              element={
+                <DeliveryPerformance
+                  transfers={filteredTransfers}
+                  dateRange={dateRange}
+                  onDateRangeChange={handleDateRangeChange}
+                />
+              }
+            />
+            <Route
+              path="/scorecard"
+              element={
+                <SupplierScorecard
+                  items={filteredItems}
+                  dateRange={dateRange}
+                  onDateRangeChange={handleDateRangeChange}
+                />
+              }
+            />
+            <Route
+              path="/reports-exports"
+              element={
+                <ReportsExports
+                  items={filteredItems}
+                  poItems={filteredPurchaseOrders}
+                  dateRange={dateRange}
+                  onDateRangeChange={handleDateRangeChange}
+                />
+              }
+            />
+            <Route
+              path="/analytics-insights"
+              element={
+                <AnalyticsInsights
+                  items={filteredItems}
+                  allItems={allItems}
+                  poItems={filteredPurchaseOrders}
+                  dateRange={dateRange}
+                  onDateRangeChange={handleDateRangeChange}
+                />
+              }
+            />
+          </Routes>
+        </Suspense>
+      </Layout>
+    </RequireAuth>
   );
 }
 
