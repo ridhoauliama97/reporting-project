@@ -268,7 +268,7 @@ export default function Dashboard({
 
   return (
     <PageLayout
-      title={`${getGreeting()}, ${userName || "User"}. 👋`}
+      title={userName ? `${getGreeting()}, ${userName}. 👋` : `${getGreeting()}. 👋`}
       subtitle="Here's a quick overview of your purchasing data."
       dateRange={dateRange}
       onDateRangeChange={onDateRangeChange}
