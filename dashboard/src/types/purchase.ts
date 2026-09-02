@@ -265,6 +265,118 @@ export interface ParsedUsage
   usageDateObj: Date | null;
 }
 
+export interface ProductionRecord {
+  recordType: string;
+  productionNumber: string;
+  productionType: string;
+  productionDate: string;
+  requiredDate: string;
+  pic: string;
+  lineName: string;
+  machine: string;
+  operator: string;
+  productionTime: string;
+  productionHour: string;
+  process: string;
+  itemCode: string;
+  itemName: string;
+  itemCategory: string;
+  uom: string;
+  quantity: string;
+  cog: string;
+  totalCog: string;
+  warehouse: string;
+  batchNo: string;
+  createdBy: string;
+  createdDate: string;
+}
+
+export interface ParsedProduction
+  extends Omit<ProductionRecord, 'productionHour' | 'quantity' | 'cog' | 'totalCog'> {
+  productionHour: number;
+  quantity: number;
+  cog: number;
+  totalCog: number;
+  productionDateObj: Date | null;
+}
+
+export interface ProductionMaterialRecord {
+  recordType: string;
+  productionNumber: string;
+  productionType: string;
+  productionDate: string;
+  pic: string;
+  lineName: string;
+  machine: string;
+  operator: string;
+  productionHour: string;
+  assemblyItemCode: string;
+  assemblyItemName: string;
+  itemCode: string;
+  itemName: string;
+  itemCategory: string;
+  uom: string;
+  estUom: string;
+  quantity: string;
+  estQuantity: string;
+  cog: string;
+  totalCog: string;
+  warehouse: string;
+  batchNo: string;
+  createdBy: string;
+}
+
+export interface ParsedProductionMaterial
+  extends Omit<
+    ProductionMaterialRecord,
+    'productionHour' | 'quantity' | 'estQuantity' | 'cog' | 'totalCog'
+  > {
+  productionHour: number;
+  quantity: number;
+  estQuantity: number;
+  cog: number;
+  totalCog: number;
+  productionDateObj: Date | null;
+}
+
+export interface ProductionOutputRecord {
+  recordType: string;
+  productionNumber: string;
+  productionType: string;
+  productionDate: string;
+  pic: string;
+  lineName: string;
+  machine: string;
+  operator: string;
+  productionHour: string;
+  itemCode: string;
+  itemName: string;
+  itemCategory: string;
+  uom: string;
+  quantity: string;
+  originalQuantity: string;
+  costOfGood: string;
+  totalCostOfGood: string;
+  totalWaste: string;
+  warehouse: string;
+  batchNo: string;
+  createdBy: string;
+}
+
+export interface ParsedProductionOutput
+  extends Omit<
+    ProductionOutputRecord,
+    'productionHour' | 'quantity' | 'originalQuantity' | 'costOfGood' | 'totalCostOfGood' | 'totalWaste'
+  > {
+  productionHour: number;
+  quantity: number;
+  originalQuantity: number;
+  costOfGood: number;
+  totalCostOfGood: number;
+  totalWaste: number;
+  productionDateObj: Date | null;
+}
+
 export type ItemCategory = 'BAHAN BAKU' | 'BAHAN PENDUKUNG' | 'SPAREPART' | 'WORK IN PROGRESS' | 'BARANG DAGANG';
 
 export const ITEM_CATEGORIES: ItemCategory[] = [

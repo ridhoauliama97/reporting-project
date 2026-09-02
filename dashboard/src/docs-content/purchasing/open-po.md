@@ -14,7 +14,7 @@ Closed       : qty diterima >= qty pesan    (diterima penuh)
 ```
 
 ## Sumber Data
-Dataset `purchase-order-by-item` — dihitung dari Qty. Delivered per baris item, lalu **dikelompokkan per nomor PO** (tabel menampilkan satu baris per PO: jumlah item, qty agregat, % diterima, nilai PO). Filter tanggal berlaku pada tanggal PO.
+Dataset `purchasing-data.json` (recordType `po`) — dihitung dari Qty. Delivered per baris item, lalu **dikelompokkan per nomor PO** (tabel menampilkan satu baris per PO: jumlah item, qty agregat, % diterima, nilai PO). Filter tanggal berlaku pada tanggal PO.
 
 ## Statistik & Visualisasi
 - 4 kartu KPI: jumlah PO, jumlah baris item, total nilai PO, qty belum diterima

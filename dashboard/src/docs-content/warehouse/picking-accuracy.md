@@ -12,4 +12,4 @@ Mengukur kesalahan pengambilan barang (salah item/salah jumlah) yang menyebabkan
 - Catatan kesalahan picking
 
 ## Status Saat Ini: Placeholder (EmptyState)
-Dataset (`purchase-data.json`) tidak berisi data proses picking. Laporan ini belum bisa diisi angka apa pun sampai sumber data tersebut tersedia.
+Dataset (`warehouse-data.json`) tidak berisi data proses picking. Laporan ini belum bisa diisi angka apa pun sampai sumber data tersebut tersedia.

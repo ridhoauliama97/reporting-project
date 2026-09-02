@@ -5,6 +5,9 @@ import type {
   TransferRecord,
   AdjustmentRecord,
   UsageRecord,
+  ProductionRecord,
+  ProductionMaterialRecord,
+  ProductionOutputRecord,
 } from "./types/purchase";
 
 export type RawRecord =
@@ -13,7 +16,10 @@ export type RawRecord =
   | StockRecord
   | TransferRecord
   | AdjustmentRecord
-  | UsageRecord;
+  | UsageRecord
+  | ProductionRecord
+  | ProductionMaterialRecord
+  | ProductionOutputRecord;
 
 export interface LoaderResponse {
   ok: boolean;
@@ -22,19 +28,23 @@ export interface LoaderResponse {
 }
 
 interface WorkerScope {
-  onmessage: ((event: MessageEvent<string>) => void) | null;
+  onmessage: ((event: MessageEvent<string[]>) => void) | null;
   postMessage: (message: LoaderResponse) => void;
 }
 
 const workerScope = self as unknown as WorkerScope;
 
-workerScope.onmessage = async (event: MessageEvent<string>) => {
-  const url = event.data;
+workerScope.onmessage = async (event: MessageEvent<string[]>) => {
+  const urls = event.data;
   try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = (await res.json()) as RawRecord[];
-    workerScope.postMessage({ ok: true, data });
+    const parts = await Promise.all(
+      urls.map(async (url) => {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return (await res.json()) as RawRecord[];
+      }),
+    );
+    workerScope.postMessage({ ok: true, data: parts.flat() });
   } catch (err) {
     workerScope.postMessage({
       ok: false,

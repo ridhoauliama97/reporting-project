@@ -1,14 +1,17 @@
-# Warehouse Productivity (Produktivitas Gudang)
+# Warehouse Productivity (Produktivitas Pabrik/Gudang)
 
 ## Deskripsi
-Laporan produktivitas gudang — jumlah transaksi atau penerimaan per periode kerja sebagai ukuran efisiensi operasional gudang.
+Laporan produktivitas diukur dari catatan produksi: total kuantitas yang diproduksi dibanding jam produksi (unit per jam), dirinci per mesin/sumber daya, operator, dan lini.
 
 ## Kegunaan
-Membandingkan kinerja antar gudang dan memantau tren produktivitas dari waktu ke waktu.
+Membandingkan produktivitas antar mesin/operator/lini dan memantau tren bulanan output serta biaya produksi.
 
-## Data yang Seharusnya Diperlukan
-- Transaksi per pegawai gudang (penerimaan, putaway, picking, packing)
-- Jam kerja / jumlah pegawai per periode
+## Definisi Metrik
+- **Total Produksi** — penjumlahan `quantity` pada record `production`
+- **Jam Produksi** — penjumlahan field `productionHour`
+- **Biaya Produksi** — penjumlahan `totalCog`
+- **Unit/Jam** — `total produksi ÷ jam produksi` (rata-rata per periode)
+- Tabel dirinci per mesin/sumber daya (fallback ke operator bila `machine` kosong)
 
-## Status Saat Ini: Placeholder (EmptyState)
-Dataset (`purchase-data.json`) tidak berisi data transaksi per pegawai maupun jam kerja gudang. Laporan ini belum bisa diisi angka apa pun sampai sumber data tersebut tersedia.
+## Status Saat Ini: Real Data (proxy)
+Dataset `warehouse-data.json` berisi record `production` (±45 ribu baris) sehingga laporan dapat menampilkan angka riil. Metrik unit/jam bersifat **proksi** — bukan hasil pengukuran time-and-motion; jam produksi diambil dari field `Production Hour` pada setiap record.

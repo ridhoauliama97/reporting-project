@@ -1,4 +1,23 @@
-import type { PurchaseItem, ParsedPurchaseItem, PurchaseOrderRecord, ParsedPurchaseOrder, StockRecord, ParsedStockRecord, TransferRecord, ParsedTransfer, AdjustmentRecord, ParsedAdjustment, UsageRecord, ParsedUsage } from "../types/purchase";
+import type {
+  PurchaseItem,
+  ParsedPurchaseItem,
+  PurchaseOrderRecord,
+  ParsedPurchaseOrder,
+  StockRecord,
+  ParsedStockRecord,
+  TransferRecord,
+  ParsedTransfer,
+  AdjustmentRecord,
+  ParsedAdjustment,
+  UsageRecord,
+  ParsedUsage,
+  ProductionRecord,
+  ParsedProduction,
+  ProductionMaterialRecord,
+  ParsedProductionMaterial,
+  ProductionOutputRecord,
+  ParsedProductionOutput,
+} from "../types/purchase";
 import { format, parseISO, isValid } from "date-fns";
 import { id } from "date-fns/locale";
 
@@ -334,6 +353,83 @@ export function parseAllUsages(items: UsageRecord[]): ParsedUsage[] {
     .map((item) => {
       const parsed = parseUsageItem(item);
       parsed.usageDateObj = parseDateCached(dateCache, item.usageDate);
+      return parsed;
+    });
+}
+
+export function parseProductionItem(item: ProductionRecord): ParsedProduction {
+  return {
+    ...item,
+    productionHour: parseNum(item.productionHour),
+    quantity: parseNum(item.quantity),
+    cog: parseNum(item.cog),
+    totalCog: parseNum(item.totalCog),
+    productionDateObj: null,
+  };
+}
+
+export function parseAllProductions(items: ProductionRecord[]): ParsedProduction[] {
+  const dateCache = new Map<string, Date | null>();
+  return items
+    .filter((item) => item.recordType === "production")
+    .map((item) => {
+      const parsed = parseProductionItem(item);
+      parsed.productionDateObj = parseDateCached(dateCache, item.productionDate);
+      return parsed;
+    });
+}
+
+export function parseProductionMaterialItem(
+  item: ProductionMaterialRecord,
+): ParsedProductionMaterial {
+  return {
+    ...item,
+    productionHour: parseNum(item.productionHour),
+    quantity: parseNum(item.quantity),
+    estQuantity: parseNum(item.estQuantity),
+    cog: parseNum(item.cog),
+    totalCog: parseNum(item.totalCog),
+    productionDateObj: null,
+  };
+}
+
+export function parseAllProductionMaterials(
+  items: ProductionMaterialRecord[],
+): ParsedProductionMaterial[] {
+  const dateCache = new Map<string, Date | null>();
+  return items
+    .filter((item) => item.recordType === "productionMaterial")
+    .map((item) => {
+      const parsed = parseProductionMaterialItem(item);
+      parsed.productionDateObj = parseDateCached(dateCache, item.productionDate);
+      return parsed;
+    });
+}
+
+export function parseProductionOutputItem(
+  item: ProductionOutputRecord,
+): ParsedProductionOutput {
+  return {
+    ...item,
+    productionHour: parseNum(item.productionHour),
+    quantity: parseNum(item.quantity),
+    originalQuantity: parseNum(item.originalQuantity),
+    costOfGood: parseNum(item.costOfGood),
+    totalCostOfGood: parseNum(item.totalCostOfGood),
+    totalWaste: parseNum(item.totalWaste),
+    productionDateObj: null,
+  };
+}
+
+export function parseAllProductionOutputs(
+  items: ProductionOutputRecord[],
+): ParsedProductionOutput[] {
+  const dateCache = new Map<string, Date | null>();
+  return items
+    .filter((item) => item.recordType === "productionOutput")
+    .map((item) => {
+      const parsed = parseProductionOutputItem(item);
+      parsed.productionDateObj = parseDateCached(dateCache, item.productionDate);
       return parsed;
     });
 }

@@ -1,12 +1,14 @@
 # Tentang Aplikasi
 
-**Database Report** adalah dashboard reporting **Purchasing & Warehouse** berbasis web (frontend-only) yang menyajikan 14 halaman analisis pembelian, 12 laporan warehouse, halaman **Reports & Exports**, **Analytics & AI Insights**, dan 5 halaman placeholder warehouse. Seluruh angka diturunkan langsung dari dataset riil — tidak ada data rekaan.
+**Database Report** adalah dashboard reporting **Purchasing & Warehouse** berbasis web (frontend-only) yang menyajikan 14 halaman analisis pembelian, 17 laporan menu Warehouse (real + placeholder), halaman **Reports & Exports**, **Analytics & AI Insights**, dan 3 halaman placeholder warehouse. Seluruh angka diturunkan langsung dari dataset riil — tidak ada data rekaan.
 
 ## Sumber Data
 
-- File: `purchase-data.json` (dimuat runtime dari `dashboard/src/data/`) — dataset gabungan ± **25.917 record** dari 7 tipe: invoice pembelian (3.010), PO (2.996), PR (2.650), saldo stok (2.861), transfer antar gudang (7.174), adjustment (706), dan pemakaian (6.520)
-- Rentang data: Januari–Agustus 2026; saldo stok (`stock`) merupakan **snapshot** per 14 Agustus 2026
-- **Tidak ada** data penerimaan barang (goods receipt), QC, atau reject — konsekuensinya dijelaskan per halaman pada bagian Catatan
+- Dua file dimuat runtime dari `dashboard/src/data/`:
+  - `purchasing-data.json` — **9.418 record**, 3 tipe: invoice pembelian (3.284), PO (3.220), PR (2.914)
+  - `warehouse-data.json` — **78.472 record**, 7 tipe: saldo stok (2.886), transfer antar gudang (7.879), adjustment (856), pemakaian (7.001), produksi (45.046), material terpakai produksi (13.127), output produksi (1.677)
+- Rentang data: Januari–Agustus 2026 (adjustment s.d. Juli 2026); saldo stok (`stock`) merupakan **snapshot** per 31 Agustus 2026
+- **Tidak ada** data penerimaan barang (goods receipt), QC, reject, cyce count, picking, maupun packing — konsekuensinya dijelaskan per halaman pada bagian Catatan
 - Field numerik disimpan sebagai string di JSON dan di-parse sebelum dihitung; nilai kosong dianggap `0` dan ditampilkan sebagai `-`
 
 ## Kategori Item

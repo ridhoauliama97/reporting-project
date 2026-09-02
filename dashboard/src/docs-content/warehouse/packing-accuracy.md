@@ -11,4 +11,4 @@ Mengukur kesalahan pengemasan yang berdampak pada retur pelanggan dan biaya peng
 - Data keluhan/retur akibat kesalahan packing
 
 ## Status Saat Ini: Placeholder (EmptyState)
-Dataset (`purchase-data.json`) tidak berisi data proses packing maupun keluhan akibat kesalahan packing. Laporan ini belum bisa diisi angka apa pun sampai sumber data tersebut tersedia.
+Dataset (`warehouse-data.json`) tidak berisi data proses packing maupun keluhan akibat kesalahan packing. Laporan ini belum bisa diisi angka apa pun sampai sumber data tersebut tersedia.

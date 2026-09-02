@@ -4,7 +4,15 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-import { useEffect, useMemo, useState, Suspense, lazy } from "react";
+import {
+  Component,
+  useEffect,
+  useMemo,
+  useState,
+  Suspense,
+  lazy,
+  type ReactNode,
+} from "react";
 import {
   parseAllItems,
   parseAllPurchaseOrders,
@@ -12,6 +20,7 @@ import {
   parseAllTransfers,
   parseAllAdjustments,
   parseAllUsages,
+  parseAllProductions,
   filterByDateRange,
   filterPurchaseOrdersByDateRange,
   filterByDateAccessor,
@@ -29,13 +38,17 @@ import type {
   ParsedAdjustment,
   UsageRecord,
   ParsedUsage,
+  ProductionRecord,
+  ParsedProduction,
 } from "./types/purchase";
 import type {
   LoaderResponse,
   RawRecord,
 } from "./data-loader.worker";
-import purchaseDataUrl from "./data/purchase-data.json?url";
+import purchasingDataUrl from "./data/purchasing-data.json?url";
+import warehouseDataUrl from "./data/warehouse-data.json?url";
 import Layout from "./components/Layout";
+import RequireAuth from "./components/RequireAuth";
 import { Button } from "./components/ui/button";
 import { Analytics } from '@vercel/analytics/react';
 
@@ -74,6 +87,9 @@ const PickingAccuracy = lazy(() => import("./pages/PickingAccuracy"));
 const PackingAccuracy = lazy(() => import("./pages/PackingAccuracy"));
 const DeliveryPerformance = lazy(() => import("./pages/DeliveryPerformance"));
 const DocsPage = lazy(() => import("./pages/DocsPage"));
+const LoginPage = lazy(() => import("./pages/Login"));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPassword"));
+const SettingsPage = lazy(() => import("./pages/Settings"));
 
 function getDefaultDateRange() {
   const now = new Date();
@@ -93,6 +109,36 @@ function LoadingScreen() {
   );
 }
 
+class ErrorBoundary extends Component<
+  { children: ReactNode },
+  { error: Error | null }
+> {
+  state: { error: Error | null } = { error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 p-6">
+          <p className="text-sm font-medium text-foreground">
+            Terjadi kesalahan tak terduga.
+          </p>
+          <p className="max-w-md text-center text-sm text-muted-foreground">
+            {this.state.error.message}
+          </p>
+          <Button variant="outline" onClick={() => this.setState({ error: null })}>
+            Muat Ulang Halaman
+          </Button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function App() {
   const [allItems, setAllItems] = useState<ParsedPurchaseItem[]>([]);
   const [allPurchaseOrders, setAllPurchaseOrders] = useState<
@@ -102,6 +148,7 @@ function App() {
   const [allTransfers, setAllTransfers] = useState<ParsedTransfer[]>([]);
   const [allAdjustments, setAllAdjustments] = useState<ParsedAdjustment[]>([]);
   const [allUsages, setAllUsages] = useState<ParsedUsage[]>([]);
+  const [allProductions, setAllProductions] = useState<ParsedProduction[]>([]);
   const [loadError, setLoadError] = useState(false);
   const [loadKey, setLoadKey] = useState(0);
 
@@ -121,6 +168,7 @@ function App() {
       setAllTransfers(parseAllTransfers(data as TransferRecord[]));
       setAllAdjustments(parseAllAdjustments(data as AdjustmentRecord[]));
       setAllUsages(parseAllUsages(data as UsageRecord[]));
+      setAllProductions(parseAllProductions(data as ProductionRecord[]));
       setDateRange((prev) => {
         if (!prev.start || !prev.end) return prev;
         const inRange = parsed.some(
@@ -140,13 +188,16 @@ function App() {
     };
 
     const loadOnMainThread = () => {
-      fetch(purchaseDataUrl)
-        .then((res) => {
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          return res.json();
-        })
-        .then((data: RawRecord[]) => {
-          applyData(data);
+      Promise.all(
+        [purchasingDataUrl, warehouseDataUrl].map((url) =>
+          fetch(url).then((res) => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.json();
+          }),
+        ),
+      )
+        .then((parts: RawRecord[][]) => {
+          applyData(parts.flat());
         })
         .catch(() => {
           if (!cancelled) setLoadError(true);
@@ -169,7 +220,7 @@ function App() {
       worker.onerror = () => {
         if (!cancelled) loadOnMainThread();
       };
-      worker.postMessage(purchaseDataUrl);
+      worker.postMessage([purchasingDataUrl, warehouseDataUrl]);
     } catch {
       loadOnMainThread();
     }
@@ -233,9 +284,21 @@ function App() {
     [allUsages, dateRange],
   );
 
+  const filteredProductions = useMemo(
+    () =>
+      filterByDateAccessor(
+        allProductions,
+        dateRange.start,
+        dateRange.end,
+        (p) => p.productionDateObj,
+      ),
+    [allProductions, dateRange],
+  );
+
   return (
     <Router>
-      <Routes>
+      <ErrorBoundary>
+        <Routes>
         <Route
           path="/docs"
           element={
@@ -247,6 +310,34 @@ function App() {
               }
             >
               <DocsPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/login"
+          element={
+            <Suspense
+              fallback={
+                <div className="flex min-h-[50vh] items-center justify-center">
+                  <div className="size-8 animate-spin rounded-full border-2 border-border border-t-foreground" />
+                </div>
+              }
+            >
+              <LoginPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/reset-password"
+          element={
+            <Suspense
+              fallback={
+                <div className="flex min-h-[50vh] items-center justify-center">
+                  <div className="size-8 animate-spin rounded-full border-2 border-border border-t-foreground" />
+                </div>
+              }
+            >
+              <ResetPasswordPage />
             </Suspense>
           }
         />
@@ -268,6 +359,7 @@ function App() {
             ) : allItems.length === 0 ? (
               <LoadingScreen />
             ) : (
+              <RequireAuth>
               <Layout>
                 <Suspense
                   fallback={
@@ -278,8 +370,12 @@ function App() {
                 >
                   <Routes>
                     <Route
+                      path="/settings"
+                      element={<SettingsPage />}
+                    />
+                    <Route
                       path="/"
-                      element={<Navigate to="/dashboard" replace />}
+                      element={<Navigate to="/login" replace />}
                     />
                     <Route
                       path="/dashboard"
@@ -476,8 +572,8 @@ function App() {
                         />
                       }
                     />
-                    <Route path="/warehouse/warehouse-productivity" element={<WarehouseProductivity />} />
-                    <Route path="/warehouse/warehouse-utilization" element={<WarehouseUtilization />} />
+                    <Route path="/warehouse/warehouse-productivity" element={<WarehouseProductivity productions={filteredProductions} dateRange={dateRange} onDateRangeChange={setDateRange} />} />
+                    <Route path="/warehouse/warehouse-utilization" element={<WarehouseUtilization stock={allStock} />} />
                     <Route
                       path="/warehouse/location-occupancy"
                       element={
@@ -562,10 +658,12 @@ function App() {
                   </Routes>
                 </Suspense>
               </Layout>
+              </RequireAuth>
             )
           }
         />
       </Routes>
+      </ErrorBoundary>
       <Analytics />
     </Router>
   );

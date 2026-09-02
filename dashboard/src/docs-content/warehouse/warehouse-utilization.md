@@ -1,14 +1,16 @@
-# Warehouse Utilization (Utilisasi Gudang)
+# Warehouse Utilization (Utilisasi Lokasi Gudang)
 
 ## Deskripsi
-Laporan tingkat pemanfaatan kapasitas gudang — seberapa penuh rak/lokasi penyimpanan terpakai terhadap kapasitas yang tersedia.
+Laporan pemanfaatan lokasi/rak penyimpanan per gudang — seberapa banyak shelf location yang berisi stok dibanding seluruh shelf location yang terdaftar pada snapshot stok.
 
 ## Kegunaan
-Mendeteksi gudang yang hampir penuh (risiko kekurangan ruang) vs yang longgar (ruang tidak terpakai) untuk optimasi penempatan barang.
+Mendeteksi gudang dengan lokasi yang paling banyak terisi (risiko penuhnya ruang) dan barang yang belum ditetapkan lokasinya ("Tanpa Lokasi") untuk optimasi penempatan.
 
-## Data yang Seharusnya Diperlukan
-- Kapasitas maksimum per gudang/rak/lokasi
-- Kuantitas terisi per lokasi
+## Definisi Metrik
+- **Lokasi Terdaftar** — jumlah shelf code unik yang muncul pada baris stok dengan `onHand > 0`
+- **Lokasi Terisi** — shelf code yang berisi stok (subset dari lokasi terdaftar)
+- **Utilisasi** — `lokasi terisi ÷ lokasi terdaftar × 100` per gudang
+- **Item Tanpa Lokasi** — baris stok tanpa shelf code
 
-## Status Saat Ini: Placeholder (EmptyState)
-Dataset (`purchase-data.json`) hanya berisi snapshot stok per item — **tidak ada** data kapasitas gudang/rak. Laporan ini belum bisa diisi angka apa pun sampai sumber data tersebut tersedia.
+## Status Saat Ini: Real Data (proxy)
+Dataset `warehouse-data.json` berisi `stock` (snapshot) sehingga laporan dapat menampilkan angka riil. Utilisasi dihitung dari ketersediaan shelf code — **bukan** kapasitas fisik rak, karena data kapasitas maksimum tidak tersedia di sumber.

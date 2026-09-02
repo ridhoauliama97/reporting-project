@@ -58,7 +58,8 @@ Page #4 (Supplier Quality) must stay empty-state via the `EmptyState` component 
 
 - `verbatimModuleSyntax: true` — type-only imports must use `import type`.
 - `noUnusedLocals`/`noUnusedParameters` are errors — build fails on unused vars.
-- Path alias `@/` → `./src/` (in `vite.config.ts` + `tsconfig.app.json`); shadcn CLI reads it, so `npx shadcn@latest add <component> -o` works non-interactively (needs network to ui.shadcn.com).
+- `erasableSyntaxOnly: true` — no TS `enum`, `namespace`, or constructor parameter properties (build errors); use const objects / discriminated unions instead.
+- Path alias `@/` → `./src/` (in `vite.config.ts` + `tsconfig.app.json`). shadcn CLI reads it, but `npx shadcn@latest add <component> -o` **mis-resolves the alias here**: generated files land in a literal `@/` folder at the CWD — move them into `src/components/ui/`, delete `@/`, and review `git status` before committing (the CLI once also retitled an unrelated page, SupplierQuality).
 
 ## UI Conventions
 
@@ -69,6 +70,8 @@ Page #4 (Supplier Quality) must stay empty-state via the `EmptyState` component 
 - Proxy-metric pages carry an `InfoBanner` note explaining the data limitation (e.g. Supplier Delivery, Supplier Scorecard)
 - Dark mode: `ThemeToggle` toggles `.dark` on `<html>`, persists via `localStorage` key `theme` (no next-themes in app code)
 - Responsive rules from `polish.md`: no page-level horizontal scroll; tables use horizontal-scroll container with sticky columns; fluid type scale, min 12px text
+
+- **cmdk + Tailwind v4 gotcha (`ui/command.tsx`)**: cmdk renders `data-selected="true"|"false"` on **every** item, and presence-based variants (`data-selected:bg-muted`) match both values — every item gets highlighted. Use the value-based form `data-[selected=true]:...` (command.tsx is already fixed; don't regress). Also: `<Command>`'s `onValueChange` fires only when its `value` prop is controlled.
 
 ## DataTable Gotchas (hard-earned)
 
@@ -87,7 +90,12 @@ Page #4 (Supplier Quality) must stay empty-state via the `EmptyState` component 
 
 ## Analytics & AI Insights
 
-`utils/analytics.ts` is a **deterministic rule-based engine** (no LLM, no backend, no API calls — the app is frontend-only). Threshold constants live at the top of the file. `AnalyticsInsights.tsx` renders summaries, recommendations (Info/Perhatian/Urgent), anomaly detection, spend analysis, and a chat sheet ("Tanya Data") with source links via `REPORT_PATHS`. Don't add LLM integration without an explicit ask.
+`utils/analytics.ts` is a **deterministic rule-based engine** (no LLM, no backend, no API calls — the app is frontend-only). Threshold constants live at the top of the file. `AnalyticsInsights.tsx` renders summaries, recommendations (Info/Perhatian/Urgent), anomaly detection, spend analysis, and a chat sheet ("Tanya Data") with source links via `REPORT_PATHS` (defined in `AnalyticsInsights.tsx`, not in the engine). Don't add LLM integration without an explicit ask.
+
+## Shared Utils Conventions
+
+- **`round1`/`round2` live only in `utils/formatters.ts`** (single source of truth, imported by both `analytics.ts` and `reports.ts`). Never redefine them locally in another module.
+- **Date helpers too**: items carry pre-parsed `purchaseDateObj`/`poDateObj`/`prDateObj`; sort/filter with those via `byPurchaseDateAsc`, `monthKeyOf`, `monthLabelOf` (`utils/formatters.ts`) instead of re-parsing date strings with `new Date(...)` in comparators (O(n log n) parses — a real perf bug when it regresses).
 
 ## Shared Utils Conventions
 
@@ -114,12 +122,33 @@ dashboard/src/
 ├── docs-content/     # {menu}/{slug}.md + index.tsx config (see Documentation Hub)
 ├── utils/formatters.ts # parseAllItems/PO/Stock/Transfers/Adjustments/Usages, formatRupiah, formatRupiahCompact, formatPercent, filterByDateRange, filterByDateAccessor, warehouseFull, round1, round2
 ├── utils/analytics.ts  # rule-based insight engine (no LLM)
+├── utils/reports.ts    # REPORT_DEFINITIONS: per-report getData(items, purchaseOrders?) used by ReportsExports
 ├── utils/exporter.ts   # CSV/Excel/PDF export (used by DataTable + ReportsExports)
 ├── utils/reports.ts    # REPORTS catalog (ReportDefinition/ReportExport): defines every report's export shape; imported by ReportsExports + analytics
 ├── types/purchase.ts  # PurchaseItem / ParsedPurchaseItem
 ├── data/purchase-data.json  # fetched at runtime via ?url import (see Data Handling)
 └── lib/              # cn() helper
 ```
+
+## Backend (/server) — Auth Service
+
+- Auth service: **Express 5 + better-auth** (email/password + session) **+ drizzle-orm (pg)**; TypeScript ESM (NodeNext), `tsx` for dev, `tsc` build. Postgres `db_reporting` (owner-provided local-dev defaults: `postgres://postgres:password@localhost:5432/db_reporting` — don't invent others).
+- Commands (run in `server/`): `npm run dev` (tsx watch), `npm run build` (tsc → dist), `npm start`, `db:generate`/`db:migrate` (drizzle-kit). Routes: `GET /api/health`, auth endpoints under `/api/auth/*`, sample protected `GET /api/me`.
+- **Auth wiring gotchas (better-auth 1.7.x)**: import `toNodeHandler`/`fromNodeHeaders` from `better-auth/node` — `better-auth/express` does NOT exist in 1.7. Express 5 wildcard needs named form: `/api/auth/*splat`. Session check: `auth.api.getSession({ headers: fromNodeHeaders(req.headers) })`.
+- **Schema source of truth**: `src/db/schema.ts` generated via `npx auth@latest generate` (run with `--output` + `-y`). Do NOT regenerate with `@better-auth/cli` — it's deprecated and emits a v1.4-era schema (missing `account.issuer` → runtime `BadAuthError`). Migrations live in `server/drizzle/` and are committed. Kill dev server by port (`fuser -k 4000/tcp`) — `pkill -f tsx` also matches the invoking shell.
+- Frontend remains self-contained: no dashboard code calls this API yet.
+- **Cloud DB (Supabase)**: production database = Supabase project `akbmckowpczplxdsyebl` (ap-southeast-1). Direct host is **IPv6-only** — use the **transaction pooler** `aws-0-ap-southeast-1.pooler.supabase.com` (IPv4; pooler user = `postgres.<ref>`). `drizzle-kit migrate` hangs against the pooler (TLS/verify-full) — apply migration SQL via `node`/`pg` directly (files in `server/drizzle/`), no bookkeeping table needed. `src/db/pool.ts` enables `ssl: { rejectUnauthorized: false }` for `supabase.co` URLs (chain quirk). The DB password lives ONLY in GitHub secret `API_DATABASE_URL` + user's dashboard — never commit it.
+
+## Dashboard Auth Integration (M1)
+
+- **Login page**: route `/login` renders **outside** the Layout shell (sibling of `/docs` in `App.tsx`); centered Card with Masuk/Daftar toggle; on success `navigate("/dashboard")`.
+- **`src/lib/auth-client.ts`**: lazily imports `better-auth/react` (`createAuthClient`, baseURL = `VITE_AUTH_URL` env, default `http://localhost:4000`) — dynamic import keeps the client out of the index bundle. `getAuthClient()` caches a singleton promise.
+- **Header session**: `components/dashboard/user-menu.tsx` replaces the static profile menu; it refreshes `getSession()` when the dropdown opens (cookie may not be ready right after register, so mount-only fetch showed guest).
+- **Gotcha (client)**: better-auth client methods **do not throw** — they resolve `{ data, error }`; check `res.error` before navigating (the login page did navigate on a failed duplicate sign-up until this was fixed).
+- Dev requires BOTH servers: vite `:5173` (dashboard) + api `:4000` (server/) running side by side; auth requests go cross-origin (CORS + credentials already verified).
+- **Email flows (M2)**: `src/mailer.ts` uses SMTP env (`SMTP_HOST/PORT/USER/PASS/SECURE`, `EMAIL_FROM`); without `SMTP_HOST` it's a **dev transport** that prints mails (+ links) to the server console — full local E2E without SMTP. `auth.ts`: `emailVerification.sendOnSignUp: true` (email sent on sign-up; login stays open), reset/verify links built to `BETTER_AUTH_REDIRECT_URL` (dashboard); reset token lives in the URL PATH (`/reset-password/:token`) but the dashboard page receives it via `?token=` (auth.ts builds the link; POST reset-password uses the token body).
+- **Account settings (M3)**: `/settings` route lives INSIDE the Layout (sibling of report routes in `App.tsx`, linked from the user-menu "Pengaturan" item); update name via `updateUser`, email via `changeEmail` (sends verification email), password via `changePassword`. **Gotcha**: `deleteUser` is disabled by default — auth.ts must set `user.deleteUser.enabled: true`, and the endpoint requires the current `password` when the session isn't fresh.
+- **Dashboard flows**: `/reset-password` page (outside Layout) — email form, or token form (when `?token=` present); Login page has "Lupa password?" link; after register, `navigate("/dashboard", { state: { registered: true } })` shows an `InfoBanner`. In E2E scripts the mailing links are read straight from the server log (grep `[mailer DEV] LINK:`).
 
 ## Per-Page Notes (from prompt.md)
 

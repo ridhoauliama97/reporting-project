@@ -12,4 +12,4 @@ Mengukur keandalan catatan persediaan; akurasi tinggi berarti saldo sistem dapat
 - Catatan selisih (variance) dan tindak lanjutnya
 
 ## Status Saat Ini: Placeholder (EmptyState)
-Dataset (`purchase-data.json`) tidak berisi data hasil cycle count — hanya snapshot saldo stok (`stock`), transfer, adjustment, dan pemakaian. Laporan ini belum bisa diisi angka apa pun sampai sumber data tersebut tersedia.
+Dataset (`warehouse-data.json`) tidak berisi data hasil cycle count — hanya snapshot saldo stok (`stock`), transfer, adjustment, dan pemakaian. Laporan ini belum bisa diisi angka apa pun sampai sumber data tersebut tersedia.

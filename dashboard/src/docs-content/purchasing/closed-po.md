@@ -17,7 +17,7 @@ Status PO (diturunkan dari kesesuaian qty, bukan field tersimpan):
 - **OPEN**: qty diterima = 0 (belum menerima pengiriman)
 
 ## Sumber Data
-Dataset `purchase-order-by-item` — dihitung dari Qty. Ordered vs Qty. Delivered per baris item, lalu **dikelompokkan per nomor PO** (tabel menampilkan satu baris per PO: jumlah item, % diterima, nilai PO). Filter tanggal berlaku pada tanggal PO.
+Dataset `purchasing-data.json` (recordType `po`) — dihitung dari Qty. Ordered vs Qty. Delivered per baris item, lalu **dikelompokkan per nomor PO** (tabel menampilkan satu baris per PO: jumlah item, % diterima, nilai PO). Filter tanggal berlaku pada tanggal PO.
 
 ## Statistik & Visualisasi
 - 4 kartu KPI: jumlah PO, jumlah baris item, total nilai PO, qty belum diterima (0 untuk PO closed)
