@@ -1,17 +1,18 @@
-# Warehouse Productivity (Produktivitas Pabrik/Gudang)
+# Warehouse Productivity (Produktivitas Proses di Gudang)
 
 ## Deskripsi
-Laporan produktivitas diukur dari catatan produksi: total kuantitas yang diproduksi dibanding jam produksi (unit per jam), dirinci per mesin/sumber daya, operator, dan lini.
+Laporan produktivitas proses dipakai sebagai ukuran efisiensi produksi di gudang: output yang dihasilkan dibanding material yang terpakai (yield), kuantitas dan biaya produksi per lini, serta tren bulanan.
 
 ## Kegunaan
-Membandingkan produktivitas antar mesin/operator/lini dan memantau tren bulanan output serta biaya produksi.
+Membandingkan produktivitas antar lini produksi dan memantau tren bulanan output vs pemakaian material.
 
 ## Definisi Metrik
-- **Total Produksi** — penjumlahan `quantity` pada record `production`
-- **Jam Produksi** — penjumlahan field `productionHour`
+- **Total Produksi** — penjumlahan `quantity` pada record `production` (hanya nilai > 0)
 - **Biaya Produksi** — penjumlahan `totalCog`
-- **Unit/Jam** — `total produksi ÷ jam produksi` (rata-rata per periode)
-- Tabel dirinci per mesin/sumber daya (fallback ke operator bila `machine` kosong)
+- **Material Terpakai** — penjumlahan `quantity` pada record `productionMaterial`
+- **Output** — penjumlahan `quantity` pada record `productionOutput`
+- **Rasio Output / Material (yield)** — `output ÷ material × 100`
+- Tabel dirinci per lini produksi (`lineName`)
 
 ## Status Saat Ini: Real Data (proxy)
-Dataset `warehouse-data.json` berisi record `production` (±45 ribu baris) sehingga laporan dapat menampilkan angka riil. Metrik unit/jam bersifat **proksi** — bukan hasil pengukuran time-and-motion; jam produksi diambil dari field `Production Hour` pada setiap record.
+Dataset `warehouse-data.json` berisi record `production`, `productionMaterial`, dan `productionOutput` sehingga laporan dapat menampilkan angka riil. **Catatan**: snapshot ini tidak menyertakan jam kerja, mesin, maupun operator (field kosong di sumber), sehingga metrik unit/jam atau transaksi per pegawai tidak dapat dihitung — metrik yang ditampilkan adalah yield output/material sebagai proksi produktivitas.

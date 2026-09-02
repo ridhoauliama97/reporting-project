@@ -1,9 +1,14 @@
 import { useMemo } from "react";
-import type { ParsedProduction } from "../types/purchase";
+import type {
+  ParsedProduction,
+  ParsedProductionMaterial,
+  ParsedProductionOutput,
+} from "../types/purchase";
 import type { DateRange } from "../types/ui";
 import {
   formatNumber,
   formatRupiah,
+  formatPercent,
   round1,
   round2,
   monthKeyOf,
@@ -28,26 +33,23 @@ import {
 
 interface WarehouseProductivityProps {
   productions: ParsedProduction[];
+  productionMaterials: ParsedProductionMaterial[];
+  productionOutputs: ParsedProductionOutput[];
   dateRange: DateRange;
   onDateRangeChange: (range: DateRange) => void;
 }
 
-interface MachineRow {
-  machine: string;
-  operator: string;
+interface LineRow {
   line: string;
   batchCount: number;
   totalQty: number;
-  totalHours: number;
   totalCost: number;
-  qtyPerHour: number;
 }
-
-const machineKey = (p: ParsedProduction): string =>
-  p.machine?.trim() || p.operator?.trim() || "Tanpa Mesin";
 
 export default function WarehouseProductivity({
   productions,
+  productionMaterials,
+  productionOutputs,
   dateRange,
   onDateRangeChange,
 }: WarehouseProductivityProps) {
@@ -55,67 +57,71 @@ export default function WarehouseProductivity({
 
   const totals = useMemo(() => {
     let totalQty = 0;
-    let totalHours = 0;
     let totalCost = 0;
     productions.forEach((p) => {
-      totalQty += p.quantity;
-      totalHours += p.productionHour;
+      totalQty += p.quantity > 0 ? p.quantity : 0;
       totalCost += p.totalCog;
+    });
+    let materialQty = 0;
+    productionMaterials.forEach((m) => {
+      materialQty += m.quantity > 0 ? m.quantity : 0;
+    });
+    let outputQty = 0;
+    let wasteQty = 0;
+    productionOutputs.forEach((o) => {
+      outputQty += o.quantity > 0 ? o.quantity : 0;
+      wasteQty += o.totalWaste;
     });
     return {
       totalQty: round1(totalQty),
-      totalHours: round1(totalHours),
       totalCost: round2(totalCost),
-      qtyPerHour: totalHours > 0 ? round2(totalQty / totalHours) : 0,
+      materialQty: round1(materialQty),
+      outputQty: round1(outputQty),
+      wasteQty: round1(wasteQty),
+      yieldPct:
+        materialQty > 0 ? round2((outputQty / materialQty) * 100) : 0,
     };
-  }, [productions]);
+  }, [productions, productionMaterials, productionOutputs]);
 
-  const machineRows = useMemo(() => {
-    const grouped: Record<string, MachineRow> = {};
+  const lineRows: LineRow[] = useMemo(() => {
+    const grouped: Record<string, LineRow> = {};
     productions.forEach((p) => {
-      const key = machineKey(p);
-      const label = p.machine?.trim() || "Tanpa Mesin";
-      if (!grouped[key]) {
-        grouped[key] = {
-          machine: label,
-          operator: p.operator?.trim() || "-",
-          line: p.lineName?.trim() || "-",
+      const line = p.lineName?.trim() || "Tanpa Lini";
+      if (!grouped[line]) {
+        grouped[line] = {
+          line,
           batchCount: 0,
           totalQty: 0,
-          totalHours: 0,
           totalCost: 0,
-          qtyPerHour: 0,
         };
       }
-      const g = grouped[key];
+      const g = grouped[line];
       g.batchCount += 1;
-      g.totalQty += p.quantity;
-      g.totalHours += p.productionHour;
+      g.totalQty += p.quantity > 0 ? p.quantity : 0;
       g.totalCost += p.totalCog;
     });
     return Object.values(grouped)
       .map((g) => ({
         ...g,
-        totalQty: round1(g.totalQty),
-        totalHours: round1(g.totalHours),
         totalCost: round2(g.totalCost),
-        qtyPerHour: g.totalHours > 0 ? round2(g.totalQty / g.totalHours) : 0,
+        totalQty: round1(g.totalQty),
       }))
       .sort((a, b) => b.totalQty - a.totalQty || b.totalCost - a.totalCost);
   }, [productions]);
 
-  const topResource =
-    productions.length > 0
-      ? machineRows.reduce(
-          (best, r) => (r.qtyPerHour > (best?.qtyPerHour ?? 0) ? r : best),
-          machineRows[0],
-        )
-      : undefined;
+  const topLine = lineRows[0];
 
   const chartData = useMemo(() => {
     const byMonth: Record<
       string,
-      { key: string; label: string; qty: number; hours: number }
+      {
+        key: string;
+        label: string;
+        qty: number;
+        cost: number;
+        material: number;
+        output: number;
+      }
     > = {};
     productions.forEach((p) => {
       const key = monthKeyOf(p.productionDateObj);
@@ -125,33 +131,49 @@ export default function WarehouseProductivity({
           key,
           label: monthLabelOf(p.productionDateObj),
           qty: 0,
-          hours: 0,
+          cost: 0,
+          material: 0,
+          output: 0,
         };
       }
-      byMonth[key].qty += p.quantity;
-      byMonth[key].hours += p.productionHour;
+      byMonth[key].qty += p.quantity > 0 ? p.quantity : 0;
+      byMonth[key].cost += p.totalCog;
+    });
+    productionMaterials.forEach((m) => {
+      const key = monthKeyOf(m.productionDateObj);
+      if (!key || !byMonth[key]) return;
+      byMonth[key].material += m.quantity;
+    });
+    productionOutputs.forEach((o) => {
+      const key = monthKeyOf(o.productionDateObj);
+      if (!key || !byMonth[key]) return;
+      byMonth[key].output += o.quantity;
     });
     return Object.values(byMonth)
       .sort((a, b) => a.key.localeCompare(b.key))
-      .map((m) => ({ ...m, qty: round1(m.qty), hours: round1(m.hours) }));
-  }, [productions]);
+      .map((m) => ({
+        ...m,
+        qty: round1(m.qty),
+        cost: round2(m.cost),
+        material: round1(m.material),
+        output: round1(m.output),
+      }));
+  }, [productions, productionMaterials, productionOutputs]);
 
-  const machineChartData = useMemo(
+  const lineChartData = useMemo(
     () =>
-      machineRows.slice(0, 10).map((r) => ({
+      lineRows.slice(0, 10).map((r) => ({
         name:
-          r.machine.length > (isMobile ? 14 : 22)
-            ? r.machine.substring(0, isMobile ? 14 : 22) + "..."
-            : r.machine,
-        total: r.qtyPerHour,
+          r.line.length > (isMobile ? 14 : 22)
+            ? r.line.substring(0, isMobile ? 14 : 22) + "..."
+            : r.line,
+        total: r.totalQty,
       })),
-    [machineRows, isMobile],
+    [lineRows, isMobile],
   );
 
   const columns = [
-    { key: "machine", label: "Mesin / Sumber Daya", sortable: true },
-    { key: "operator", label: "Operator", sortable: true },
-    { key: "line", label: "Lini", sortable: true },
+    { key: "line", label: "Lini Produksi", sortable: true },
     {
       key: "batchCount",
       label: "Jumlah Batch",
@@ -163,68 +185,55 @@ export default function WarehouseProductivity({
       label: "Total Produksi",
       align: "right" as const,
       sortable: true,
-      render: (r: MachineRow) => formatNumber(r.totalQty),
-    },
-    {
-      key: "totalHours",
-      label: "Jam Produksi",
-      align: "right" as const,
-      sortable: true,
-      render: (r: MachineRow) => formatNumber(r.totalHours),
-    },
-    {
-      key: "qtyPerHour",
-      label: "Unit / Jam",
-      align: "right" as const,
-      sortable: true,
-      render: (r: MachineRow) => formatNumber(r.qtyPerHour),
+      render: (r: LineRow) => formatNumber(r.totalQty),
     },
     {
       key: "totalCost",
       label: "Biaya Produksi",
       align: "right" as const,
       sortable: true,
-      render: (r: MachineRow) => formatRupiah(r.totalCost),
+      render: (r: LineRow) => formatRupiah(r.totalCost),
     },
   ];
 
   return (
     <PageLayout
       title="Warehouse Productivity"
-      subtitle="Produktivitas pabrik/gudang dari data produksi (unit per jam produksi)."
+      subtitle="Produktivitas proses di gudang: output produksi vs material terpakai."
       dateRange={dateRange}
       onDateRangeChange={onDateRangeChange}
     >
       <InfoBanner>
-        Produktivitas dihitung dari catatan produksi (Production), bukan hasil
-        time-and-motion. Metrik unit/jam bersifat proksi: jam produksi diambil
-        dari field Production Hour pada setiap record. Diskrepansi antara qty
-        produksi dan penggunaan material/output dapat dicermati di laporan
-        produksi terkait.
+        Snapshot produksi ini tidak menyertakan jam kerja, mesin, maupun
+        operator (field kosong di sumber data), sehingga metrik unit/jam atau
+        transaksi per pegawai tidak dapat dihitung. Sebagai gantinya, laporan
+        menampilkan metrik riil yang tersedia: kuantitas produksi, biaya, dan
+        rasio output terhadap material terpakai (yield) sebagai proksi
+        produktivitas.
       </InfoBanner>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Total Produksi" value={formatNumber(totals.totalQty)} />
-        <StatCard title="Jam Produksi" value={formatNumber(totals.totalHours)} />
         <StatCard
           title="Biaya Produksi"
           value={formatRupiah(totals.totalCost)}
         />
         <StatCard
-          title="Produktivitas Rata-rata"
-          value={`${formatNumber(totals.qtyPerHour)} unit/jam`}
-          subtitle={
-            topResource
-              ? `Terbaik: ${topResource.machine} (${formatNumber(topResource.qtyPerHour)} unit/jam)`
-              : undefined
-          }
+          title="Rasio Output / Material"
+          value={formatPercent(totals.yieldPct)}
+          subtitle={`Output ${formatNumber(totals.outputQty)} dari material ${formatNumber(totals.materialQty)}`}
+        />
+        <StatCard
+          title="Lini Terbesar"
+          value={formatNumber(topLine?.totalQty ?? 0)}
+          subtitle={topLine?.line}
           accent
         />
       </div>
 
       <ChartCard
-        title="Produksi per Bulan"
-        description="Total qty produksi per bulan pada rentang tanggal terpilih"
+        title="Produksi vs Material Terpakai per Bulan"
+        description="Total qty produksi dan material terpakai pada rentang tanggal terpilih"
       >
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData}>
@@ -251,13 +260,13 @@ export default function WarehouseProductivity({
             />
             <Bar
               dataKey="qty"
-              name="Qty Produksi"
+              name="Produksi"
               fill="var(--color-chart-1)"
               radius={[4, 4, 0, 0]}
             />
             <Bar
-              dataKey="hours"
-              name="Jam Produksi"
+              dataKey="material"
+              name="Material Terpakai"
               fill="var(--color-chart-2)"
               radius={[4, 4, 0, 0]}
             />
@@ -266,12 +275,12 @@ export default function WarehouseProductivity({
       </ChartCard>
 
       <ChartCard
-        title="Produktivitas per Mesin (10 Teratas)"
-        description="Unit per jam produksi, berdasarkan mesin/sumber daya"
+        title="Produksi per Lini (10 Teratas)"
+        description="Total qty produksi per lini"
       >
         <TopBarChart
-          data={machineChartData}
-          tooltipLabel="Unit/Jam"
+          data={lineChartData}
+          tooltipLabel="Produksi"
           tooltipFormatter={formatNumber}
           yWidthMobile={100}
           yWidthDesktop={150}
@@ -280,13 +289,13 @@ export default function WarehouseProductivity({
 
       <DataTable
         columns={columns}
-        data={machineRows}
+        data={lineRows}
         searchable
-        searchFields={["machine", "operator", "line"]}
+        searchFields={["line"]}
         showExport
         showColumnToggle
         title="warehouse-productivity"
-        totalColumns={["batchCount", "totalQty", "totalHours", "totalCost"]}
+        totalColumns={["batchCount", "totalQty", "totalCost"]}
       />
     </PageLayout>
   );

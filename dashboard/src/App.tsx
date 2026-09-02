@@ -21,6 +21,8 @@ import {
   parseAllAdjustments,
   parseAllUsages,
   parseAllProductions,
+  parseAllProductionMaterials,
+  parseAllProductionOutputs,
   filterByDateRange,
   filterPurchaseOrdersByDateRange,
   filterByDateAccessor,
@@ -40,6 +42,10 @@ import type {
   ParsedUsage,
   ProductionRecord,
   ParsedProduction,
+  ProductionMaterialRecord,
+  ParsedProductionMaterial,
+  ProductionOutputRecord,
+  ParsedProductionOutput,
 } from "./types/purchase";
 import type {
   LoaderResponse,
@@ -149,6 +155,12 @@ function App() {
   const [allAdjustments, setAllAdjustments] = useState<ParsedAdjustment[]>([]);
   const [allUsages, setAllUsages] = useState<ParsedUsage[]>([]);
   const [allProductions, setAllProductions] = useState<ParsedProduction[]>([]);
+  const [allProductionMaterials, setAllProductionMaterials] = useState<
+    ParsedProductionMaterial[]
+  >([]);
+  const [allProductionOutputs, setAllProductionOutputs] = useState<
+    ParsedProductionOutput[]
+  >([]);
   const [loadError, setLoadError] = useState(false);
   const [loadKey, setLoadKey] = useState(0);
 
@@ -169,6 +181,12 @@ function App() {
       setAllAdjustments(parseAllAdjustments(data as AdjustmentRecord[]));
       setAllUsages(parseAllUsages(data as UsageRecord[]));
       setAllProductions(parseAllProductions(data as ProductionRecord[]));
+      setAllProductionMaterials(
+        parseAllProductionMaterials(data as ProductionMaterialRecord[]),
+      );
+      setAllProductionOutputs(
+        parseAllProductionOutputs(data as ProductionOutputRecord[]),
+      );
       setDateRange((prev) => {
         if (!prev.start || !prev.end) return prev;
         const inRange = parsed.some(
@@ -293,6 +311,28 @@ function App() {
         (p) => p.productionDateObj,
       ),
     [allProductions, dateRange],
+  );
+
+  const filteredProductionMaterials = useMemo(
+    () =>
+      filterByDateAccessor(
+        allProductionMaterials,
+        dateRange.start,
+        dateRange.end,
+        (p) => p.productionDateObj,
+      ),
+    [allProductionMaterials, dateRange],
+  );
+
+  const filteredProductionOutputs = useMemo(
+    () =>
+      filterByDateAccessor(
+        allProductionOutputs,
+        dateRange.start,
+        dateRange.end,
+        (p) => p.productionDateObj,
+      ),
+    [allProductionOutputs, dateRange],
   );
 
   return (
@@ -572,7 +612,7 @@ function App() {
                         />
                       }
                     />
-                    <Route path="/warehouse/warehouse-productivity" element={<WarehouseProductivity productions={filteredProductions} dateRange={dateRange} onDateRangeChange={setDateRange} />} />
+                    <Route path="/warehouse/warehouse-productivity" element={<WarehouseProductivity productions={filteredProductions} productionMaterials={filteredProductionMaterials} productionOutputs={filteredProductionOutputs} dateRange={dateRange} onDateRangeChange={setDateRange} />} />
                     <Route path="/warehouse/warehouse-utilization" element={<WarehouseUtilization stock={allStock} />} />
                     <Route
                       path="/warehouse/location-occupancy"
