@@ -178,8 +178,8 @@ export default function Dashboard({
 
     const alertRows = priceIncreaseAlerts(items)
       .slice(0, 5)
-      .map((a) => ({
-        key: `alert-${a.item}`,
+      .map((a, idx) => ({
+        key: `alert-${a.item}-${idx}`,
         label: a.item,
         sublabel: `${formatRupiah(a.prev)} → ${formatRupiah(a.curr)} per unit`,
         value: `+${formatPercent(a.increase * 100)}`,
