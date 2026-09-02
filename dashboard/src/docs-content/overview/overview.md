@@ -1,13 +1,15 @@
 # Tentang Aplikasi
 
-**Database Report** adalah dashboard reporting **Purchasing** berbasis web (frontend-only) yang menyajikan 14 halaman analisis pembelian ditambah halaman **Reports & Exports** dan **Analytics & AI Insights**. Seluruh angka diturunkan langsung dari dataset riil — tidak ada data rekaan.
+**Database Report** adalah dashboard reporting **Purchasing & Warehouse** berbasis web (frontend-only) yang menyajikan 14 halaman analisis pembelian, 17 laporan menu Warehouse (real + placeholder), halaman **Reports & Exports**, **Analytics & AI Insights**, dan 3 halaman placeholder warehouse. Seluruh angka diturunkan langsung dari dataset riil — tidak ada data rekaan.
 
 ## Sumber Data
 
-- File: `purchasing-report-data.json` — hasil **penggabungan, pengelompokan, dan pengurutan** dari 8 dataset sumber (`purchase-by-item`, `purchase-order-by-item`, `purchase-request-by-item`, `purchase-request`, `usage-by-item`, `stock-balance`, `goods-transfer-by-tem`, `adjustment-by-item`), dibuat oleh `scripts/build-report-data.mjs`
-- Bagian utama: **3.010 baris invoice** (purchase) — transaksi berjenis `PI`, `PN`, `PURBB`; plus 1.558 header PO, 2.713 baris PR, 6.520 pemakaian, 2.861 saldo stok, 7.174 transfer gudang, dan 706 penyesuaian stok
-- **Tidak ada** data QC/reject — konsekuensinya dijelaskan per halaman pada bagian Catatan
-- Field numerik dinormalisasi menjadi angka (bukan string) saat file dibangkitkan; nilai kosong dianggap `0` dan ditampilkan sebagai `-`
+- Dua file dimuat runtime dari `dashboard/src/data/`:
+  - `purchasing-data.json` — **9.418 record**, 3 tipe: invoice pembelian (3.284), PO (3.220), PR (2.914)
+  - `warehouse-data.json` — **78.472 record**, 7 tipe: saldo stok (2.886), transfer antar gudang (7.879), adjustment (856), pemakaian (7.001), produksi (45.046), material terpakai produksi (13.127), output produksi (1.677)
+- Rentang data: Januari–Agustus 2026 (adjustment s.d. Juli 2026); saldo stok (`stock`) merupakan **snapshot** per 31 Agustus 2026
+- **Tidak ada** data penerimaan barang (goods receipt), QC, reject, cyce count, picking, maupun packing — konsekuensinya dijelaskan per halaman pada bagian Catatan
+- Field numerik disimpan sebagai string di JSON dan di-parse sebelum dihitung; nilai kosong dianggap `0` dan ditampilkan sebagai `-`
 
 ## Kategori Item
 
@@ -25,7 +27,7 @@ Field `itemCategory` memiliki tepat 5 nilai:
 
 ### Date Filter
 
-Filter rentang tanggal yang menggerakkan **semua** widget, tabel, dan chart di halaman tersebut. Filter mengikuti tanggal `purchaseDate` (beberapa halaman menggunakan `poDate`/`prDate` sesuai metriknya).
+Filter rentang tanggal yang menggerakkan **semua** widget, tabel, dan chart di halaman tersebut. Filter mengikuti tanggal `purchaseDate` (beberapa halaman menggunakan `poDate`/`prDate` sesuai metriknya); halaman warehouse mengikuti `transferDate`/`adjustmentDate`/`usageDate` sesuai sumbernya. Laporan berbasis snapshot stok (Inventory Value, Dead/Slow/Fast Moving, Inventory Aging, Location Occupancy, Stock Availability) tidak terpengaruh filter — informasinya ditampilkan pada InfoBanner di halaman masing-masing.
 
 ### DataTable
 

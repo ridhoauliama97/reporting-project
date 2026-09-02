@@ -1,14 +1,10 @@
 import { useMemo } from "react";
 import type { ParsedPurchaseItem } from "../types/purchase";
+import type { DateRange } from "../types/ui";
 import { formatNumber, formatPercent, formatDate } from "../utils/formatters";
 import PageLayout from "../components/PageLayout";
 import StatCard from "../components/StatCard";
 import DataTable from "../components/DataTable";
-
-interface DateRange {
-  start: Date | null;
-  end: Date | null;
-}
 
 interface PurchaseVarianceProps {
   items: ParsedPurchaseItem[];
@@ -127,7 +123,14 @@ export default function PurchaseVariance({
         />
       </div>
 
-      <DataTable columns={columns} data={varianceData} />
+      <DataTable
+        columns={columns}
+        data={varianceData}
+        showExport
+        showColumnToggle
+        title="variance"
+        totalColumns={["qtyOrdered", "quantity", "variance"]}
+      />
     </PageLayout>
   );
 }

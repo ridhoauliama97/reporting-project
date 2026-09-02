@@ -1,14 +1,10 @@
 import { useMemo } from "react";
 import type { ParsedPurchaseItem } from "../types/purchase";
+import type { DateRange } from "../types/ui";
 import { formatRupiah, formatNumber, formatPercent } from "../utils/formatters";
 import PageLayout from "../components/PageLayout";
 import StatCard from "../components/StatCard";
 import DataTable from "../components/DataTable";
-
-interface DateRange {
-  start: Date | null;
-  end: Date | null;
-}
 
 interface PurchaseBySupplierProps {
   items: ParsedPurchaseItem[];
@@ -120,7 +116,14 @@ export default function PurchaseBySupplier({
           accent
         />
       </div>
-      <DataTable columns={columns} data={supplierData} />
+      <DataTable
+        columns={columns}
+        data={supplierData}
+        showExport
+        showColumnToggle
+        title="by-supplier"
+        totalColumns={["transactionCount", "totalQuantity", "totalPurchase"]}
+      />
     </PageLayout>
   );
 }

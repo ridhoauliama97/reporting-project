@@ -12,7 +12,7 @@ Setiap halaman gudang menampilkan kondisi stok dan aktivitas untuk satu gudang: 
 - **Tabel 4 — Penyesuaian Stok**: tanggal, no. memo, tipe, item, qty (DB/CR), nilai penyesuaian
 
 ## Sumber Data
-Digabung dari 4 dataset: `stock-balance` (saldo), `usage-by-item` (pemakaian), `goods-transfer-by-tem` (transfer), `adjustment-by-item` (penyesuaian) — disaring berdasarkan kode gudang (mis. `07` untuk GUDANG SPAREPART).
+Dataset `warehouse-data.json` menyediakan record `stock` (saldo), `usage` (pemakaian), `transfer` (transfer antar gudang), dan `adjustment` (penyesuaian).
 
 ## Catatan
 - Saldo stok adalah **snapshot** (tidak ikut filter tanggal); tabel pemakaian/transfer/penyesuaian mengikuti rentang tanggal aktif.

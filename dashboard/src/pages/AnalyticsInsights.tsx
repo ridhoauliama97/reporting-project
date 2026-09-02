@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import type { ParsedPurchaseItem, PurchaseOrder, StockBalance } from "../types/purchase";
+import type { ParsedPurchaseItem, ParsedPurchaseOrder } from "../types/purchase";
+import type { DateRange } from "../types/ui";
 import PageLayout from "../components/PageLayout";
 import EmptyState from "../components/EmptyState";
 import {
@@ -48,16 +49,10 @@ import {
   WalletIcon,
 } from "lucide-react";
 
-interface DateRange {
-  start: Date | null;
-  end: Date | null;
-}
-
 interface AnalyticsInsightsProps {
   items: ParsedPurchaseItem[];
   allItems: ParsedPurchaseItem[];
-  purchaseOrders: PurchaseOrder[];
-  stockBalances: StockBalance[];
+  poItems: ParsedPurchaseOrder[];
   dateRange: DateRange;
   onDateRangeChange: (range: DateRange) => void;
 }
@@ -167,8 +162,7 @@ function SourceLink({ reportId }: { reportId: string }) {
 export default function AnalyticsInsights({
   items,
   allItems,
-  purchaseOrders,
-  stockBalances,
+  poItems,
   dateRange,
   onDateRangeChange,
 }: AnalyticsInsightsProps) {
@@ -181,17 +175,6 @@ export default function AnalyticsInsights({
     [items, allItems],
   );
   const spendInsights = useMemo(() => generateSpendInsights(items), [items]);
-
-  const filteredPurchaseOrders = useMemo(() => {
-    if (!dateRange.start && !dateRange.end) return purchaseOrders;
-    return purchaseOrders.filter((po) => {
-      if (!po.orderDate) return false;
-      const date = new Date(po.orderDate);
-      if (dateRange.start && date < dateRange.start) return false;
-      if (dateRange.end && date > dateRange.end) return false;
-      return true;
-    });
-  }, [purchaseOrders, dateRange]);
 
   const [summaries, setSummaries] = useState<Record<string, string>>({});
   const [pendingSummary, setPendingSummary] = useState<string | null>(null);
@@ -221,7 +204,7 @@ export default function AnalyticsInsights({
       }
       setSummaries((prev) => ({
         ...prev,
-        [reportId]: generateReportSummary(reportId, items, filteredPurchaseOrders),
+        [reportId]: generateReportSummary(reportId, items, poItems),
       }));
       setPendingSummary(null);
     }, 450);
@@ -248,13 +231,7 @@ export default function AnalyticsInsights({
     setInput("");
     setThinking(true);
     window.setTimeout(() => {
-      const answer = answerQuestion(
-        question,
-        items,
-        allItems,
-        filteredPurchaseOrders,
-        stockBalances,
-      );
+      const answer = answerQuestion(question, items, allItems);
       setMessages((prev) => [
         ...prev,
         {

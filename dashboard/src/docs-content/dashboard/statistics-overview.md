@@ -1,4 +1,4 @@
-# Dashboard (Landing Page)
+# Statistics Overview (Landing Page)
 
 ## Deskripsi
 Halaman utama aplikasi — menu terpisah di paling atas sidebar yang merangkum statistik **keseluruhan** laporan purchasing dan insight utama sesuai rentang tanggal aktif.

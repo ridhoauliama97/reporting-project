@@ -1,34 +1,13 @@
 import { useMemo } from "react";
 import type { ParsedPurchaseItem } from "../types/purchase";
+import type { DateRange } from "../types/ui";
 import { formatRupiah, formatRupiahCompact, formatNumber, formatPercent } from "../utils/formatters";
 import PageLayout from "../components/PageLayout";
 import StatCard from "../components/StatCard";
 import DataTable from "../components/DataTable";
 import ChartCard from "../components/ChartCard";
 import { useIsMobile } from "@/hooks/use-mobile";
-import {
-  BarChart,
-  Bar,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
-
-interface DateRange {
-  start: Date | null;
-  end: Date | null;
-}
-
-const CHART_COLORS = [
-  "var(--color-chart-1)",
-  "var(--color-chart-2)",
-  "var(--color-chart-3)",
-  "var(--color-chart-4)",
-  "var(--color-chart-5)",
-];
+import TopBarChart from "../components/TopBarChart";
 
 interface SupplierRankingProps {
   items: ParsedPurchaseItem[];
@@ -157,49 +136,22 @@ export default function SupplierRanking({
         title="Top 10 Supplier berdasarkan Total Pembelian"
         description="Peringkat supplier dengan nilai pembelian tertinggi"
       >
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} layout="vertical" margin={{ left: 0 }}>
-            <CartesianGrid
-              strokeDasharray="3 3"
-              className="stroke-border"
-              horizontal={false}
-            />
-            <XAxis
-              type="number"
-              tickFormatter={(v) => formatRupiahCompact(Number(v))}
-              className="text-xs text-muted-foreground"
-              tickLine={false}
-              axisLine={false}
-            />
-            <YAxis
-              type="category"
-              dataKey="name"
-              width={isMobile ? 120 : 180}
-              className="text-xs text-muted-foreground"
-              tickLine={false}
-              axisLine={false}
-            />
-            <Tooltip
-              formatter={(value) => [
-                formatRupiah(Number(value)),
-                "Total Pembelian",
-              ]}
-              cursor={{ fill: "var(--color-muted)" }}
-              contentStyle={{ borderRadius: 8 }}
-            />
-            <Bar dataKey="total" radius={[0, 4, 4, 0]}>
-              {chartData.map((_, idx) => (
-                <Cell
-                  key={idx}
-                  fill={CHART_COLORS[idx % CHART_COLORS.length]}
-                />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+        <TopBarChart
+          data={chartData}
+          tooltipLabel="Total Pembelian"
+          tickFormatter={formatRupiahCompact}
+          tooltipFormatter={formatRupiah}
+        />
       </ChartCard>
 
-      <DataTable columns={columns} data={supplierRanks} />
+      <DataTable
+        columns={columns}
+        data={supplierRanks}
+        showExport
+        showColumnToggle
+        title="ranking"
+        totalColumns={["totalPurchase", "transactionCount"]}
+      />
     </PageLayout>
   );
 }

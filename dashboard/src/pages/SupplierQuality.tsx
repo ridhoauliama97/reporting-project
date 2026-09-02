@@ -6,12 +6,12 @@ export default function SupplierQuality() {
   return (
     <PageLayout
       title="Supplier Quality"
-      subtitle="Laporan kualitas supplier (reject/QC) berdasarkan data pembelian."
+      subtitle="Laporan supplier quality (reject/QC) berdasarkan data pembelian."
     >
       <EmptyState
         icon={ShieldCheckIcon}
-        title="Data Kualitas Supplier"
-        description="Data kualitas supplier (reject/QC) belum tersedia di sumber data saat ini."
+        title="Data Supplier Quality"
+        description="Data Supplier Quality (reject/QC) belum tersedia di sumber data saat ini."
       />
     </PageLayout>
   );

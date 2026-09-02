@@ -2,13 +2,12 @@ import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ChartSplineIcon, ChevronRightIcon, SearchIcon } from "lucide-react";
 import {
-  DOCS_MENUS,
-  getDocContent,
-  resolveDoc,
-  type DocsSubmenu,
-} from "@/docs-content";
+  ChartSplineIcon,
+  ChevronRightIcon,
+  SearchIcon,
+} from "lucide-react";
+import { DOCS_MENUS, getDocContent, resolveDoc, type DocsSubmenu } from "@/docs-content";
 import { Input } from "@/components/ui/input";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -39,13 +38,10 @@ function SubmenuButton({
 
 export default function DocsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const active = useMemo(
-    () => resolveDoc(searchParams.get("doc")),
-    [searchParams],
-  );
+  const active = useMemo(() => resolveDoc(searchParams.get("doc")), [searchParams]);
   const content = useMemo(
     () => getDocContent(active.menuSlug, active.slug),
-    [active],
+    [active]
   );
   const activeTitle = useMemo(() => {
     const menu = DOCS_MENUS.find((m) => m.slug === active.menuSlug);
@@ -55,7 +51,7 @@ export default function DocsPage() {
 
   const [query, setQuery] = useState("");
   const [openMenus, setOpenMenus] = useState<Set<string>>(
-    () => new Set(DOCS_MENUS.map((m) => m.slug)),
+    () => new Set(DOCS_MENUS.map((m) => m.slug))
   );
 
   const q = query.trim().toLowerCase();
@@ -67,8 +63,7 @@ export default function DocsPage() {
       menu,
       submenus: menu.submenus.filter(
         (s) =>
-          s.title.toLowerCase().includes(q) ||
-          menu.title.toLowerCase().includes(q),
+          s.title.toLowerCase().includes(q) || menu.title.toLowerCase().includes(q)
       ),
     })).filter((entry) => entry.submenus.length > 0);
   }, [q]);
@@ -102,8 +97,8 @@ export default function DocsPage() {
               <ChartSplineIcon className="size-4!" />
             </div>
             <span className="hidden sm:inline">Database Report</span>
-            {/* <span className="hidden text-muted-foreground sm:inline">/</span> */}
-            {/* <span className="hidden sm:inline">Documentation</span> */}
+            <span className="hidden text-muted-foreground sm:inline">/</span>
+            <span className="hidden sm:inline">Documentation</span>
           </a>
           <select
             aria-label="Pilih dokumen"
@@ -125,12 +120,12 @@ export default function DocsPage() {
             ))}
           </select>
           <div className="ml-auto flex items-center gap-1">
-            {/* <a
+            <a
               href="/dashboard"
               className="hidden text-sm text-muted-foreground transition-colors hover:text-foreground md:inline"
             >
               Kembali ke Dashboard
-            </a> */}
+            </a>
             <ThemeToggle />
           </div>
         </div>
@@ -151,10 +146,7 @@ export default function DocsPage() {
               />
             </div>
           </div>
-          <nav
-            className="flex-1 overflow-y-auto p-2"
-            aria-label="Daftar dokumen"
-          >
+          <nav className="flex-1 overflow-y-auto p-2" aria-label="Daftar dokumen">
             {filteredMenus.map(({ menu, submenus }) => {
               const open = q ? true : openMenus.has(menu.slug);
               return (
@@ -181,8 +173,7 @@ export default function DocsPage() {
                           key={sub.slug}
                           sub={sub}
                           active={
-                            active.menuSlug === menu.slug &&
-                            active.slug === sub.slug
+                            active.menuSlug === menu.slug && active.slug === sub.slug
                           }
                           onClick={() => selectDoc(menu.slug, sub.slug)}
                         />

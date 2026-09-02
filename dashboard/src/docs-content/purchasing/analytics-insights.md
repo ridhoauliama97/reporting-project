@@ -10,7 +10,7 @@ Lapisan analisis otomatis di atas data seluruh laporan — ringkasan, rekomendas
 
 ### AI Summaries per Submenu
 
-Ringkasan naratif otomatis untuk setiap laporan (#1-#14), dihasilkan on-demand lewat tombol "Generate Insight" / "Regenerasi". Hanya laporan placeholder (#4 Supplier Quality) yang menghasilkan ringkasan jujur tentang keterbatasan data; laporan PO (#11-13) kini punya ringkasan berbasis data PO asli.
+Ringkasan naratif otomatis untuk setiap laporan (#1-#14), dihasilkan on-demand lewat tombol "Generate Insight" / "Regenerasi". Laporan placeholder (#4, #11, #12, #13) menghasilkan ringkasan jujur yang menjelaskan keterbatasan data.
 
 ### Decision Support (Rekomendasi Keputusan)
 

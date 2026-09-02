@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { AlertTriangleIcon, DownloadIcon } from "lucide-react";
-import type { ParsedPurchaseItem, PurchaseOrder } from "../types/purchase";
+import type { ParsedPurchaseItem, ParsedPurchaseOrder } from "../types/purchase";
+import type { DateRange } from "../types/ui";
 import PageLayout from "../components/PageLayout";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,21 +15,16 @@ import {
 import { REPORTS } from "../utils/reports";
 import { exportData, type ExportFormat } from "../utils/exporter";
 
-interface DateRange {
-  start: Date | null;
-  end: Date | null;
-}
-
 interface ReportsExportsProps {
   items: ParsedPurchaseItem[];
-  purchaseOrders: PurchaseOrder[];
+  poItems: ParsedPurchaseOrder[];
   dateRange: DateRange;
   onDateRangeChange: (range: DateRange) => void;
 }
 
 export default function ReportsExports({
   items,
-  purchaseOrders,
+  poItems,
   dateRange,
   onDateRangeChange,
 }: ReportsExportsProps) {
@@ -36,9 +32,11 @@ export default function ReportsExports({
     () =>
       REPORTS.map((report) => ({
         report,
-        data: report.getData(items, purchaseOrders),
+        data: report.getPoData
+          ? report.getPoData(poItems)
+          : report.getData(items),
       })),
-    [items, purchaseOrders],
+    [items, poItems],
   );
 
   const [exportingId, setExportingId] = useState<string | null>(null);

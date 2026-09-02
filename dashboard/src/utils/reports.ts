@@ -15,9 +15,9 @@ import {
   FileTextIcon,
   FolderCheckIcon,
 } from "lucide-react";
-import type { ParsedPurchaseItem, ItemCategory, PurchaseOrder } from "@/types/purchase";
+import type { ParsedPurchaseItem, ParsedPurchaseOrder, ItemCategory } from "@/types/purchase";
 import { CATEGORY_LABELS } from "@/types/purchase";
-import { getMonthLabel, monthKeyOf, byPurchaseDateAsc } from "@/utils/formatters";
+import { getMonthLabel, monthKeyOf, byPurchaseDateAsc, round1, round2, warehouseLabel } from "@/utils/formatters";
 
 export interface ReportExport {
   headers: (string | number)[];
@@ -29,14 +29,9 @@ export interface ReportDefinition {
   name: string;
   description: string;
   icon: LucideIcon;
-  getData: (
-    items: ParsedPurchaseItem[],
-    purchaseOrders?: PurchaseOrder[],
-  ) => ReportExport;
+  getData: (items: ParsedPurchaseItem[]) => ReportExport;
+  getPoData?: (poItems: ParsedPurchaseOrder[]) => ReportExport;
 }
-
-const round1 = (n: number) => Math.round(n * 10) / 10;
-const round2 = (n: number) => Math.round(n * 100) / 100;
 
 function groupBySupplier(items: ParsedPurchaseItem[]) {
   const grouped: Record<string, { count: number; qty: number; total: number }> =
@@ -54,6 +49,51 @@ function groupBySupplier(items: ParsedPurchaseItem[]) {
 }
 
 const EMPTY_EXPORT: ReportExport = { headers: [], rows: [] };
+
+const OUTSTANDING_PO_HEADERS: (string | number)[] = [
+  "No. PO",
+  "Tanggal PO",
+  "Supplier",
+  "Target Gudang",
+  "No. PR",
+  "Expected Delivery",
+  "Jumlah Item",
+  "Qty Dipesan",
+  "Qty Diterima",
+  "Qty Belum Diterima",
+  "% Diterima",
+  "Nilai PO",
+];
+
+function outstandingPoRow(group: {
+  orderNumber: string;
+  orderDate: string;
+  supplierName: string;
+  targetWarehouse: string;
+  prNumber: string;
+  expectedDeliveryDate: string;
+  itemCount: number;
+  qtyOrdered: number;
+  qtyDelivered: number;
+  qtyOutstanding: number;
+  pctDelivered: number;
+  orderNetTotal: number;
+}): (string | number)[] {
+  return [
+    group.orderNumber,
+    group.orderDate,
+    group.supplierName,
+    warehouseLabel(group.targetWarehouse),
+    group.prNumber,
+    group.expectedDeliveryDate,
+    group.itemCount,
+    group.qtyOrdered,
+    group.qtyDelivered,
+    group.qtyOutstanding,
+    round1(group.pctDelivered),
+    group.orderNetTotal,
+  ];
+}
 
 export const REPORTS: ReportDefinition[] = [
   {
@@ -485,100 +525,150 @@ export const REPORTS: ReportDefinition[] = [
   {
     id: "outstanding-po",
     name: "Outstanding PO",
-    description: "PO dengan penerimaan sebagian (qty diterima < qty pesan)",
+    description: "PO dengan sisa kuantitas belum diterima",
     icon: ClipboardListIcon,
-    getData: (_items, purchaseOrders) => {
-      const rows = (purchaseOrders ?? [])
-        .filter((po) => po.status === "OUTSTANDING")
-        .map((po) => [
-          po.orderNumber,
-          po.orderDate,
-          po.supplierName,
-          po.targetWarehouse,
-          po.lines.length,
-          po.lines.reduce((s, l) => s + l.qtyOutstanding, 0),
-          po.purchaseOrderPercentDelivered * 100,
-          po.orderNetTotal,
-        ]);
-      return {
-        headers: [
-          "Nomor PO",
-          "Tanggal PO",
-          "Supplier",
-          "Target Gudang",
-          "Jumlah Item",
-          "Qty Belum Diterima",
-          "% Diterima",
-          "Nilai PO",
-        ],
-        rows,
-      };
+    getData: () => EMPTY_EXPORT,
+    getPoData: (poItems) => {
+      const grouped: Record<string, ParsedPurchaseOrder[]> = {};
+      poItems.forEach((po) => {
+        if (
+          po.qtyDelivered > 0 &&
+          po.qtyDelivered < po.qtyOrdered &&
+          po.qtyOrdered > 0
+        ) {
+          if (!grouped[po.orderNumber]) grouped[po.orderNumber] = [];
+          grouped[po.orderNumber].push(po);
+        }
+      });
+      const rows = Object.values(grouped)
+        .map((lines) => {
+          const qtyOrdered = round1(
+            lines.reduce((sum, l) => sum + l.qtyOrdered, 0),
+          );
+          const qtyDelivered = round1(
+            lines.reduce((sum, l) => sum + l.qtyDelivered, 0),
+          );
+          const group = {
+            orderNumber: lines[0].orderNumber,
+            orderDate: lines[0].orderDate,
+            supplierName: lines[0].supplierName,
+            targetWarehouse: lines[0].targetWarehouse,
+            prNumber: lines[0].prNumber,
+            expectedDeliveryDate: lines[0].expectedDeliveryDate,
+            itemCount: lines.length,
+            qtyOrdered,
+            qtyDelivered,
+            qtyOutstanding: round1(qtyOrdered - qtyDelivered),
+            pctDelivered:
+              qtyOrdered > 0 ? (qtyDelivered / qtyOrdered) * 100 : 0,
+            orderNetTotal: lines[0].orderNetTotal,
+          };
+          return group;
+        })
+        .sort((a, b) => b.qtyOutstanding - a.qtyOutstanding)
+        .map(outstandingPoRow);
+      return { headers: OUTSTANDING_PO_HEADERS, rows };
     },
   },
   {
     id: "open-po",
     name: "Open PO",
-    description: "PO yang masih berjalan dan belum menerima pengiriman",
+    description: "Daftar PO yang masih berstatus terbuka (belum ter-invoice)",
     icon: FileTextIcon,
-    getData: (_items, purchaseOrders) => {
-      const rows = (purchaseOrders ?? [])
-        .filter((po) => po.status === "OPEN")
-        .map((po) => [
-          po.orderNumber,
-          po.orderDate,
-          po.supplierName,
-          po.targetWarehouse,
-          po.lines.length,
-          po.lines.reduce((s, l) => s + l.qtyOutstanding, 0),
-          po.orderNetTotal,
-          po.expectedDeliveryDate,
-        ]);
-      return {
-        headers: [
-          "Nomor PO",
-          "Tanggal PO",
-          "Supplier",
-          "Target Gudang",
-          "Jumlah Item",
-          "Qty Belum Diterima",
-          "Nilai PO",
-          "Expected Delivery",
-        ],
-        rows,
-      };
+    getData: () => EMPTY_EXPORT,
+    getPoData: (poItems) => {
+      const grouped: Record<string, ParsedPurchaseOrder[]> = {};
+      poItems.forEach((po) => {
+        if (po.qtyDelivered === 0 && po.qtyOrdered > 0) {
+          if (!grouped[po.orderNumber]) grouped[po.orderNumber] = [];
+          grouped[po.orderNumber].push(po);
+        }
+      });
+      const rows = Object.values(grouped)
+        .map((lines) => {
+          const qtyOrdered = round1(
+            lines.reduce((sum, l) => sum + l.qtyOrdered, 0),
+          );
+          const qtyDelivered = round1(
+            lines.reduce((sum, l) => sum + l.qtyDelivered, 0),
+          );
+          const group = {
+            orderNumber: lines[0].orderNumber,
+            orderDate: lines[0].orderDate,
+            orderDateObj: lines[0].orderDateObj,
+            supplierName: lines[0].supplierName,
+            targetWarehouse: lines[0].targetWarehouse,
+            prNumber: lines[0].prNumber,
+            expectedDeliveryDate: lines[0].expectedDeliveryDate,
+            itemCount: lines.length,
+            qtyOrdered,
+            qtyDelivered,
+            qtyOutstanding: round1(qtyOrdered - qtyDelivered),
+            pctDelivered:
+              qtyOrdered > 0 ? (qtyDelivered / qtyOrdered) * 100 : 0,
+            orderNetTotal: lines[0].orderNetTotal,
+          };
+          return group;
+        })
+        .sort(
+          (a, b) =>
+            (a.orderDateObj?.getTime() ?? 0) -
+            (b.orderDateObj?.getTime() ?? 0),
+        )
+        .map(outstandingPoRow);
+      return { headers: OUTSTANDING_PO_HEADERS, rows };
     },
   },
   {
     id: "closed-po",
     name: "Closed PO",
-    description: "PO yang seluruh item-nya sudah diterima penuh",
+    description: "PO yang seluruh item-nya diterima penuh",
     icon: FolderCheckIcon,
-    getData: (_items, purchaseOrders) => {
-      const rows = (purchaseOrders ?? [])
-        .filter((po) => po.status === "CLOSED")
-        .map((po) => [
-          po.orderNumber,
-          po.orderDate,
-          po.supplierName,
-          po.targetWarehouse,
-          po.lines.length,
-          po.purchaseOrderPercentDelivered * 100,
-          po.orderNetTotal,
-          po.poPiDays,
-        ]);
-      return {
-        headers: [
-          "Nomor PO",
-          "Tanggal PO",
-          "Supplier",
-          "Target Gudang",
-          "Jumlah Item",
-          "% Diterima",
-          "Nilai PO",
-          "PO→Invoice (hari)",
-        ],
-        rows,
-      };
+    getData: () => EMPTY_EXPORT,
+    getPoData: (poItems) => {
+      const grouped: Record<string, ParsedPurchaseOrder[]> = {};
+      poItems.forEach((po) => {
+        if (!grouped[po.orderNumber]) grouped[po.orderNumber] = [];
+        grouped[po.orderNumber].push(po);
+      });
+      const rows = Object.values(grouped)
+        .filter((lines) =>
+          lines.every((l) => l.qtyDelivered >= l.qtyOrdered),
+        )
+        .map((lines) => {
+          const qtyOrdered = round1(
+            lines.reduce((sum, l) => sum + l.qtyOrdered, 0),
+          );
+          const qtyDelivered = round1(
+            lines.reduce((sum, l) => sum + l.qtyDelivered, 0),
+          );
+          const group = {
+            orderNumber: lines[0].orderNumber,
+            orderDate: lines[0].orderDate,
+            orderDateObj: lines[0].orderDateObj,
+            supplierName: lines[0].supplierName,
+            targetWarehouse: lines[0].targetWarehouse,
+            prNumber: lines[0].prNumber,
+            expectedDeliveryDate: lines[0].expectedDeliveryDate,
+            itemCount: lines.length,
+            qtyOrdered,
+            qtyDelivered,
+            qtyOutstanding: 0,
+            pctDelivered:
+              qtyOrdered > 0
+                ? Math.min(100, (qtyDelivered / qtyOrdered) * 100)
+                : 100,
+            orderNetTotal: lines[0].orderNetTotal,
+          };
+          return group;
+        })
+        .sort(
+          (a, b) =>
+            (a.orderDateObj?.getTime() ?? 0) -
+            (b.orderDateObj?.getTime() ?? 0),
+        )
+        .map(outstandingPoRow);
+      return { headers: OUTSTANDING_PO_HEADERS, rows };
     },
   },
 ];

@@ -13,9 +13,46 @@ import {
   lazy,
   type ReactNode,
 } from "react";
-import { filterByDateRange, parseBundle } from "./utils/formatters";
-import type { PurchaseBundle } from "./types/purchase";
-import reportDataUrl from "./data/purchasing-report-data.json?url";
+import {
+  parseAllItems,
+  parseAllPurchaseOrders,
+  parseAllStock,
+  parseAllTransfers,
+  parseAllAdjustments,
+  parseAllUsages,
+  parseAllProductions,
+  parseAllProductionMaterials,
+  parseAllProductionOutputs,
+  filterByDateRange,
+  filterPurchaseOrdersByDateRange,
+  filterByDateAccessor,
+} from "./utils/formatters";
+import type {
+  PurchaseItem,
+  ParsedPurchaseItem,
+  PurchaseOrderRecord,
+  ParsedPurchaseOrder,
+  StockRecord,
+  ParsedStockRecord,
+  TransferRecord,
+  ParsedTransfer,
+  AdjustmentRecord,
+  ParsedAdjustment,
+  UsageRecord,
+  ParsedUsage,
+  ProductionRecord,
+  ParsedProduction,
+  ProductionMaterialRecord,
+  ParsedProductionMaterial,
+  ProductionOutputRecord,
+  ParsedProductionOutput,
+} from "./types/purchase";
+import type {
+  LoaderResponse,
+  RawRecord,
+} from "./data-loader.worker";
+import purchasingDataUrl from "./data/purchasing-data.json?url";
+import warehouseDataUrl from "./data/warehouse-data.json?url";
 import Layout from "./components/Layout";
 import RequireAuth from "./components/RequireAuth";
 import { Button } from "./components/ui/button";
@@ -38,26 +75,32 @@ const ClosedPO = lazy(() => import("./pages/ClosedPO"));
 const SupplierScorecard = lazy(() => import("./pages/SupplierScorecard"));
 const ReportsExports = lazy(() => import("./pages/ReportsExports"));
 const AnalyticsInsights = lazy(() => import("./pages/AnalyticsInsights"));
-const SettingsPage = lazy(() => import("./pages/Settings"));
-const WarehousePlaceholder = lazy(() => import("./pages/WarehouseReport"));
+const InventoryValue = lazy(() => import("./pages/InventoryValue"));
+const StockMovement = lazy(() => import("./pages/StockMovement"));
+const DeadStock = lazy(() => import("./pages/DeadStock"));
+const SlowMoving = lazy(() => import("./pages/SlowMoving"));
+const FastMoving = lazy(() => import("./pages/FastMoving"));
+const InventoryAging = lazy(() => import("./pages/InventoryAging"));
+const CycleCountAccuracy = lazy(() => import("./pages/CycleCountAccuracy"));
+const StockAdjustment = lazy(() => import("./pages/StockAdjustment"));
+const WarehouseProductivity = lazy(() => import("./pages/WarehouseProductivity"));
+const WarehouseUtilization = lazy(() => import("./pages/WarehouseUtilization"));
+const LocationOccupancy = lazy(() => import("./pages/LocationOccupancy"));
+const TransferHistory = lazy(() => import("./pages/TransferHistory"));
+const StockAvailability = lazy(() => import("./pages/StockAvailability"));
+const FillRate = lazy(() => import("./pages/FillRate"));
+const PickingAccuracy = lazy(() => import("./pages/PickingAccuracy"));
+const PackingAccuracy = lazy(() => import("./pages/PackingAccuracy"));
+const DeliveryPerformance = lazy(() => import("./pages/DeliveryPerformance"));
 const DocsPage = lazy(() => import("./pages/DocsPage"));
 const LoginPage = lazy(() => import("./pages/Login"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPassword"));
-
-const WAREHOUSES: Record<string, string> = {
-  "gudang-bahan-baku": "01: GUDANG BAHAN BAKU",
-  "gudang-barang-jadi": "04: GUDANG BARANG JADI",
-  "gudang-sparepart": "07: GUDANG SPAREPART",
-  "cbd-sparepart": "09: CBD SPAREPART",
-  "gudang-wip": "51: GUDANG WIP",
-  "gudang-pekanbaru": "54: GUDANG PEKANBARU",
-  "kantor-sales": "24: KANTOR SALES",
-};
+const SettingsPage = lazy(() => import("./pages/Settings"));
 
 function getDefaultDateRange() {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
   return { start, end };
 }
 
@@ -103,31 +146,106 @@ class ErrorBoundary extends Component<
 }
 
 function App() {
-  const [bundle, setBundle] = useState<PurchaseBundle | null>(null);
+  const [allItems, setAllItems] = useState<ParsedPurchaseItem[]>([]);
+  const [allPurchaseOrders, setAllPurchaseOrders] = useState<
+    ParsedPurchaseOrder[]
+  >([]);
+  const [allStock, setAllStock] = useState<ParsedStockRecord[]>([]);
+  const [allTransfers, setAllTransfers] = useState<ParsedTransfer[]>([]);
+  const [allAdjustments, setAllAdjustments] = useState<ParsedAdjustment[]>([]);
+  const [allUsages, setAllUsages] = useState<ParsedUsage[]>([]);
+  const [allProductions, setAllProductions] = useState<ParsedProduction[]>([]);
+  const [allProductionMaterials, setAllProductionMaterials] = useState<
+    ParsedProductionMaterial[]
+  >([]);
+  const [allProductionOutputs, setAllProductionOutputs] = useState<
+    ParsedProductionOutput[]
+  >([]);
   const [loadError, setLoadError] = useState(false);
   const [loadKey, setLoadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 30000);
+    let worker: Worker | null = null;
     setLoadError(false);
-    fetch(reportDataUrl, { signal: controller.signal })
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((data) => {
-        if (!cancelled) setBundle(parseBundle(data));
-      })
-      .catch(() => {
-        if (!cancelled) setLoadError(true);
-      })
-      .finally(() => clearTimeout(timer));
+
+    const applyData = (data: RawRecord[]) => {
+      if (cancelled) return;
+      const parsed = parseAllItems(data as PurchaseItem[]);
+      setAllItems(parsed);
+      setAllPurchaseOrders(
+        parseAllPurchaseOrders(data as PurchaseOrderRecord[]),
+      );
+      setAllStock(parseAllStock(data as StockRecord[]));
+      setAllTransfers(parseAllTransfers(data as TransferRecord[]));
+      setAllAdjustments(parseAllAdjustments(data as AdjustmentRecord[]));
+      setAllUsages(parseAllUsages(data as UsageRecord[]));
+      setAllProductions(parseAllProductions(data as ProductionRecord[]));
+      setAllProductionMaterials(
+        parseAllProductionMaterials(data as ProductionMaterialRecord[]),
+      );
+      setAllProductionOutputs(
+        parseAllProductionOutputs(data as ProductionOutputRecord[]),
+      );
+      setDateRange((prev) => {
+        if (!prev.start || !prev.end) return prev;
+        const inRange = parsed.some(
+          (i) =>
+            i.purchaseDateObj &&
+            i.purchaseDateObj >= prev.start! &&
+            i.purchaseDateObj <= prev.end!,
+        );
+        if (inRange || parsed.length === 0) return prev;
+        const dates = parsed
+          .map((i) => i.purchaseDateObj)
+          .filter((d): d is Date => d !== null)
+          .sort((a, b) => a.getTime() - b.getTime());
+        if (dates.length === 0) return prev;
+        return { start: dates[0], end: dates[dates.length - 1] };
+      });
+    };
+
+    const loadOnMainThread = () => {
+      Promise.all(
+        [purchasingDataUrl, warehouseDataUrl].map((url) =>
+          fetch(url).then((res) => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.json();
+          }),
+        ),
+      )
+        .then((parts: RawRecord[][]) => {
+          applyData(parts.flat());
+        })
+        .catch(() => {
+          if (!cancelled) setLoadError(true);
+        });
+    };
+
+    try {
+      worker = new Worker(
+        new URL("./data-loader.worker.ts", import.meta.url),
+        { type: "module" },
+      );
+      worker.onmessage = (event: MessageEvent<LoaderResponse>) => {
+        if (cancelled) return;
+        if (event.data.ok && event.data.data) {
+          applyData(event.data.data);
+        } else {
+          loadOnMainThread();
+        }
+      };
+      worker.onerror = () => {
+        if (!cancelled) loadOnMainThread();
+      };
+      worker.postMessage([purchasingDataUrl, warehouseDataUrl]);
+    } catch {
+      loadOnMainThread();
+    }
+
     return () => {
       cancelled = true;
-      clearTimeout(timer);
-      controller.abort();
+      worker?.terminate();
     };
   }, [loadKey]);
 
@@ -136,10 +254,85 @@ function App() {
     end: Date | null;
   }>(getDefaultDateRange());
 
-  const allItems = useMemo(() => bundle?.purchases ?? [], [bundle]);
   const filteredItems = useMemo(
     () => filterByDateRange(allItems, dateRange.start, dateRange.end),
     [allItems, dateRange],
+  );
+
+  const filteredPurchaseOrders = useMemo(
+    () =>
+      filterPurchaseOrdersByDateRange(
+        allPurchaseOrders,
+        dateRange.start,
+        dateRange.end,
+      ),
+    [allPurchaseOrders, dateRange],
+  );
+
+  const filteredTransfers = useMemo(
+    () =>
+      filterByDateAccessor(
+        allTransfers,
+        dateRange.start,
+        dateRange.end,
+        (t) => t.transferDateObj,
+      ),
+    [allTransfers, dateRange],
+  );
+
+  const filteredAdjustments = useMemo(
+    () =>
+      filterByDateAccessor(
+        allAdjustments,
+        dateRange.start,
+        dateRange.end,
+        (a) => a.adjustmentDateObj,
+      ),
+    [allAdjustments, dateRange],
+  );
+
+  const filteredUsages = useMemo(
+    () =>
+      filterByDateAccessor(
+        allUsages,
+        dateRange.start,
+        dateRange.end,
+        (u) => u.usageDateObj,
+      ),
+    [allUsages, dateRange],
+  );
+
+  const filteredProductions = useMemo(
+    () =>
+      filterByDateAccessor(
+        allProductions,
+        dateRange.start,
+        dateRange.end,
+        (p) => p.productionDateObj,
+      ),
+    [allProductions, dateRange],
+  );
+
+  const filteredProductionMaterials = useMemo(
+    () =>
+      filterByDateAccessor(
+        allProductionMaterials,
+        dateRange.start,
+        dateRange.end,
+        (p) => p.productionDateObj,
+      ),
+    [allProductionMaterials, dateRange],
+  );
+
+  const filteredProductionOutputs = useMemo(
+    () =>
+      filterByDateAccessor(
+        allProductionOutputs,
+        dateRange.start,
+        dateRange.end,
+        (p) => p.productionDateObj,
+      ),
+    [allProductionOutputs, dateRange],
   );
 
   return (
@@ -207,7 +400,7 @@ function App() {
               <LoadingScreen />
             ) : (
               <RequireAuth>
-                <Layout>
+              <Layout>
                 <Suspense
                   fallback={
                     <div className="flex min-h-[50vh] items-center justify-center">
@@ -216,6 +409,10 @@ function App() {
                   }
                 >
                   <Routes>
+                    <Route
+                      path="/settings"
+                      element={<SettingsPage />}
+                    />
                     <Route
                       path="/"
                       element={<Navigate to="/login" replace />}
@@ -326,7 +523,7 @@ function App() {
                       path="/outstanding-po"
                       element={
                         <OutstandingPO
-                          purchaseOrders={bundle?.purchaseOrders ?? []}
+                          poItems={filteredPurchaseOrders}
                           dateRange={dateRange}
                           onDateRangeChange={setDateRange}
                         />
@@ -336,7 +533,7 @@ function App() {
                       path="/open-po"
                       element={
                         <OpenPO
-                          purchaseOrders={bundle?.purchaseOrders ?? []}
+                          poItems={filteredPurchaseOrders}
                           dateRange={dateRange}
                           onDateRangeChange={setDateRange}
                         />
@@ -346,29 +543,125 @@ function App() {
                       path="/closed-po"
                       element={
                         <ClosedPO
-                          purchaseOrders={bundle?.purchaseOrders ?? []}
+                          poItems={filteredPurchaseOrders}
                           dateRange={dateRange}
                           onDateRangeChange={setDateRange}
                         />
                       }
                     />
-                    {Object.entries(WAREHOUSES).map(([slug, name]) => (
-                      <Route
-                        key={slug}
-                        path={`/warehouse/${slug}`}
-                        element={
-                          <WarehousePlaceholder
-                            name={name}
-                            stockBalances={bundle?.stockBalances ?? []}
-                            usage={bundle?.usage ?? []}
-                            goodsTransfers={bundle?.goodsTransfers ?? []}
-                            adjustments={bundle?.adjustments ?? []}
-                            dateRange={dateRange}
-                            onDateRangeChange={setDateRange}
-                          />
-                        }
-                      />
-                    ))}
+                    <Route
+                      path="/warehouse/inventory-value"
+                      element={
+                        <InventoryValue
+                          stock={allStock}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/warehouse/stock-movement"
+                      element={
+                        <StockMovement
+                          transfers={filteredTransfers}
+                          adjustments={filteredAdjustments}
+                          usages={filteredUsages}
+                          dateRange={dateRange}
+                          onDateRangeChange={setDateRange}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/warehouse/dead-stock"
+                      element={
+                        <DeadStock
+                          stock={allStock}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/warehouse/slow-moving"
+                      element={
+                        <SlowMoving
+                          stock={allStock}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/warehouse/fast-moving"
+                      element={
+                        <FastMoving
+                          stock={allStock}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/warehouse/inventory-aging"
+                      element={
+                        <InventoryAging
+                          stock={allStock}
+                        />
+                      }
+                    />
+                    <Route path="/warehouse/cycle-count-accuracy" element={<CycleCountAccuracy />} />
+                    <Route
+                      path="/warehouse/stock-adjustment"
+                      element={
+                        <StockAdjustment
+                          adjustments={filteredAdjustments}
+                          dateRange={dateRange}
+                          onDateRangeChange={setDateRange}
+                        />
+                      }
+                    />
+                    <Route path="/warehouse/warehouse-productivity" element={<WarehouseProductivity productions={filteredProductions} productionMaterials={filteredProductionMaterials} productionOutputs={filteredProductionOutputs} dateRange={dateRange} onDateRangeChange={setDateRange} />} />
+                    <Route path="/warehouse/warehouse-utilization" element={<WarehouseUtilization stock={allStock} />} />
+                    <Route
+                      path="/warehouse/location-occupancy"
+                      element={
+                        <LocationOccupancy
+                          stock={allStock}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/warehouse/transfer-history"
+                      element={
+                        <TransferHistory
+                          transfers={filteredTransfers}
+                          dateRange={dateRange}
+                          onDateRangeChange={setDateRange}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/warehouse/stock-availability"
+                      element={
+                        <StockAvailability
+                          stock={allStock}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/warehouse/fill-rate"
+                      element={
+                        <FillRate
+                          transfers={filteredTransfers}
+                          dateRange={dateRange}
+                          onDateRangeChange={setDateRange}
+                        />
+                      }
+                    />
+                    <Route path="/warehouse/picking-accuracy" element={<PickingAccuracy />} />
+                    <Route path="/warehouse/packing-accuracy" element={<PackingAccuracy />} />
+                    <Route
+                      path="/warehouse/delivery-performance"
+                      element={
+                        <DeliveryPerformance
+                          transfers={filteredTransfers}
+                          dateRange={dateRange}
+                          onDateRangeChange={setDateRange}
+                        />
+                      }
+                    />
                     <Route
                       path="/scorecard"
                       element={
@@ -384,27 +677,25 @@ function App() {
                       element={
                         <ReportsExports
                           items={filteredItems}
-                          purchaseOrders={bundle?.purchaseOrders ?? []}
+                          poItems={filteredPurchaseOrders}
                           dateRange={dateRange}
                           onDateRangeChange={setDateRange}
                         />
                       }
                     />
                     <Route
-                       path="/analytics-insights"
-                       element={
-                         <AnalyticsInsights
-                           items={filteredItems}
-                           allItems={allItems}
-                           purchaseOrders={bundle?.purchaseOrders ?? []}
-                           stockBalances={bundle?.stockBalances ?? []}
-                           dateRange={dateRange}
-                           onDateRangeChange={setDateRange}
-                         />
-                       }
-                     />
-                     <Route path="/settings" element={<SettingsPage />} />
-                   </Routes>
+                      path="/analytics-insights"
+                      element={
+                        <AnalyticsInsights
+                          items={filteredItems}
+                          allItems={allItems}
+                          poItems={filteredPurchaseOrders}
+                          dateRange={dateRange}
+                          onDateRangeChange={setDateRange}
+                        />
+                      }
+                    />
+                  </Routes>
                 </Suspense>
               </Layout>
               </RequireAuth>

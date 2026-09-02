@@ -1,15 +1,11 @@
 import { useMemo } from "react";
 import type { ParsedPurchaseItem } from "../types/purchase";
+import type { DateRange } from "../types/ui";
 import { ITEM_CATEGORIES, CATEGORY_LABELS } from "../types/purchase";
 import { formatRupiah, formatNumber, formatDate } from "../utils/formatters";
 import PageLayout from "../components/PageLayout";
 import StatCard from "../components/StatCard";
 import DataTable from "../components/DataTable";
-
-interface DateRange {
-  start: Date | null;
-  end: Date | null;
-}
 
 interface PurchaseSummaryProps {
   items: ParsedPurchaseItem[];

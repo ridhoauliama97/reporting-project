@@ -1,353 +1,434 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
 
-const DATA_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "src", "data");
+/**
+ * Pipeline data dashboard.
+ * Sumber: 12 file JSON terbaru (SSRS export) di RAW_DATA_DIR (default Desktop/data).
+ * Hasil:
+ *   purchasing-data.json -> records purchase | po | pr  (menu Purchasing + Dashboard + Analytics)
+ *   warehouse-data.json  -> records stock | transfer | adjustment | usage
+ *                           | production | productionMaterial | productionOutput (menu Warehouse)
+ * Header SSRS ter-encode (_x0028_ dst) di-decode sebelum dipetakan.
+ */
 
-function load(name) {
-  return JSON.parse(readFileSync(join(DATA_DIR, `${name}.json`), "utf8"));
+const RAW_DIR =
+  process.env.RAW_DATA_DIR || "C:/Users/ridho/Desktop/data";
+const OUT_DIR = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "src",
+  "data",
+);
+
+function decodeKey(key) {
+  return String(key).replace(
+    /_x([0-9A-F]{2,4})_/gi,
+    (_, hex) => String.fromCharCode(parseInt(hex, 16)),
+  );
 }
 
-const num = (v) => {
-  if (v === null || v === undefined || v === "") return 0;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
-};
-
-const str = (v) => (v === null || v === undefined ? "" : String(v));
-
-function dayDiff(a, b) {
-  if (!a || !b) return 0;
-  const da = new Date(a).getTime();
-  const db = new Date(b).getTime();
-  if (Number.isNaN(da) || Number.isNaN(db)) return 0;
-  return Math.round((db - da) / 86400000);
+function loadRaw(name) {
+  const data = JSON.parse(readFileSync(join(RAW_DIR, `${name}.json`), "utf8"));
+  if (!Array.isArray(data)) {
+    throw new Error(`[${name}] bukan array data (kemungkinan metadata/summary)`);
+  }
+  return data.map((row) =>
+    Object.fromEntries(
+      Object.entries(row).map(([k, v]) => [decodeKey(k), v]),
+    ),
+  );
 }
 
-const poLines = load("purchase-order-by-item");
-const poByRefItem = new Map();
-for (const p of poLines) {
-  poByRefItem.set(`${str(p["Order Number"])}|${str(p["Item Code"])}`, p);
+function pick(row, ...names) {
+  for (const n of names) {
+    const v = row[n];
+    if (v !== undefined && v !== null) return v;
+  }
+  return "";
 }
 
-const prByNumber = new Map();
-for (const p of load("purchase-request-by-item")) {
-  prByNumber.set(str(p["PR Number"]), p);
+function nz(value) {
+  const s = String(value ?? "");
+  return s;
 }
 
-const purchases = load("purchase-by-item").map((d) => {
-  const po = poByRefItem.get(`${str(d["PO Ref."])}|${str(d["Item Code"])}`);
-  const expected = po ? str(po["Expected Delivery Date (Master)"]) : "";
-  const poDate = str(d["PO Date"]);
-  const purchaseDate = str(d["Purchase Date"]);
-  const poPiDays = dayDiff(poDate, purchaseDate);
-  const plannedDays = expected && poDate ? dayDiff(poDate, expected) : 0;
-  const pr = prByNumber.get(str(d["PR Number"]));
-  const prRequiredDate = pr ? str(pr["Required Date"]) : "";
+/* ------------------------------------------------------------------ */
+/* Purchasing                                                          */
+/* ------------------------------------------------------------------ */
+
+function mapPurchase(row) {
   return {
-    purchaseDetailId: str(d["PurchaseDetailID"]),
-    itemId: str(d["ItemID"]),
-    purchaseNumber: str(d["Purchase Number"]),
-    purchaseType: str(d["Purchase Type"]),
-    purchaseDate,
-    dueDate: str(d["Due Date"]),
-    prNumber: str(d["PR Number"]),
-    prDate: str(d["PR Date"] ?? ""),
-    poNumber: str(d["PO Ref."]),
-    poDate,
-    poExpectedDate: expected,
-    poPiDays,
-    prPiDays: dayDiff(str(d["PR Date"] ?? ""), purchaseDate),
-    prPoDays: dayDiff(str(d["PR Date"] ?? ""), poDate),
-    requiredPrDays: dayDiff(str(d["PR Date"] ?? ""), prRequiredDate),
-    prRequiredDate,
-    poPiOverdueDays: Math.max(0, poPiDays - plannedDays),
-    referenceNumber: str(d["Reference Number"]),
-    transitStatus: str(d["Transit Status"]),
-    supplierCode: str(d["Supplier Code"]),
-    supplierName: str(d["Supplier Name"]),
-    itemCode: str(d["Item Code"]),
-    itemName: str(d["Item Name"]),
-    itemCategory: str(d["Item Category"]),
-    itemType: str(d["Item Type"]),
-    uom: str(d["UOM"]),
-    warehouse: str(d["Warehouse"]),
-    qtyOrdered: num(d["Qty. Ordered"]),
-    quantity: num(d["Quantity"]),
-    unitCost: num(d["Unit Cost"]),
-    poUnitCost: po ? num(po["Item Unit Cost"]) : num(d["Unit Cost"]),
-    netTotal: num(d["Net Total"]),
-    lineTotal: num(d["Line Total"]),
-    lineTotalAfterTax: num(d["Line Total After Tax"]),
-    qtyUsed: num(d["Qty. Used"]),
-    qtyTransferred: num(d["Qty. Transferred"]),
-    quantityReceived: num(d["Qty. Received"]),
-    amountReceived: num(d["Amount Received"]),
-    qcBy: str(d["QC By"]),
-    qcComment: str(d["QC Comment"]),
-    requestedBy: str(d["Requested By"]),
-    usedBy: str(d["Used By"]),
-    purpose: str(d["Purpose"]),
-    poCreator: str(d["Created By"]),
-    poApprovedBy: po ? str(po["Approved By"]) : "",
-    currency: str(d["Currency"]),
-    paymentTerm: num(d["Payment Term"]),
-    priceGroup: str(d["Price Group"]),
-    itemFamilyCode: str(d["Item Family Code"]),
-    itemFamilyName: str(d["Item Family Name"]),
-    itemSpecification: str(d["Item Specification"]),
-    itemPartNumber: str(d["Item Part Number"]),
-    supplierCity: str(d["Supplier City"]),
+    recordType: "purchase",
+    purchaseNumber: pick(row, "Purchase Number"),
+    purchaseType: pick(row, "Purchase Type"),
+    purchaseDate: pick(row, "Purchase Date"),
+    dueDate: pick(row, "Due Date"),
+    prNumber: pick(row, "PR Number"),
+    prDate: pick(row, "PR Date"),
+    poNumber: pick(row, "PO Ref.", "PO Number"),
+    poDate: pick(row, "PO Date"),
+    poExpectedDate: pick(row, "PO Expected Date"),
+    poPiDays: nz(pick(row, "PO-PI Days")),
+    prPiDays: nz(pick(row, "PR-PI Days")),
+    poPiOverdueDays: nz(pick(row, "PO-PI Overdue Days")),
+    referenceNumber: pick(row, "Reference Number"),
+    transitStatus: pick(row, "Transit Status"),
+    supplierCode: pick(row, "Supplier Code"),
+    supplierName: pick(row, "Supplier Name"),
+    itemCode: pick(row, "Item Code"),
+    itemName: pick(row, "Item Name"),
+    itemCategory: pick(row, "Item Category"),
+    itemType: pick(row, "Item Type"),
+    uom: pick(row, "UOM"),
+    warehouse: pick(row, "Warehouse"),
+    qtyOrdered: nz(pick(row, "Qty. Ordered")),
+    quantity: nz(pick(row, "Quantity")),
+    unitCost: nz(pick(row, "Unit Cost")),
+    poUnitCost: nz(pick(row, "PO Unit Cost")),
+    netTotal: nz(pick(row, "Net Total")),
+    requestedBy: pick(row, "Requested By"),
+    usedBy: pick(row, "Used By"),
+    poCreator: pick(row, "PO Creator"),
+    poApprovedBy: pick(row, "PO Approved By"),
   };
-});
-purchases.sort((a, b) => a.purchaseDate.localeCompare(b.purchaseDate));
-
-const poByHeader = new Map();
-for (const p of poLines) {
-  const key = str(p["Order Number"]);
-  if (!poByHeader.has(key)) poByHeader.set(key, []);
-  poByHeader.get(key).push(p);
 }
 
-function poLineStatus(p) {
-  const ordered = num(p["Qty. Ordered (Major)"] || p["Qty. Ordered"]);
-  const delivered = num(p["Qty. Delivered (Major)"] || p["Qty. Delivered (Smallest)"]);
-  if (ordered > 0 && delivered >= ordered) return "CLOSED";
-  if (delivered > 0) return "OUTSTANDING";
-  return "OPEN";
+function mapPo(row) {
+  const ordered = Number(pick(row, "Qty. Ordered (Major)", "Qty. Ordered") || 0);
+  const delivered = Number(
+    pick(row, "Qty. Delivered (Major)", "Qty. Delivered (Smallest)") || 0,
+  );
+  let status;
+  if (Number.isFinite(ordered) && ordered > 0 && delivered >= ordered) {
+    status = "CLOSED";
+  } else if (Number.isFinite(delivered) && delivered > 0) {
+    status = "OUTSTANDING";
+  } else {
+    status = "OPEN";
+  }
+  return {
+    recordType: "po",
+    orderNumber: pick(row, "Order Number"),
+    orderDate: pick(row, "Order Date"),
+    expectedDeliveryDate: pick(row, "Expected Delivery Date", "Expected Delivery Date (Master)"),
+    status,
+    importance: pick(row, "Importance"),
+    terms: pick(row, "Terms"),
+    incoterm: pick(row, "Incoterm"),
+    deliveryDays: nz(pick(row, "Delivery Days")),
+    poPiDays: nz(pick(row, "PO-PI Days")),
+    supplierCode: pick(row, "Supplier Code"),
+    supplierName: pick(row, "Supplier Name"),
+    itemCode: pick(row, "Item Code"),
+    itemName: pick(row, "Item Name"),
+    itemCategory: pick(row, "Item Category"),
+    uom: pick(row, "UOM"),
+    qtyOrdered: nz(pick(row, "Qty. Ordered (Major)", "Qty. Ordered")),
+    qtyDelivered: nz(pick(row, "Qty. Delivered (Major)", "Qty. Delivered (Smallest)")),
+    qtyOutstanding: nz(pick(row, "Qty. Outstanding (Major)", "Qty. Outstanding (Smallest)")),
+    pctDelivered: nz(pick(row, "Purchase Order % Delivered", "Item % Delivered")),
+    itemUnitCost: nz(pick(row, "Item Unit Cost")),
+    orderNetTotal: nz(pick(row, "Order Net Total")),
+    prNumber: pick(row, "PR Number"),
+    prDate: pick(row, "PR Date"),
+    requestedBy: pick(row, "Requested By"),
+    usedBy: pick(row, "Used By"),
+    targetWarehouse: pick(row, "Target Warehouse"),
+    purchaseInvoice: pick(row, "Purchase Invoice"),
+    lastPurchaseNumber: pick(row, "Last Purchase Number"),
+    createdBy: pick(row, "Created By"),
+    approvedBy: pick(row, "Approved By"),
+  };
 }
 
-function poHeaderStatus(lines) {
-  const s = new Set(lines.map(poLineStatus));
-  if (s.has("OUTSTANDING")) return "OUTSTANDING";
-  if (s.has("OPEN")) return "OPEN";
-  return "CLOSED";
+function mapPr(row) {
+  return {
+    recordType: "pr",
+    prNumber: pick(row, "PR Number"),
+    prDate: pick(row, "PR Date"),
+    status: pick(row, "Status"),
+    openClosed: pick(row, "Open/Closed"),
+    importance: pick(row, "Importance"),
+    requiredDate: pick(row, "Required Date"),
+    approvedBy: pick(row, "Approved By"),
+    requestedBy: pick(row, "Requested By"),
+    prPiDays: nz(pick(row, "PR-PI Days")),
+    itemCode: pick(row, "Item Code"),
+    itemName: pick(row, "Item Name"),
+    itemCategory: pick(row, "Item Category"),
+    uom: pick(row, "UOM"),
+    qtyRequested: nz(pick(row, "Qty. Requested", "Qty. Requested (Smallest)")),
+    qtyOutstanding: nz(pick(row, "Qty. Outstanding")),
+    qtyPurchased: nz(pick(row, "Qty. Purchased", "Qty. Purchased (Smallest)")),
+    qtyRevised: nz(pick(row, "Qty. Revised")),
+    supplierCode: pick(row, "Supplier Code"),
+    supplierName: pick(row, "Supplier Name"),
+    poNumber: pick(row, "PO Number"),
+    poDate: pick(row, "PO Date"),
+    poExpectedDate: pick(row, "PO Expected Date"),
+    warehouseCode: pick(row, "Warehouse Code"),
+    purpose: pick(row, "Purpose"),
+  };
 }
 
-const purchaseOrders = [];
-for (const [orderNumber, lines] of poByHeader) {
-  const header = lines[0];
-  purchaseOrders.push({
-    orderNumber,
-    status: poHeaderStatus(lines),
-    poType: str(header["PO Type"]),
-    orderDate: str(header["Order Date"]),
-    expectedDeliveryDate: str(header["Expected Delivery Date"]),
-    importance: str(header["Importance"]),
-    approved: str(header["Approved"]),
-    approvedBy: str(header["Approved By"]),
-    approvedDate: str(header["Approved Date/Time"]),
-    supplierCode: str(header["Supplier Code"]),
-    supplierName: str(header["Supplier Name"]),
-    targetWarehouse: str(header["Target Warehouse"]),
-    orderNetTotal: num(header["Order Net Total"]),
-    purchaseOrderPercentDelivered: num(header["Purchase Order % Delivered"]),
-    deliveryDays: num(header["Delivery Days"]),
-    poPiDays: num(header["PO-PI Days"]),
-    prNumber: str(header["PR Number"]),
-    prDate: str(header["PR Date"]),
-    prRequiredDate: str(header["PR Required Date"]),
-    closedBy: str(header["Closed By"]),
-    closedReason: str(header["Closed Reason"]),
-    usedBy: str(header["Used By"]),
-    requestedBy: str(header["Requested By"]),
-    lines: lines.map((p) => ({
-      lineStatus: poLineStatus(p),
-      itemCode: str(p["Item Code"]),
-      itemName: str(p["Item Name"]),
-      itemCategory: str(p["Item Category"]),
-      uom: str(p["UOM"]),
-      qtyOrdered: num(p["Qty. Ordered (Major)"] || p["Qty. Ordered"]),
-      qtyDelivered: num(p["Qty. Delivered (Major)"] || p["Qty. Delivered (Smallest)"]),
-      qtyOutstanding: num(p["Qty. Outstanding (Major)"] || p["Qty. Outstanding (Smallest)"]),
-      itemPercentDelivered: num(p["Item % Delivered"]),
-      itemUnitCost: num(p["Item Unit Cost"]),
-      lineTotal: num(p["Line Total"]),
-      prNumber: str(p["PR Number"]),
-      prDate: str(p["PR Date"]),
-    })),
-  });
+/* ------------------------------------------------------------------ */
+/* Warehouse                                                           */
+/* ------------------------------------------------------------------ */
+
+function mapStock(row) {
+  return {
+    recordType: "stock",
+    itemCode: pick(row, "Item Code"),
+    itemName: pick(row, "Item Name"),
+    itemCategory: pick(row, "Item Category"),
+    itemType: pick(row, "Item Type"),
+    uom: pick(row, "UOM", "Smallest UOM"),
+    warehouseCode: pick(row, "Warehouse Code", "WarehouseID"),
+    warehouseName: pick(row, "Warehouse Name", "Warehouse"),
+    onHand: nz(pick(row, "On Hand", "On Hand Detail")),
+    outstandingPO: nz(pick(row, "Outstanding PO")),
+    outstandingSO: nz(pick(row, "Outstanding SO")),
+    qtyInTransit: nz(pick(row, "Qty. In Transit")),
+    qtyBlocked: nz(pick(row, "Qty. Blocked")),
+    qtyMinimumOrder: nz(pick(row, "Qty. Minimum Order")),
+    lastPurchaseDate: pick(row, "Last Purchase Date"),
+    lastPurchaseCost: nz(pick(row, "Last Purchase Cost", "COG")),
+    lastPurchaseQuantity: nz(pick(row, "Last Purchase Quantity")),
+    lastPurchaseNumber: pick(row, "Last Purchase Number"),
+    lastSupplierCode: pick(row, "Last Supplier Code"),
+    lastSupplierName: pick(row, "Last Supplier Name"),
+    lastUsageDate: pick(row, "Last Usage Date"),
+    daysSinceLastUsage: nz(pick(row, "Days Since Last Usage")),
+    age: nz(pick(row, "Age")),
+    discontinued: pick(row, "Discontinued", "DMS"),
+    shelfCode: pick(row, "Shelf Code"),
+    status: pick(row, "Status"),
+    date: pick(row, "Date"),
+  };
 }
-purchaseOrders.sort((a, b) => a.orderDate.localeCompare(b.orderDate));
 
-const purchaseRequests = load("purchase-request-by-item").map((d) => ({
-  prType: str(d["PR Type"]),
-  prNumber: str(d["PR Number"]),
-  prDate: str(d["PR Date"]),
-  requiredDate: str(d["Required Date"]),
-  importance: str(d["Importance"]),
-  status: str(d["Status"]),
-  approved: str(d["Approved"]),
-  approvedBy: str(d["Approved By"]),
-  approvedDate: str(d["Approved Date/Time"]),
-  requestedBy: str(d["Requested By"]),
-  itemCode: str(d["Item Code"]),
-  itemName: str(d["Item Name"]),
-  itemCategory: str(d["Item Category"]),
-  uom: str(d["UOM"]),
-  qtyRequested: num(d["Qty. Requested"]),
-  qtyShipped: num(d["Qty. Shipped"]),
-  qtyOnOrder: num(d["Qty. On Order"]),
-  qtyOnHand: num(d["Qty. On Hand"]),
-  poNumber: str(d["PO Number"]),
-  poDate: str(d["PO Date"]),
-  supplierCode: str(d["Supplier Code"]),
-  supplierName: str(d["Supplier Name"]),
-  itemRemarks: str(d["Item Remarks"]),
-}));
-purchaseRequests.sort((a, b) => a.prDate.localeCompare(b.prDate));
+function mapTransfer(row) {
+  return {
+    recordType: "transfer",
+    memoNumber: pick(row, "Memo Number"),
+    transferDate: pick(row, "Transfer Date"),
+    receivedDate: pick(row, "Received Date"),
+    received: pick(row, "Received"),
+    void: pick(row, "Void"),
+    goodsTransferType: pick(row, "Goods Transfer Type"),
+    originWarehouseCode: pick(row, "Origin Warehouse Code"),
+    originWarehouseName: pick(row, "Origin Warehouse"),
+    destinationWarehouseCode: pick(row, "Destination Warehouse Code"),
+    destinationWarehouseName: pick(row, "Destination Warehouse"),
+    transitWarehouseCode: pick(row, "Transit Warehouse Code"),
+    transitWarehouseName: pick(row, "Transit Warehouse Name"),
+    itemCode: pick(row, "Item Code"),
+    itemName: pick(row, "Item Name"),
+    itemCategory: pick(row, "Item Category"),
+    uom: pick(row, "UOM"),
+    quantity: nz(pick(row, "Quantity")),
+    receivedQuantity: nz(pick(row, "Received Quantity")),
+    unitPrice: nz(pick(row, "Unit Price")),
+    lineTotal: nz(pick(row, "Line Total")),
+    purpose: pick(row, "Purpose"),
+    createdBy: pick(row, "Created By"),
+  };
+}
 
-const usage = load("usage-by-item").map((d) => ({
-  itemId: str(d["ItemID"]),
-  usageDetailId: str(d["UsageDetailID"]),
-  usageType: str(d["Usage Type"]),
-  usageNumber: str(d["Usage Number"]),
-  usageDate: str(d["Usage Date"]),
-  effectiveDate: str(d["Effective Date"]),
-  itemCode: str(d["Item Code"]),
-  itemName: str(d["Item Name"]),
-  itemCategory: str(d["Item Category"]),
-  uom: str(d["UOM"]),
-  quantity: num(d["Quantity"]),
-  cost: num(d["Cost"]),
-  totalCost: num(d["Total Cost"]),
-  warehouse: str(d["Warehouse"]),
-  warehouseCode: str(d["Warehouse Code"]),
-  warehouseName: str(d["Warehouse Name"]),
-  requestedBy: str(d["Requested By Name"]),
-  requestedByCode: str(d["Requested By Code"]),
-  requestedByDepartment: str(d["Requested By Department"]),
-  purpose: str(d["Purpose"]),
-  costCenterSegment1Name: str(d["Cost Center Segment 1 Name"]),
-  itemRemarks: str(d["Item Remarks"]),
-}));
-usage.sort((a, b) => a.usageDate.localeCompare(b.usageDate));
+function mapAdjustment(row) {
+  return {
+    recordType: "adjustment",
+    memoNumber: pick(row, "Memo Number"),
+    adjustmentDate: pick(row, "Adjustment Date"),
+    adjustmentType: pick(row, "Adjustment Type"),
+    status: pick(row, "Status"),
+    postAs: pick(row, "Post As"),
+    approvedBy: pick(row, "Approved By"),
+    createdBy: pick(row, "Created By", "Create Date"),
+    itemCode: pick(row, "Item Code"),
+    itemName: pick(row, "Item Name"),
+    itemCategory: pick(row, "Item Category"),
+    uom: pick(row, "UOM"),
+    quantity: nz(pick(row, "Quantity")),
+    quantityCR: nz(pick(row, "Quantity (CR)")),
+    quantityDB: nz(pick(row, "Quantity (DB)")),
+    adjustedValue: nz(pick(row, "Adjusted Value")),
+    adjustedValuePerUnit: nz(pick(row, "Adjusted Value/Unit")),
+    warehouseCode: pick(row, "Warehouse Code"),
+    warehouseName: pick(row, "Warehouse Name", "Warehouse"),
+    memoRemarks: pick(row, "Memo Remarks"),
+  };
+}
 
-const stockBalances = load("stock-balance").map((d) => ({
-  warehouseId: str(d["WarehouseID"]),
-  warehouseCode: str(d["Warehouse Code"]),
-  warehouseName: str(d["Warehouse Name"]),
-  itemId: str(d["ItemID"]),
-  itemCode: str(d["Item Code"]),
-  itemName: str(d["Item Name"]),
-  itemCategory: str(d["Item Category"]),
-  uom: str(d["UOM"]),
-  onHand: num(d["On Hand"]),
-  smallestOnHand: num(d["Smallest On Hand"]),
-  outstandingSO: num(d["Outstanding SO"]),
-  qtyInTransit: num(d["Qty. In Transit"]),
-  qtyBlocked: num(d["Qty. Blocked"]),
-  grade: str(d["Grade"]),
-  discontinued: str(d["Discontinued"]),
-  lastPurchaseDate: str(d["Last Purchase Date"]),
-  lastPurchaseCost: num(d["Last Purchase Cost"]),
-  lastPurchaseNumber: str(d["Last Purchase Number"]),
-  lastPurchaseQuantity: num(d["Last Purchase Quantity"]),
-  lastSupplierCode: str(d["Last Supplier Code"]),
-  lastSupplierName: str(d["Last Supplier Name"]),
-  priceGroup: str(d["Price Group"]),
-  priceGroupCategory: str(d["Price Group Category"]),
-  shelfCode: str(d["Shelf Code"]),
-}));
-stockBalances.sort(
-  (a, b) => a.warehouseCode.localeCompare(b.warehouseCode) || a.itemCode.localeCompare(b.itemCode),
-);
+function mapUsage(row) {
+  return {
+    recordType: "usage",
+    usageNumber: pick(row, "Usage Number"),
+    usageDate: pick(row, "Usage Date"),
+    effectiveDate: pick(row, "Effective Date"),
+    usageType: pick(row, "Usage Type"),
+    purpose: pick(row, "Purpose"),
+    requestedBy: pick(row, "Requested By"),
+    requestedByName: pick(row, "Requested By Name"),
+    usedByCode: pick(row, "Used By Code"),
+    usedByName: pick(row, "Used By Name"),
+    itemCode: pick(row, "Item Code"),
+    itemName: pick(row, "Item Name"),
+    itemCategory: pick(row, "Item Category"),
+    uom: pick(row, "UOM"),
+    quantity: nz(pick(row, "Quantity")),
+    quantityReturned: nz(pick(row, "Quantity Returned")),
+    qtyReturned: nz(pick(row, "Qty. Returned")),
+    totalCost: nz(pick(row, "Total Cost")),
+    cost: nz(pick(row, "Cost")),
+    warehouseCode: pick(row, "Warehouse Code"),
+    warehouseName: pick(row, "Warehouse Name", "Warehouse"),
+    employeeRelation: pick(row, "Employee Relation"),
+    brokenNotReturnedReason: pick(row, "Broken Not Returned Reason"),
+    memoRemarks: pick(row, "Memo Remarks"),
+    createdBy: pick(row, "Created By"),
+  };
+}
 
-const goodsTransfers = load("goods-transfer-by-tem").map((d) => ({
-  transferType: str(d["Goods Transfer Type"]),
-  memoNumber: str(d["Memo Number"]),
-  transferDate: str(d["Transfer Date"]),
-  receivedDate: str(d["Received Date"]),
-  received: str(d["Received"]),
-  receivedBy: str(d["Received By"]),
-  originWarehouse: str(d["Origin Warehouse"]),
-  originWarehouseCode: str(d["Origin Warehouse Code"]),
-  destinationWarehouse: str(d["Destination Warehouse"]),
-  destinationWarehouseCode: str(d["Destination Warehouse Code"]),
-  driverName: str(d["Driver Name"]),
-  vehicleNo: str(d["Vehicle No."]),
-  purpose: str(d["Purpose"]),
-  itemCode: str(d["Item Code"]),
-  itemName: str(d["Item Name"]),
-  itemCategory: str(d["Item Category"]),
-  uom: str(d["UOM"]),
-  quantity: num(d["Quantity"]),
-  receivedQuantity: num(d["Received Quantity"]),
-  diffQuantity: num(d["Diff. Quantity"]),
-  unitPrice: num(d["Unit Price"]),
-  lineTotal: num(d["Line Total"]),
-  totalVolumeM3: num(d["Total Volume (m3)"]),
-  itemFamilyCode: str(d["Item Family Code"]),
-  itemFamilyName: str(d["Item Family Name"]),
-}));
-goodsTransfers.sort((a, b) => a.transferDate.localeCompare(b.transferDate));
+function mapProduction(row) {
+  return {
+    recordType: "production",
+    productionNumber: pick(row, "Production Number"),
+    productionType: pick(row, "Production Type"),
+    productionDate: pick(row, "Production Date"),
+    requiredDate: pick(row, "Required Date"),
+    pic: pick(row, "PIC"),
+    lineName: pick(row, "Line Name"),
+    machine: pick(row, "Machine"),
+    operator: pick(row, "Operator"),
+    productionTime: pick(row, "Production Time"),
+    productionHour: nz(pick(row, "Production Hour")),
+    process: pick(row, "Process"),
+    itemCode: pick(row, "Item Code"),
+    itemName: pick(row, "Item Name"),
+    itemCategory: pick(row, "Item Category"),
+    uom: pick(row, "UOM"),
+    quantity: nz(pick(row, "Quantity")),
+    cog: nz(pick(row, "COG")),
+    totalCog: nz(pick(row, "Total COG")),
+    warehouse: pick(row, "Warehouse"),
+    batchNo: pick(row, "Batch No."),
+    createdBy: pick(row, "Created By"),
+    createdDate: pick(row, "Created Date/Time"),
+  };
+}
 
-const adjustments = load("adjustment-by-item").map((d) => ({
-  adjustmentType: str(d["Adjustment Type"]),
-  memoNumber: str(d["Memo Number"]),
-  adjustmentDate: str(d["Adjustment Date"]),
-  createdBy: str(d["Created By"]),
-  approvedBy: str(d["Approved By"]),
-  status: str(d["Status"]),
-  memoRemarks: str(d["Memo Remarks"]),
-  itemCode: str(d["Item Code"]),
-  itemName: str(d["Item Name"]),
-  itemCategory: str(d["Item Category"]),
-  uom: str(d["UOM"]),
-  quantity: num(d["Quantity"]),
-  adjustedValue: num(d["Adjusted Value"]),
-  adjustedValuePerUnit: num(d["Adjusted Value/Unit"]),
-  warehouse: str(d["Warehouse"]),
-  warehouseCode: str(d["Warehouse Code"]),
-  warehouseName: str(d["Warehouse Name"]),
-  qtyDb: num(d["Quantity (DB)"]),
-  qtyCr: num(d["Quantity (CR)"]),
-  glAccountCode: str(d["GL Account Code"]),
-  glCostCenter: str(d["GL Cost Center"]),
-  itemFamilyCode: str(d["Item Family Code"]),
-  itemFamilyName: str(d["Item Family Name"]),
-}));
-adjustments.sort((a, b) => a.adjustmentDate.localeCompare(b.adjustmentDate));
+function mapProductionMaterial(row) {
+  return {
+    recordType: "productionMaterial",
+    productionNumber: pick(row, "Production Number"),
+    productionType: pick(row, "Production Type"),
+    productionDate: pick(row, "Production Date"),
+    pic: pick(row, "PIC"),
+    lineName: pick(row, "Line Name"),
+    machine: pick(row, "Machine"),
+    operator: pick(row, "Operator"),
+    productionHour: nz(pick(row, "Production Hour")),
+    assemblyItemCode: pick(row, "AssemblyItemID", "Assembly Item Code"),
+    assemblyItemName: pick(row, "Assembly Item Name"),
+    itemCode: pick(row, "Material Item Code"),
+    itemName: pick(row, "Material Item Name"),
+    itemCategory: pick(row, "Material Category", "Item Category"),
+    uom: pick(row, "UOM"),
+    estUom: pick(row, "Est. UOM"),
+    quantity: nz(pick(row, "Quantity")),
+    estQuantity: nz(pick(row, "Est. Quantity")),
+    cog: nz(pick(row, "COG")),
+    totalCog: nz(pick(row, "Total COG")),
+    warehouse: pick(row, "Warehouse"),
+    batchNo: pick(row, "Batch No."),
+    createdBy: pick(row, "Created By"),
+  };
+}
 
-const prHeaders = load("purchase-request").map((d) => ({
-  prNumber: str(d["PRNumber"]),
-  prType: str(d["PRType"]),
-  date: str(d["Date"]),
-  createDate: str(d["CreateDate"]),
-  approved: str(d["Approved"]),
-  approvedBy: str(d["ApprovedBy"]),
-  controllerApprovedBy: str(d["ControllerApprovedBy"]),
-  importance: str(d["Importance"]),
-  completePercent: num(d["CompletePercent"]),
-  inventoryUserName: str(d["InventoryUserName"]),
-  voidReason: str(d["VoidReason"]),
-}));
-prHeaders.sort((a, b) => a.date.localeCompare(b.date));
+function mapProductionOutput(row) {
+  return {
+    recordType: "productionOutput",
+    productionNumber: pick(row, "Production Number"),
+    productionType: pick(row, "Production Type"),
+    productionDate: pick(row, "Production Date"),
+    pic: pick(row, "PIC"),
+    lineName: pick(row, "Line Name"),
+    machine: pick(row, "Machine"),
+    operator: pick(row, "Operator"),
+    productionHour: nz(pick(row, "Production Hour")),
+    itemCode: pick(row, "Item Code"),
+    itemName: pick(row, "Item Name"),
+    itemCategory: pick(row, "Item Category"),
+    uom: pick(row, "UOM"),
+    quantity: nz(pick(row, "Quantity")),
+    originalQuantity: nz(pick(row, "Original Quantity")),
+    costOfGood: nz(pick(row, "Cost of Good")),
+    totalCostOfGood: nz(pick(row, "Total Cost of Good")),
+    totalWaste: nz(pick(row, "Total Waste")),
+    warehouse: pick(row, "Warehouse"),
+    batchNo: pick(row, "Batch No."),
+    createdBy: pick(row, "Created By"),
+  };
+}
 
-const bundle = {
-  generatedAt: new Date().toISOString(),
-  purchases,
-  purchaseOrders,
-  purchaseRequests,
-  usage,
-  stockBalances,
-  goodsTransfers,
-  adjustments,
-  prHeaders,
-};
+/* ------------------------------------------------------------------ */
 
-writeFileSync(
-  join(DATA_DIR, "purchasing-report-data.json"),
-  JSON.stringify(bundle),
-);
+function build() {
+  const purchases = loadRaw("AnlReports_Inventory_PurchaseByItem").map(mapPurchase);
+  const pos = loadRaw("AnlReports_Inventory_PurchaseOrderByItem").map(mapPo);
+  const prs = loadRaw("AnlReports_Inventory_PurchaseRequestByItem").map(mapPr);
+  const stocks = loadRaw("AnlReports_Inventory_StockBalance").map(mapStock);
+  const transfers = loadRaw("AnlReports_Inventory_GoodsTransferByItem").map(mapTransfer);
+  const adjustments = loadRaw("AnlReports_Inventory_AdjustmentByItem").map(mapAdjustment);
+  const usages = loadRaw("AnlReports_Inventory_UsageByItem").map(mapUsage);
+  const productions = loadRaw("AnlReports_Inventory_Production").map(mapProduction);
+  const productionMaterials = loadRaw(
+    "AnlReports_Inventory_ProductionMaterialUsedByItem",
+  ).map(mapProductionMaterial);
+  const productionOutputs = loadRaw(
+    "AnlReports_Inventory_ProductionOutputByItem",
+  ).map(mapProductionOutput);
 
-const fmt = (n) => n.toLocaleString("id-ID");
-console.log("generated purchasing-report-data.json");
-console.log("  purchases       :", fmt(purchases.length));
-console.log("  purchaseOrders  :", fmt(purchaseOrders.length), "(OPEN", purchaseOrders.filter((p) => p.status === "OPEN").length, "/ OUTSTANDING", purchaseOrders.filter((p) => p.status === "OUTSTANDING").length, "/ CLOSED", purchaseOrders.filter((p) => p.status === "CLOSED").length + ")");
-console.log("  purchaseRequests:", fmt(purchaseRequests.length), "(tanpa PO:", fmt(purchaseRequests.filter((p) => !p.poNumber).length) + ")");
-console.log("  usage           :", fmt(usage.length));
-console.log("  stockBalances   :", fmt(stockBalances.length));
-console.log("  goodsTransfers  :", fmt(goodsTransfers.length));
-console.log("  adjustments     :", fmt(adjustments.length));
-console.log("  prHeaders       :", fmt(prHeaders.length));
+  const purchasingData = [
+    ...purchases,
+    ...pos,
+    ...prs,
+  ];
+  const warehouseData = [
+    ...stocks,
+    ...transfers,
+    ...adjustments,
+    ...usages,
+    ...productions,
+    ...productionMaterials,
+    ...productionOutputs,
+  ];
+
+  mkdirSync(OUT_DIR, { recursive: true });
+  writeFileSync(
+    join(OUT_DIR, "purchasing-data.json"),
+    JSON.stringify(purchasingData),
+  );
+  writeFileSync(
+    join(OUT_DIR, "warehouse-data.json"),
+    JSON.stringify(warehouseData),
+  );
+
+  console.log(`generated purchasing-data.json + warehouse-data.json`);
+  console.log(`  purchases          : ${purchases.length}`);
+  console.log(`  po                 : ${pos.length}`);
+  console.log(`  pr                 : ${prs.length}`);
+  console.log(`  stock              : ${stocks.length}`);
+  console.log(`  transfer           : ${transfers.length}`);
+  console.log(`  adjustment         : ${adjustments.length}`);
+  console.log(`  usage              : ${usages.length}`);
+  console.log(`  production         : ${productions.length}`);
+  console.log(`  productionMaterial : ${productionMaterials.length}`);
+  console.log(`  productionOutput   : ${productionOutputs.length}`);
+  console.log(`  purchasing data total : ${purchasingData.length}`);
+  console.log(`  warehouse data total  : ${warehouseData.length}`);
+}
+
+build();

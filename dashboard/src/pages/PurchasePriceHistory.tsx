@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import type { ParsedPurchaseItem } from "../types/purchase";
+import type { DateRange } from "../types/ui";
 import { formatRupiah, formatRupiahCompact, formatNumber, formatDate, byPurchaseDateAsc } from "../utils/formatters";
 import PageLayout from "../components/PageLayout";
 import StatCard from "../components/StatCard";
@@ -32,13 +33,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-interface DateRange {
-  start: Date | null;
-  end: Date | null;
-}
-
-const MAX_VISIBLE_ITEMS = 200;
-
 interface PurchasePriceHistoryProps {
   items: ParsedPurchaseItem[];
   dateRange: DateRange;
@@ -65,10 +59,6 @@ export default function PurchasePriceHistory({
       .map(([name, code]) => ({ name, code }))
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [items]);
-
-  const comboboxItems = comboboxSearch
-    ? uniqueItems
-    : uniqueItems.slice(0, MAX_VISIBLE_ITEMS);
 
   const filteredByItem = useMemo(() => {
     if (!selectedItem) return [];
@@ -163,7 +153,7 @@ export default function PurchasePriceHistory({
                 <CommandList>
                   <CommandEmpty>Tidak ada item ditemukan.</CommandEmpty>
                   <CommandGroup>
-                    {comboboxItems.map((item) => (
+                    {uniqueItems.map((item) => (
                       
                         <CommandItem
                           key={item.name}
@@ -186,13 +176,6 @@ export default function PurchasePriceHistory({
                         </CommandItem>
                     ))}
                   </CommandGroup>
-                  {!comboboxSearch &&
-                    uniqueItems.length > MAX_VISIBLE_ITEMS && (
-                      <p className="border-t px-3 py-2 text-xs text-muted-foreground">
-                        {uniqueItems.length - MAX_VISIBLE_ITEMS} item lainnya —
-                        ketik untuk mencari
-                      </p>
-                    )}
                 </CommandList>
               </Command>
             </PopoverContent>
@@ -266,7 +249,14 @@ export default function PurchasePriceHistory({
             </ResponsiveContainer>
           </ChartCard>
 
-          <DataTable columns={columns} data={filteredByItem} />
+          <DataTable
+              columns={columns}
+              data={filteredByItem}
+              showExport
+              showColumnToggle
+              title="price-history"
+              totalColumns={["quantity", "netTotal"]}
+            />
         </>
       ) : (
         <EmptyState

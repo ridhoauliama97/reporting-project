@@ -1,10 +1,6 @@
-import type { ReactNode } from 'react';
-import DateFilter from './DateFilter';
 
-interface DateRange {
-  start: Date | null;
-  end: Date | null;
-}
+import type { DateRange } from "../types/ui";import type { ReactNode } from 'react';
+import DateFilter from './DateFilter';
 
 interface PageLayoutProps {
   title: string;

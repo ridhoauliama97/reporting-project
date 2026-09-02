@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import type { ParsedPurchaseItem } from "../types/purchase";
+import type { DateRange } from "../types/ui";
 import { formatRupiah, formatRupiahCompact, formatPercent, getMonthLabel, monthKeyOf } from "../utils/formatters";
 import PageLayout from "../components/PageLayout";
 import StatCard from "../components/StatCard";
@@ -17,11 +18,6 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-
-interface DateRange {
-  start: Date | null;
-  end: Date | null;
-}
 
 interface MaterialCostTrendProps {
   items: ParsedPurchaseItem[];
@@ -268,7 +264,17 @@ export default function MaterialCostTrend({
         )}
       </ChartCard>
 
-      <DataTable columns={columns} data={tableData} />
+      <DataTable
+        columns={columns}
+        data={tableData}
+        showExport
+        showColumnToggle
+        title="material-cost-trend"
+        totalColumns={[
+          ...selectedCategories.map((c) => CATEGORY_LABELS[c]),
+          "total",
+        ]}
+      />
     </PageLayout>
   );
 }

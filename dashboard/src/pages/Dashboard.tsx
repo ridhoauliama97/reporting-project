@@ -1,14 +1,10 @@
-import { useMemo } from "react";
-import { Link, useLocation } from "react-router-dom";
-import InfoBanner from "../components/InfoBanner";
+
+import type { DateRange } from "../types/ui";import { useMemo } from "react";
+import { Link } from "react-router-dom";
 import type { ParsedPurchaseItem } from "@/types/purchase";
 import { ITEM_CATEGORIES, CATEGORY_LABELS } from "@/types/purchase";
 import { formatRupiah, formatNumber, formatPercent } from "@/utils/formatters";
-import {
-  generateOverallSummary,
-  priceIncreaseAlerts,
-  getVarianceRows,
-} from "@/utils/analytics";
+import { generateOverallSummary, priceIncreaseAlerts } from "@/utils/analytics";
 import PageLayout from "../components/PageLayout";
 import { SectionCards } from "../components/dashboard/section-cards";
 import {
@@ -28,11 +24,6 @@ import {
   TrendingUpIcon,
   TruckIcon,
 } from "lucide-react";
-
-interface DateRange {
-  start: Date | null;
-  end: Date | null;
-}
 
 interface DashboardProps {
   items: ParsedPurchaseItem[];
@@ -187,20 +178,22 @@ export default function Dashboard({
 
     const alertRows = priceIncreaseAlerts(items)
       .slice(0, 5)
-      .map((a) => ({
-        key: `alert-${a.item}`,
+      .map((a, idx) => ({
+        key: `alert-${a.item}-${idx}`,
         label: a.item,
         sublabel: `${formatRupiah(a.prev)} → ${formatRupiah(a.curr)} per unit`,
         value: `+${formatPercent(a.increase * 100)}`,
         valueClass: "text-red-600 dark:text-red-400",
       }));
 
-    const varianceRows = getVarianceRows(items)
-      .map((r) => ({
-        key: r.purchaseNumber,
-        item: r,
-        variance: r.variance,
+    const varianceRows = items
+      .filter((i) => i.qtyOrdered > 0)
+      .map((i) => ({
+        key: i.purchaseNumber,
+        item: i,
+        variance: i.quantity - i.qtyOrdered,
       }))
+      .filter((r) => r.variance !== 0)
       .sort((a, b) => Math.abs(b.variance) - Math.abs(a.variance))
       .slice(0, 5)
       .map((r, i) => ({
@@ -255,9 +248,6 @@ export default function Dashboard({
     };
   }, [items]);
 
-  const location = useLocation();
-  const justRegistered = (location.state as { registered?: boolean } | null)?.registered === true;
-
   return (
     <PageLayout
       title={`${getGreeting()}, User. 👋`}
@@ -265,11 +255,6 @@ export default function Dashboard({
       dateRange={dateRange}
       onDateRangeChange={onDateRangeChange}
     >
-      {justRegistered && (
-        <InfoBanner>
-          Akun berhasil dibuat. Email verifikasi telah dikirim ke alamat email Anda — periksa kotak masuk Anda.
-        </InfoBanner>
-      )}
       <SectionCards items={items} prevItems={prevItems} />
 
       <Card className="border-teal-500/30 bg-linear-to-t from-teal-500/5 to-card">
