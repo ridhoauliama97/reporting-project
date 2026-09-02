@@ -64,7 +64,7 @@ Page #4 (Supplier Quality) must stay empty-state via the `EmptyState` component 
 ## UI Conventions
 
 - All labels in Indonesian; currency as `Rp 1.234.567` (`formatRupiah`), percentages 1 decimal (`formatPercent`)
-- Date range filter (via `DateFilter`) drives every page's widgets/table/chart; filtering uses `filterByDateRange()` (defaults to `purchaseDate`, some pages pass `poDate`/`prDate`). `DateFilter` keeps its own input state and debounces the commit (400 ms, flushed on blur) — `onChange` only fires with the clamped range, not per keystroke
+- Date range filter (via `DateFilter`) drives every page's widgets/table/chart; filtering uses `filterByDateRange()` (defaults to `purchaseDate`, some pages pass `poDate`/`prDate`). `DateFilter` commits immediately on every change (native date input only emits empty or full dates, so no keystroke spam); label is honest for partial ranges: both set = "d MMM – d MMM", start-only = "Semenjak…", end-only = "Sampai…", none = "Semua Data". Default range = full dataset window (computed across all temporal record types after load) unless the user has already picked one
 - Page shell: stat widget cards (`StatCard`) → chart/table; `PageLayout` wraps pages, `ChartCard` wraps Recharts charts (CSS vars `--color-chart-1..5`, cartesian grid uses `stroke-border`)
 - **All DataTable report pages** use `showExport` + `showColumnToggle` + `title` (export filename); `totalColumns` only for summable numeric columns (skip averages/percentages/scores/durations: lead-time, price-alert, scorecard have no total row)
 - Proxy-metric pages carry an `InfoBanner` note explaining the data limitation (e.g. Supplier Delivery, Supplier Scorecard)

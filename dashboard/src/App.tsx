@@ -8,6 +8,8 @@ import {
   Component,
   useEffect,
   useMemo,
+  useRef,
+  useCallback,
   useState,
   Suspense,
   lazy,
@@ -97,11 +99,28 @@ const LoginPage = lazy(() => import("./pages/Login"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPassword"));
 const SettingsPage = lazy(() => import("./pages/Settings"));
 
-function getDefaultDateRange() {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-  return { start, end };
+function getDatasetBounds(
+  dateLists: readonly (readonly (Date | null)[])[],
+): { min: Date; max: Date } | null {
+  let min = 0;
+  let max = 0;
+  let found = false;
+  for (const list of dateLists) {
+    for (const d of list) {
+      if (!d) continue;
+      const t = d.getTime();
+      if (!found) {
+        min = max = t;
+        found = true;
+      } else if (t < min) {
+        min = t;
+      } else if (t > max) {
+        max = t;
+      }
+    }
+  }
+  if (!found) return null;
+  return { min: new Date(min), max: new Date(max) };
 }
 
 function LoadingScreen() {
@@ -172,37 +191,53 @@ function App() {
     const applyData = (data: RawRecord[]) => {
       if (cancelled) return;
       const parsed = parseAllItems(data as PurchaseItem[]);
+      const pOrders = parseAllPurchaseOrders(data as PurchaseOrderRecord[]);
+      const stock = parseAllStock(data as StockRecord[]);
+      const transfers = parseAllTransfers(data as TransferRecord[]);
+      const adjustments = parseAllAdjustments(data as AdjustmentRecord[]);
+      const usages = parseAllUsages(data as UsageRecord[]);
+      const productions = parseAllProductions(data as ProductionRecord[]);
       setAllItems(parsed);
-      setAllPurchaseOrders(
-        parseAllPurchaseOrders(data as PurchaseOrderRecord[]),
-      );
-      setAllStock(parseAllStock(data as StockRecord[]));
-      setAllTransfers(parseAllTransfers(data as TransferRecord[]));
-      setAllAdjustments(parseAllAdjustments(data as AdjustmentRecord[]));
-      setAllUsages(parseAllUsages(data as UsageRecord[]));
-      setAllProductions(parseAllProductions(data as ProductionRecord[]));
+      setAllPurchaseOrders(pOrders);
+      setAllStock(stock);
+      setAllTransfers(transfers);
+      setAllAdjustments(adjustments);
+      setAllUsages(usages);
+      setAllProductions(productions);
       setAllProductionMaterials(
         parseAllProductionMaterials(data as ProductionMaterialRecord[]),
       );
       setAllProductionOutputs(
         parseAllProductionOutputs(data as ProductionOutputRecord[]),
       );
-      setDateRange((prev) => {
-        if (!prev.start || !prev.end) return prev;
-        const inRange = parsed.some(
-          (i) =>
-            i.purchaseDateObj &&
-            i.purchaseDateObj >= prev.start! &&
-            i.purchaseDateObj <= prev.end!,
-        );
-        if (inRange || parsed.length === 0) return prev;
-        const dates = parsed
-          .map((i) => i.purchaseDateObj)
-          .filter((d): d is Date => d !== null)
-          .sort((a, b) => a.getTime() - b.getTime());
-        if (dates.length === 0) return prev;
-        return { start: dates[0], end: dates[dates.length - 1] };
-      });
+      if (!rangeTouchedRef.current) {
+        const bounds = getDatasetBounds([
+          parsed.map((i) => i.purchaseDateObj),
+          pOrders.map((i) => i.orderDateObj),
+          transfers.map((i) => i.transferDateObj),
+          adjustments.map((i) => i.adjustmentDateObj),
+          usages.map((i) => i.usageDateObj),
+          productions.map((i) => i.productionDateObj),
+        ]);
+        if (bounds) {
+          setDateRange({
+            start: new Date(
+              bounds.min.getFullYear(),
+              bounds.min.getMonth(),
+              bounds.min.getDate(),
+            ),
+            end: new Date(
+              bounds.max.getFullYear(),
+              bounds.max.getMonth(),
+              bounds.max.getDate(),
+              23,
+              59,
+              59,
+              999,
+            ),
+          });
+        }
+      }
     };
 
     const loadOnMainThread = () => {
@@ -252,7 +287,12 @@ function App() {
   const [dateRange, setDateRange] = useState<{
     start: Date | null;
     end: Date | null;
-  }>(getDefaultDateRange());
+  }>({ start: null, end: null });
+  const rangeTouchedRef = useRef(false);
+  const handleDateRangeChange = useCallback((range: { start: Date | null; end: Date | null }) => {
+    rangeTouchedRef.current = true;
+    setDateRange(range);
+  }, []);
 
   const filteredItems = useMemo(
     () => filterByDateRange(allItems, dateRange.start, dateRange.end),
@@ -424,7 +464,7 @@ function App() {
                           items={filteredItems}
                           allItems={allItems}
                           dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
+                          onDateRangeChange={handleDateRangeChange}
                         />
                       }
                     />
@@ -434,7 +474,7 @@ function App() {
                         <PurchaseSummary
                           items={filteredItems}
                           dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
+                          onDateRangeChange={handleDateRangeChange}
                         />
                       }
                     />
@@ -444,7 +484,7 @@ function App() {
                         <PurchaseBySupplier
                           items={filteredItems}
                           dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
+                          onDateRangeChange={handleDateRangeChange}
                         />
                       }
                     />
@@ -454,7 +494,7 @@ function App() {
                         <SupplierRanking
                           items={filteredItems}
                           dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
+                          onDateRangeChange={handleDateRangeChange}
                         />
                       }
                     />
@@ -465,7 +505,7 @@ function App() {
                         <SupplierDelivery
                           items={filteredItems}
                           dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
+                          onDateRangeChange={handleDateRangeChange}
                         />
                       }
                     />
@@ -475,7 +515,7 @@ function App() {
                         <PurchasePriceHistory
                           items={filteredItems}
                           dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
+                          onDateRangeChange={handleDateRangeChange}
                         />
                       }
                     />
@@ -485,7 +525,7 @@ function App() {
                         <PurchaseVariance
                           items={filteredItems}
                           dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
+                          onDateRangeChange={handleDateRangeChange}
                         />
                       }
                     />
@@ -495,7 +535,7 @@ function App() {
                         <MaterialCostTrend
                           items={filteredItems}
                           dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
+                          onDateRangeChange={handleDateRangeChange}
                         />
                       }
                     />
@@ -505,7 +545,7 @@ function App() {
                         <PriceIncreaseAlert
                           items={filteredItems}
                           dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
+                          onDateRangeChange={handleDateRangeChange}
                         />
                       }
                     />
@@ -515,7 +555,7 @@ function App() {
                         <PurchaseLeadTime
                           items={filteredItems}
                           dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
+                          onDateRangeChange={handleDateRangeChange}
                         />
                       }
                     />
@@ -525,7 +565,7 @@ function App() {
                         <OutstandingPO
                           poItems={filteredPurchaseOrders}
                           dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
+                          onDateRangeChange={handleDateRangeChange}
                         />
                       }
                     />
@@ -535,7 +575,7 @@ function App() {
                         <OpenPO
                           poItems={filteredPurchaseOrders}
                           dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
+                          onDateRangeChange={handleDateRangeChange}
                         />
                       }
                     />
@@ -545,7 +585,7 @@ function App() {
                         <ClosedPO
                           poItems={filteredPurchaseOrders}
                           dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
+                          onDateRangeChange={handleDateRangeChange}
                         />
                       }
                     />
@@ -565,7 +605,7 @@ function App() {
                           adjustments={filteredAdjustments}
                           usages={filteredUsages}
                           dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
+                          onDateRangeChange={handleDateRangeChange}
                         />
                       }
                     />
@@ -608,11 +648,11 @@ function App() {
                         <StockAdjustment
                           adjustments={filteredAdjustments}
                           dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
+                          onDateRangeChange={handleDateRangeChange}
                         />
                       }
                     />
-                    <Route path="/warehouse/warehouse-productivity" element={<WarehouseProductivity productions={filteredProductions} productionMaterials={filteredProductionMaterials} productionOutputs={filteredProductionOutputs} dateRange={dateRange} onDateRangeChange={setDateRange} />} />
+                    <Route path="/warehouse/warehouse-productivity" element={<WarehouseProductivity productions={filteredProductions} productionMaterials={filteredProductionMaterials} productionOutputs={filteredProductionOutputs} dateRange={dateRange} onDateRangeChange={handleDateRangeChange} />} />
                     <Route path="/warehouse/warehouse-utilization" element={<WarehouseUtilization stock={allStock} />} />
                     <Route
                       path="/warehouse/location-occupancy"
@@ -628,7 +668,7 @@ function App() {
                         <TransferHistory
                           transfers={filteredTransfers}
                           dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
+                          onDateRangeChange={handleDateRangeChange}
                         />
                       }
                     />
@@ -646,7 +686,7 @@ function App() {
                         <FillRate
                           transfers={filteredTransfers}
                           dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
+                          onDateRangeChange={handleDateRangeChange}
                         />
                       }
                     />
@@ -658,7 +698,7 @@ function App() {
                         <DeliveryPerformance
                           transfers={filteredTransfers}
                           dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
+                          onDateRangeChange={handleDateRangeChange}
                         />
                       }
                     />
@@ -668,7 +708,7 @@ function App() {
                         <SupplierScorecard
                           items={filteredItems}
                           dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
+                          onDateRangeChange={handleDateRangeChange}
                         />
                       }
                     />
@@ -679,7 +719,7 @@ function App() {
                           items={filteredItems}
                           poItems={filteredPurchaseOrders}
                           dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
+                          onDateRangeChange={handleDateRangeChange}
                         />
                       }
                     />
@@ -691,7 +731,7 @@ function App() {
                           allItems={allItems}
                           poItems={filteredPurchaseOrders}
                           dateRange={dateRange}
-                          onDateRangeChange={setDateRange}
+                          onDateRangeChange={handleDateRangeChange}
                         />
                       }
                     />
