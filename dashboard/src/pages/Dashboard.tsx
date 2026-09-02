@@ -1,10 +1,11 @@
 
-import type { DateRange } from "../types/ui";import { useMemo } from "react";
+import type { DateRange } from "../types/ui";import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import type { ParsedPurchaseItem } from "@/types/purchase";
 import { ITEM_CATEGORIES, CATEGORY_LABELS } from "@/types/purchase";
 import { formatRupiah, formatNumber, formatPercent } from "@/utils/formatters";
 import { generateOverallSummary, priceIncreaseAlerts } from "@/utils/analytics";
+import { getAuthClient } from "@/lib/auth-client";
 import PageLayout from "../components/PageLayout";
 import { SectionCards } from "../components/dashboard/section-cards";
 import {
@@ -129,6 +130,23 @@ export default function Dashboard({
   dateRange,
   onDateRangeChange,
 }: DashboardProps) {
+  const [userName, setUserName] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getAuthClient()
+      .then((client) => client.getSession())
+      .then((res) => {
+        if (!cancelled && res?.data?.user?.name) {
+          setUserName(res.data.user.name);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const prevItems = useMemo(() => {
     if (!dateRange.start || !dateRange.end) return undefined;
     const len = dateRange.end.getTime() - dateRange.start.getTime();
@@ -250,7 +268,7 @@ export default function Dashboard({
 
   return (
     <PageLayout
-      title={`${getGreeting()}, User. 👋`}
+      title={`${getGreeting()}, ${userName || "User"}. 👋`}
       subtitle="Here's a quick overview of your purchasing data."
       dateRange={dateRange}
       onDateRangeChange={onDateRangeChange}
